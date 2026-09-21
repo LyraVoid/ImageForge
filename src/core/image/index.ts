@@ -1,4 +1,18 @@
 export * from "./types";
+export {
+  CPIO_TRAILER,
+  findEntry,
+  isCpio,
+  parseCpio,
+  removeEntry,
+  serializeCpio,
+  upsertEntry,
+} from "./cpio";
+export type { CpioArchive, CpioEntry } from "./cpio";
+export { decodeRamdisk, encodeRamdisk, ramdiskDecodesTo } from "./ramdisk";
+export type { DecodedRamdisk } from "./ramdisk";
+export { buildImageReport } from "./report";
+export type { ImageReport, ReportField, ReportGroup } from "./report";
 export { detectImageFormat, parseImage, tryParseImage, assertBootImage } from "./bootimage/parser";
 export type { ParseOptions } from "./bootimage/parser";
 export { repackBootImage } from "./bootimage/repacker";

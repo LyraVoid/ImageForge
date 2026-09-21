@@ -1,6 +1,13 @@
 import { formatBytes } from "../binary";
 import { sha256Hex } from "../hash";
-import { COMPRESSION_LABEL, decompress, detectCompression, isDecompressionSupported } from "./compression";
+import {
+  COMPRESSION_LABEL,
+  decompressSection,
+  describeCompression,
+  detectCompression,
+  isDecompressionSupported,
+} from "./compression";
+import { isCpio, parseCpio } from "./cpio";
 import type { ImageSection, ParsedImage } from "./types";
 import { sectionOf } from "./types";
 
@@ -70,10 +77,38 @@ export async function buildImageReport(
     field("Payload", ramdisk ? formatBytes(ramdisk.size) : "absent"),
     field("Compression", COMPRESSION_LABEL[compression]),
   ];
-  if (ramdisk && isDecompressionSupported(compression) && compression === "gzip") {
+  if (ramdisk && isDecompressionSupported(compression)) {
     try {
-      const expanded = await decompress(ramdisk.data, compression);
+      const expanded = await decompressSection(ramdisk.data, describeCompression(ramdisk.data));
       ramdiskFields.push(field("Expanded size", formatBytes(expanded.length)));
+
+      if (isCpio(expanded)) {
+        const archive = parseCpio(expanded);
+        const kinds = { directory: 0, file: 0, link: 0, other: 0 };
+        for (const entry of archive.entries) {
+          const type = (entry.mode & 0o170000) >>> 12;
+          if (type === 4) kinds.directory += 1;
+          else if (type === 8) kinds.file += 1;
+          else if (type === 10) kinds.link += 1;
+          else kinds.other += 1;
+        }
+        ramdiskFields.push(field("Archive", archive.format === "crc" ? "CPIO newc (crc)" : "CPIO newc"));
+        ramdiskFields.push(field("Entries", String(archive.entries.length)));
+        ramdiskFields.push(
+          field(
+            "Contents",
+            kinds.directory +
+              " director" + (kinds.directory === 1 ? "y" : "ies") +
+              ", " + kinds.file + " file" + (kinds.file === 1 ? "" : "s") +
+              ", " + kinds.link + " symbolic link" + (kinds.link === 1 ? "" : "s") +
+              (kinds.other > 0 ? ", " + kinds.other + " other" : ""),
+          ),
+        );
+      } else {
+        ramdiskFields.push(
+          field("Archive", "not a CPIO archive", "Android ramdisks are normally CPIO newc archives."),
+        );
+      }
     } catch (error) {
       ramdiskFields.push(field("Expanded size", "unavailable", error instanceof Error ? error.message : undefined));
     }

@@ -37,13 +37,20 @@ skipped (not silently passed) when no image is present. Bundled artifacts
 (`public/wasm/kptools.wasm`, `public/artifacts/apatch/kpimg`) are always checked against
 the digests recorded in the artifact registry.
 
+## Tests that need a real ramdisk
+
+`tests/integration/ramdisk.test.ts` checks the acceptance criterion of the ramdisk layer against a
+real `init_boot` image: an untouched ramdisk must round trip byte for byte, and an edited one must
+still decode back with the untouched entries intact. It runs when such an image is supplied through
+`IMAGEFORGE_INIT_BOOT` (default `.research/aster-validation/init_boot.img`), otherwise it reports
+itself as skipped.
+
 ## Tests that need a real KernelPatch module
 
 `tests/integration/apatch-real-kpm.test.ts` embeds a real third-party module and checks that
 kptools reports its declared identity back. Such modules are usually proprietary, so none is
 bundled: the test runs when one is supplied through `IMAGEFORGE_TEST_KPM`, or found through
-`IMAGEFORGE_KPM_DIR` (default `../images/kpm` next to the workspace). Without one it reports
-itself as skipped.
+`IMAGEFORGE_KPM_DIR` (default `.research/kpm`). Without one it reports itself as skipped.
 
 ## KernelPatch module fixtures
 

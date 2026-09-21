@@ -42,7 +42,7 @@ export const hasAsterReproductionMaterial = existsSync(STOCK_IMAGE_PATH) && exis
  * never bundled: the test only runs when one is supplied or found next to the workspace.
  */
 function firstModuleOnDisk(): string | undefined {
-  const directory = process.env.IMAGEFORGE_KPM_DIR ?? repoPath("..", "..", "images", "kpm");
+  const directory = process.env.IMAGEFORGE_KPM_DIR ?? repoPath(".research", "kpm");
   try {
     const entry = readdirSync(directory)
       .filter((name) => name.toLowerCase().endsWith(".kpm"))

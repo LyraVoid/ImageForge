@@ -39,6 +39,24 @@ never parses a raw `boot.img` itself.
 6. **Bundled artifacts are digest verified before execution.** `loadVerifiedPayload`
    refuses bytes whose SHA-256 differs from the registry entry.
 
+## Ramdisk layer
+
+Android ramdisks are CPIO `newc` archives, usually inside a gzip or LZ4 container:
+
+    ramdisk section -> decompress (LZ4 legacy / LZ4 frame / gzip) -> CPIO newc -> entries
+                    -> edit entries -> serialise CPIO -> recompress in the same container
+
+Everything a producer wrote is preserved, including the padding after a name, the padding after a
+payload, the trailer entry fields (producers disagree about them) and any bytes after the trailer,
+so `serializeCpio(parseCpio(bytes))` returns the original bytes. That is the acceptance criterion
+enforced by `tests/integration/ramdisk.test.ts` against a real device `init_boot` image: any
+provider that wants to touch a ramdisk builds on a layer that is already proven to be lossless.
+
+Re-encoding a ramdisk uses our own compressor, so the container bytes differ from the original
+even when the payload is unchanged (on a 2.7 MB LZ4 legacy ramdisk the output is about 12% larger).
+The payload is identical, which is what a bootloader parses; shrinking that difference is a
+possible later improvement.
+
 ## Image Engine
 
 | Stage | Implementation |

@@ -101,11 +101,17 @@ Full details in [docs/architecture.md](docs/architecture.md).
     Artifacts     releases, artifacts, digests, architectures
     Providers     one pipeline per patch method
     Image Engine  parse / extract / transform / repack / verify
+    Ramdisk       CPIO newc read and write inside the original container
     Worker        Comlink RPC with progress events
     WASM          CRC32 and LZ4 block decoding
 
 Hard rules: providers never parse boot images, the UI never decides compatibility, versions
 are never hardcoded in the UI, and heavy work never runs on the main thread.
+
+The ramdisk layer is lossless by construction: an untouched ramdisk serialises back to the exact
+bytes it was parsed from, including entry padding, the trailer fields and any trailing padding,
+and a real device `init_boot` image is used to enforce that
+(`tests/integration/ramdisk.test.ts`).
 
 ## Project layout
 
