@@ -70,13 +70,37 @@ describe.skipIf(!hasRealImage)("APatch KernelPatch module embedding", () => {
   );
 
   it(
-    "refuses a module the plan does not pin",
+    "pins the modules the run carries even when the options do not list them",
+    async () => {
+      // This is the shape that used to fail: the caller carries a module but the options never
+      // mention it. The plan has to end up pinning it.
+      const analyzed = await engine.analyze(readRealImage());
+      const kpm = buildKpm({ name: "carried-only" });
+
+      const outcome = await engine.run(analyzed.image, analyzed.sha256, "apatch", {}, {
+        attachments: [{ id: MODULE_NAME, name: MODULE_NAME, bytes: kpm }],
+      });
+
+      expect(outcome.plan.configuration.kpmModules).toBe(MODULE_NAME);
+      expect(outcome.result.metadata.kpmCount).toBe("1");
+      expect(outcome.verification.verification.valid).toBe(true);
+    },
+    TIMEOUT,
+  );
+
+  it(
+    "still refuses a module that is patched with a plan which does not pin it",
     async () => {
       const analyzed = await engine.analyze(readRealImage());
+      const provider = engine.providers.get("apatch");
       const kpm = buildKpm();
 
+      const plan = await provider?.resolve(analyzed.image, {}, analyzed.sha256);
+      expect(plan).toBeDefined();
+      if (!plan || !provider) throw new Error("no plan");
+
       await expect(
-        engine.run(analyzed.image, analyzed.sha256, "apatch", {}, {
+        provider.patch(analyzed.image, plan, {
           attachments: [{ id: MODULE_NAME, name: MODULE_NAME, bytes: kpm }],
         }),
       ).rejects.toThrowError(PatchError);

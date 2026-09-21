@@ -81,11 +81,24 @@ export interface PatchVerificationResult {
   checks: ImageVerification["checks"];
 }
 
+/**
+ * What a run will carry, passed to the provider while planning. A plan has to pin exactly the
+ * payloads that will be embedded, otherwise the run and the plan disagree.
+ */
+export interface PatchPlanContext {
+  attachmentNames?: string[];
+}
+
 export interface PatchProvider {
   id: string;
   name: string;
   analyze(image: ParsedImage, context?: PatchRunContext): Promise<PatchAnalysis>;
-  resolve(image: ParsedImage, options: PatchOptions, sourceImageSha256: string): Promise<PatchPlan>;
+  resolve(
+    image: ParsedImage,
+    options: PatchOptions,
+    sourceImageSha256: string,
+    context?: PatchPlanContext,
+  ): Promise<PatchPlan>;
   patch(image: ParsedImage, plan: PatchPlan, context: PatchRunContext): Promise<PatchResult>;
   verify(result: PatchResult, context?: PatchRunContext): Promise<PatchVerificationResult>;
 }

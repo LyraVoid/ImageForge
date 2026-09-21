@@ -8,6 +8,7 @@ import type {
   PatchAnalysis,
   PatchOptions,
   PatchPlan,
+  PatchPlanContext,
   PatchPlanStep,
   PatchProvider,
   PatchResult,
@@ -91,7 +92,12 @@ export class MockPatchProvider implements PatchProvider {
     };
   }
 
-  async resolve(image: ParsedImage, options: PatchOptions, sourceImageSha256: string): Promise<PatchPlan> {
+  async resolve(
+    image: ParsedImage,
+    options: PatchOptions,
+    sourceImageSha256: string,
+    _planContext?: PatchPlanContext,
+  ): Promise<PatchPlan> {
     const resolved = this.artifacts.resolve({
       providerId: this.id,
       ...(options.release === undefined ? {} : { release: options.release }),

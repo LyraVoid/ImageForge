@@ -83,7 +83,15 @@ export class PatchEngine {
     context: PatchRunContext = {},
   ): Promise<PatchRunOutcome> {
     const runContext: PatchRunContext = { ...context, options };
-    const plan = await this.plan({ image, sourceImageSha256, providerId, options });
+    // The plan is built from what the run carries, so the two can never disagree.
+    const attachmentNames = (context.attachments ?? []).map((attachment) => attachment.name);
+    const plan = await this.plan({
+      image,
+      sourceImageSha256,
+      providerId,
+      options,
+      ...(attachmentNames.length === 0 ? {} : { attachmentNames }),
+    });
     const result = await this.execute(image, plan, runContext);
     const verification = await this.verify(result, runContext);
     runContext.onProgress?.({ stage: "complete", progress: 100, message: "Patch complete" });

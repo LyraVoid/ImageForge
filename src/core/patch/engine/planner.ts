@@ -16,6 +16,8 @@ export interface PlanRequest {
   sourceImageSha256: string;
   providerId: string;
   options: PatchOptions;
+  /** Payload names the run will carry, so the plan can pin them. */
+  attachmentNames?: string[];
 }
 
 export async function planPatch(deps: PatchEngineDeps, request: PlanRequest): Promise<PatchPlan> {
@@ -40,7 +42,9 @@ export async function planPatch(deps: PatchEngineDeps, request: PlanRequest): Pr
     );
   }
 
-  const plan = await provider.resolve(request.image, request.options, request.sourceImageSha256);
+  const plan = await provider.resolve(request.image, request.options, request.sourceImageSha256, {
+    ...(request.attachmentNames === undefined ? {} : { attachmentNames: request.attachmentNames }),
+  });
   await resolvePlanArtifact(deps, plan);
   return plan;
 }

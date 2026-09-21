@@ -26,6 +26,7 @@ import type {
   PatchAnalysis,
   PatchOptions,
   PatchPlan,
+  PatchPlanContext,
   PatchPlanStep,
   PatchProvider,
   PatchResult,
@@ -191,7 +192,12 @@ export class ApatchPatchProvider implements PatchProvider {
     return { bytes: kernel.data, descriptor };
   }
 
-  async resolve(image: ParsedImage, options: PatchOptions, sourceImageSha256: string): Promise<PatchPlan> {
+  async resolve(
+    image: ParsedImage,
+    options: PatchOptions,
+    sourceImageSha256: string,
+    planContext?: PatchPlanContext,
+  ): Promise<PatchPlan> {
     if (image.format !== "boot") {
       throw new IncompatibleProviderError(
         "APatch targets the kernel, which only exists in boot images (found " + image.format + ").",
@@ -229,7 +235,9 @@ export class ApatchPatchProvider implements PatchProvider {
     });
 
     const superkey = readSuperkey(options.configuration);
-    const moduleNames = readModuleNames(options.configuration);
+    // Modules the run carries are authoritative: the plan must pin exactly those.
+    const carriedModules = planContext?.attachmentNames ?? [];
+    const moduleNames = carriedModules.length > 0 ? carriedModules : readModuleNames(options.configuration);
     // The superkey is a credential. It is used for this run and never written into the plan,
     // which is displayed in the UI and exported with the result.
     const { superkey: _superkey, ...configurationWithoutSecret } = options.configuration ?? {};
