@@ -36,16 +36,45 @@ export function ProcessingPage() {
 
   if (stage === "patched") return <Navigate to="/result" replace />;
 
+  if (error) {
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>The patch did not finish</CardTitle>
+            <CardDescription>
+              Nothing is running now. The reason is below, and technical details are available.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-center gap-2">
+            <Button variant="primary" onClick={() => navigate("/patch")}>
+              Back to the patch plan
+            </Button>
+            <Button variant="ghost" onClick={() => navigate("/")}>
+              Start over
+            </Button>
+          </CardContent>
+        </Card>
+        <ErrorPanel error={error} />
+      </div>
+    );
+  }
+
   if (stage !== "patching" && stage !== "planned") {
     return (
       <Card>
         <CardHeader>
           <CardTitle>Nothing is being processed</CardTitle>
-          <CardDescription>Start from an image to run the patch pipeline.</CardDescription>
+          <CardDescription>
+            Start from an image, choose a patch method and press Start patch.
+          </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-wrap items-center gap-2">
           <Button asChild variant="secondary">
             <Link to="/">Select an image</Link>
+          </Button>
+          <Button asChild variant="ghost">
+            <Link to="/patch">Back to the patch plan</Link>
           </Button>
         </CardContent>
       </Card>

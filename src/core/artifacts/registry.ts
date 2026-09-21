@@ -28,22 +28,30 @@ export interface ArtifactIntegrity {
  */
 export type PayloadLoader = (path: string, artifact: PatchArtifact) => Promise<Uint8Array>;
 
-async function fetchPayload(path: string): Promise<Uint8Array> {
+async function fetchPayload(path: string, artifact: PatchArtifact): Promise<Uint8Array> {
   if (typeof fetch === "undefined") {
     throw new ArtifactError("This runtime cannot fetch bundled artifacts.", "fetch() is unavailable.");
   }
+  // Content addressed: without this a stale browser cache can serve an older file whose digest
+  // no longer matches the registry, which looks like an integrity failure.
+  const url = artifact.sha256 === undefined ? path : path + "?v=" + artifact.sha256.slice(0, 16);
+
   let response: Response;
   try {
-    response = await fetch(path);
+    response = await fetch(url);
   } catch (error) {
     throw new ArtifactError(
-      "Bundled artifact " + path + " could not be fetched: " + (error instanceof Error ? error.message : String(error)),
-      "A required bundled artifact is missing from the deployment.",
+      "Bundled artifact " +
+        url +
+        " could not be fetched: " +
+        (error instanceof Error ? error.message : String(error)) +
+        ". The deployment may be unreachable, for example when a development server was stopped.",
+      "A required bundled artifact could not be loaded.",
     );
   }
   if (!response.ok) {
     throw new ArtifactError(
-      "Bundled artifact " + path + " responded with status " + response.status + ".",
+      "Bundled artifact " + url + " responded with status " + response.status + ".",
       "A required bundled artifact is missing from the deployment.",
     );
   }
@@ -54,7 +62,10 @@ export class ArtifactRegistry {
   readonly catalog: ArtifactCatalog;
   private readonly loader: PayloadLoader;
 
-  constructor(catalog: ArtifactCatalog = ARTIFACT_CATALOG, loader: PayloadLoader = (path) => fetchPayload(path)) {
+  constructor(
+    catalog: ArtifactCatalog = ARTIFACT_CATALOG,
+    loader: PayloadLoader = (path, artifact) => fetchPayload(path, artifact),
+  ) {
     this.catalog = catalog;
     this.loader = loader;
   }
@@ -135,8 +146,8 @@ export class ArtifactRegistry {
           actualSha256 +
           " (" +
           bytes.length +
-          " bytes).",
-        "The selected artifact failed its integrity check.",
+          " bytes). A cached copy from before the artifact changed is the usual cause.",
+        "The selected artifact failed its integrity check. Hard refresh the page and try again.",
       );
     }
     return bytes;

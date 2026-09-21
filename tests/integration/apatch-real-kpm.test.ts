@@ -59,6 +59,19 @@ describe.skipIf(!hasRealKpm || !hasRealImage)("APatch with a real third-party mo
       expect(listing).toMatch(/num=1/);
       expect(listing).toContain(String(declared.name));
       if (declared.version) expect(listing).toContain(String(declared.version));
+
+      // the same combination with the Aster core image
+      const aster = await engine.run(
+        analyzed.image,
+        analyzed.sha256,
+        "apatch",
+        { configuration: { [APATCH_KPM_SETTING]: name, kernelPatchFlavor: "aster" } },
+        { attachments: [{ id: name, name, bytes }] },
+      );
+      expect(aster.result.metadata.kernelPatchFlavor).toBe("aster");
+      expect(aster.result.metadata.requiredManager).toBe("me.yuki.aster");
+      expect(aster.result.metadata.kpmCount).toBe("1");
+      expect(aster.verification.verification.valid).toBe(true);
     },
     TIMEOUT,
   );
