@@ -216,6 +216,9 @@ export class ApatchPatchProvider implements PatchProvider {
     });
 
     const superkey = readSuperkey(options.configuration);
+    // The superkey is a credential. It is used for this run and never written into the plan,
+    // which is displayed in the UI and exported with the result.
+    const { superkey: _superkey, ...configurationWithoutSecret } = options.configuration ?? {};
     const plan: PatchPlan = {
       id: "",
       providerId: this.id,
@@ -228,7 +231,7 @@ export class ApatchPatchProvider implements PatchProvider {
       pageSize: image.pageSize,
       sourceImageSha256,
       configuration: {
-        ...(options.configuration ?? {}),
+        ...configurationWithoutSecret,
         kernelPatchMode: "static",
         kernelPatchFlavor: flavor.id,
         kernelPatchSource: flavor.source,

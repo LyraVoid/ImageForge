@@ -33,7 +33,9 @@ Deliberately honest limits:
   error instead of being patched wrongly. It also requires `CONFIG_KALLSYMS=y`, which is
   verified before the patch runs.
 * **The superkey is optional and unset by default**, matching the manager default where
-  authentication is signature based. The superkey is never written into the plan.
+  authentication is signature based. The patch page can set one, in which case only its
+  SHA-256 is embedded in the kernel (`root_superkey`) and the key itself is never written
+  into the plan, the metadata or the produced image.
 * **The AVB signature is dropped** on repack, so verified boot fails unless the produced
   image is re-signed or verification is disabled.
 * **Remote artifact downloads are not implemented.** Only bundled artifacts (digest

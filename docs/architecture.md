@@ -94,8 +94,11 @@ implemented.
       -> verifier re-parses the output and compares the kernel digest with the plan
 
 The superkey is optional. When it is absent (the default, matching the APatch manager where
-authentication is signature based) no `-S` argument is passed. The raw superkey never enters
-the plan: it travels through `PatchRunContext.options`, and only the mode is recorded.
+authentication is signature based) no `-S` argument is passed. When it is set, kptools stores
+the SHA-256 of the key in the kernel's `root_superkey` field, which the kernel uses to
+bootstrap the runtime superkey, so the key can be rotated later. The raw key never enters the
+plan: it travels through `PatchRunContext.options`, the provider strips it from the plan
+configuration, and only the mode is recorded.
 
 Device images are usually whole-partition dumps, so the repacked image is compact by
 default: partition padding and the AVB blob are not part of a boot image. When the plan

@@ -125,6 +125,43 @@ describe.skipIf(!hasRealImage)("APatch against a real GKI boot image", () => {
   );
 
   it(
+    "supports an optional root superkey without ever storing it in the plan",
+    async () => {
+      const analyzed = await engine.analyze(readRealImage());
+      const provider = engine.providers.get("apatch");
+      const secret = "imageforge-real-image-superkey";
+
+      const plan = await provider?.resolve(
+        analyzed.image,
+        { configuration: { superkey: secret } },
+        analyzed.sha256,
+      );
+      expect(plan?.configuration.superkeyMode).toBe("custom");
+      expect(plan?.configuration.superkey).toBeUndefined();
+      expect(JSON.stringify(plan?.configuration)).not.toContain(secret);
+
+      const outcome = await engine.run(analyzed.image, analyzed.sha256, "apatch", {
+        configuration: { superkey: secret },
+      });
+      expect(outcome.result.metadata.superkeyMode).toBe("custom");
+      expect(JSON.stringify(outcome.result.metadata)).not.toContain(secret);
+
+      // the produced kernel must carry the hash of the key and no cleartext key
+      const patched = assertBootImage(parseImage(outcome.result.bytes));
+      const kernel = sectionOf(patched, "kernel")?.data ?? new Uint8Array();
+      const listing = await kptoolsList(kernel);
+      const rootLine = (listing.find((line) => line.includes("root_superkey=")) ?? "").trim();
+      const digest = rootLine.replace("root_superkey=", "");
+      expect(digest).toHaveLength(64);
+      expect(digest).not.toBe("0".repeat(64));
+      const clearLine = (listing.find((line) => line.includes("superkey=")) ?? "").trim();
+      // the cleartext superkey field stays empty: only the hash is embedded
+      expect(clearLine).toBe("superkey=");
+    },
+    TIMEOUT,
+  );
+
+  it(
     "can keep the original partition image size",
     async () => {
       const bytes = readRealImage();

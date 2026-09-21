@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { formatBytes, truncateHash } from "@/lib/format";
 import { APATCH_FLAVOR_SETTING, APATCH_FLAVORS } from "@/core";
+import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useForgeStore } from "@/stores/forge-store";
 
@@ -23,6 +24,7 @@ export function PatchPage() {
   // Options the user changed on this page. They are sent to the worker as a re-plan so
   // the plan stays the single source of truth, and they keep the inputs responsive.
   const [optionDraft, setOptionDraft] = useState<Record<string, string>>({});
+  const [superkeyDraft, setSuperkeyDraft] = useState("");
 
   const readOption = (key: string, fallback: string): string =>
     optionDraft[key] ?? plan?.configuration[key] ?? fallback;
@@ -207,6 +209,48 @@ export function PatchPage() {
                 {APATCH_FLAVORS.find((flavor) => flavor.id === readOption(APATCH_FLAVOR_SETTING, "upstream"))
                   ?.managerPackage ?? "unknown"}
               </span>
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {plan.providerId === "apatch" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Root credentials</CardTitle>
+            <CardDescription>
+              Optional. Without a key the injected KernelPatch authenticates the manager by its
+              signature. With one, the key is hashed into the kernel so an authorised client can
+              use it and rotate it at runtime.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                type="password"
+                autoComplete="off"
+                aria-label="Root superkey"
+                className="max-w-xs"
+                placeholder={
+                  plan.configuration.superkeyMode === "custom" ? "a superkey is set" : "no superkey (default)"
+                }
+                value={superkeyDraft}
+                onChange={(event) => setSuperkeyDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") applyOption({ superkey: superkeyDraft });
+                }}
+              />
+              <Button variant="secondary" onClick={() => applyOption({ superkey: superkeyDraft })}>
+                Apply
+              </Button>
+              <Badge variant={plan.configuration.superkeyMode === "custom" ? "success" : "neutral"}>
+                plan: {plan.configuration.superkeyMode ?? "none"}
+              </Badge>
+            </div>
+            <p className="text-[11px] leading-4 text-muted-foreground">
+              The key is sent to the patch worker for this run only. Only its SHA-256 is written
+              into the kernel; the plan, the metadata and the produced image never contain the key
+              itself. Leave the field empty and apply to go back to the signature default.
             </p>
           </CardContent>
         </Card>
