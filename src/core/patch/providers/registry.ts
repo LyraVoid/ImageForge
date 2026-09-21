@@ -1,7 +1,13 @@
 import type { ArtifactRegistry } from "../../artifacts/registry";
 import type { PatchProvider, PatchProviderDescriptor } from "../types";
-import { APATCH_PROVIDER_DESCRIPTOR, MOCK_PROVIDER_DESCRIPTOR, PLANNED_PROVIDER_DESCRIPTORS } from "./descriptors";
+import {
+  APATCH_PROVIDER_DESCRIPTOR,
+  KERNELSU_PROVIDER_DESCRIPTOR,
+  MOCK_PROVIDER_DESCRIPTOR,
+  PLANNED_PROVIDER_DESCRIPTORS,
+} from "./descriptors";
 import { ApatchPatchProvider } from "./apatch-provider";
+import { KernelsuPatchProvider } from "./kernelsu-provider";
 import { MockPatchProvider } from "./mock-provider";
 
 export class ProviderRegistry {
@@ -38,6 +44,7 @@ export function createProviderRegistry(artifacts: ArtifactRegistry): ProviderReg
   const registry = new ProviderRegistry();
   registry.register(new MockPatchProvider(artifacts), MOCK_PROVIDER_DESCRIPTOR);
   registry.register(new ApatchPatchProvider(artifacts), APATCH_PROVIDER_DESCRIPTOR);
+  registry.register(new KernelsuPatchProvider(artifacts), KERNELSU_PROVIDER_DESCRIPTOR);
   for (const descriptor of PLANNED_PROVIDER_DESCRIPTORS) registry.registerDescriptor(descriptor);
   return registry;
 }

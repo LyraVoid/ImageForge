@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { formatBytes, truncateHash } from "@/lib/format";
-import { APATCH_FLAVOR_SETTING, APATCH_FLAVORS } from "@/core";
+import { APATCH_FLAVOR_SETTING, APATCH_FLAVORS, KERNELSU_KMI_SETTING, KNOWN_KMIS } from "@/core";
 import { mergePlanOptions } from "@/stores/plan-options";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -28,8 +28,8 @@ export function PatchPage() {
   const [optionDraft, setOptionDraft] = useState<Record<string, string>>({});
   const [superkeyDraft, setSuperkeyDraft] = useState("");
   const kpmInputRef = useRef<HTMLInputElement>(null);
-  const kpmFiles = useForgeStore((state) => state.kpmFiles);
-  const setKpmFiles = useForgeStore((state) => state.setKpmFiles);
+  const attachments = useForgeStore((state) => state.attachments);
+  const setAttachments = useForgeStore((state) => state.setAttachments);
 
   const readOption = (key: string, fallback: string): string =>
     optionDraft[key] ?? plan?.configuration[key] ?? fallback;
@@ -41,7 +41,7 @@ export function PatchPage() {
     void selectProvider(selectedProviderId, { configuration: next });
   };
 
-  const handleKpmSelection = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
+  const handleAttachmentSelection = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
     const selected = Array.from(event.target.files ?? []);
     event.target.value = "";
     if (selected.length === 0) return;
@@ -49,10 +49,10 @@ export function PatchPage() {
       selected.map(async (file) => ({ name: file.name, bytes: new Uint8Array(await file.arrayBuffer()) })),
     );
     const merged = [
-      ...kpmFiles.filter((existing) => !loaded.some((entry) => entry.name === existing.name)),
+      ...attachments.filter((existing) => !loaded.some((entry) => entry.name === existing.name)),
       ...loaded,
     ];
-    await setKpmFiles(merged);
+    await setAttachments(merged);
   };
 
   if (!analysis) return <Navigate to="/" replace />;
@@ -250,7 +250,7 @@ export function PatchPage() {
                 multiple
                 accept=".kpm"
                 className="hidden"
-                onChange={(event) => void handleKpmSelection(event)}
+                onChange={(event) => void handleAttachmentSelection(event)}
               />
               <Button variant="secondary" onClick={() => kpmInputRef.current?.click()}>
                 <Layers />
@@ -267,15 +267,15 @@ export function PatchPage() {
                   ? "plan: no modules"
                   : "plan: " + plan.configuration.kpmModules}
               </Badge>
-              {kpmFiles.length > 0 ? (
-                <Button variant="ghost" size="sm" onClick={() => void setKpmFiles([])}>
+              {attachments.length > 0 ? (
+                <Button variant="ghost" size="sm" onClick={() => void setAttachments([])}>
                   Clear
                 </Button>
               ) : null}
             </div>
-            {kpmFiles.length > 0 ? (
+            {attachments.length > 0 ? (
               <ul className="space-y-1">
-                {kpmFiles.map((file) => (
+                {attachments.map((file) => (
                   <li key={file.name} className="flex items-center justify-between gap-3">
                     <span className="truncate font-mono text-[11px] text-foreground">{file.name}</span>
                     <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
@@ -288,6 +288,61 @@ export function PatchPage() {
             <p className="text-[11px] leading-4 text-muted-foreground">
               Modules are embedded exactly as provided. Whether a module loads at boot depends on the
               module and the kernel, and its licence is yours to check.
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {plan.providerId === "kernelsu" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Device KMI and module</CardTitle>
+            <CardDescription>
+              The KernelSU module has to match the kernel module interface of the device. It can only be
+              read from an image that carries a kernel, so an init_boot image needs it selected here.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Select
+              aria-label="Kernel module interface"
+              className="max-w-xs"
+              value={readOption(KERNELSU_KMI_SETTING, "")}
+              onChange={(event) => applyOption({ [KERNELSU_KMI_SETTING]: event.target.value })}
+            >
+              <option value="">select the device KMI</option>
+              {KNOWN_KMIS.map((kmi) => (
+                <option key={kmi} value={kmi}>
+                  {kmi}
+                </option>
+              ))}
+            </Select>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                ref={kpmInputRef}
+                type="file"
+                accept=".ko"
+                className="hidden"
+                onChange={(event) => void handleAttachmentSelection(event)}
+              />
+              <Button variant="secondary" onClick={() => kpmInputRef.current?.click()}>
+                <Layers />
+                Attach {readOption(KERNELSU_KMI_SETTING, "") || "{kmi}"}_kernelsu.ko
+              </Button>
+              <Badge variant={attachments.length > 0 ? "primary" : "neutral"}>
+                {attachments.length === 0
+                  ? "plan: no module attached"
+                  : "plan: " + (plan.configuration.moduleSource ?? "module attached")}
+              </Badge>
+              {attachments.length > 0 ? (
+                <Button variant="ghost" size="sm" onClick={() => void setAttachments([])}>
+                  Clear
+                </Button>
+              ) : null}
+            </div>
+            <p className="text-[11px] leading-4 text-muted-foreground">
+              Download the module for this KMI from the KernelSU releases and attach it: KernelSU's kernel
+              directory is GPL-2.0-only, so ImageForge verifies it instead of shipping it. Find the KMI with
+              <code className="mx-1">uname -r</code> on the device: 6.6.118-android15-... means android15-6.6.
             </p>
           </CardContent>
         </Card>

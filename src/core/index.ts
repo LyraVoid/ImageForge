@@ -29,6 +29,7 @@ export { MockPatchProvider, MOCK_BOOTCONFIG_MARKER, MOCK_CMDLINE_MARKER } from "
 export { ProviderRegistry, createProviderRegistry } from "./patch/providers/registry";
 export {
   APATCH_PROVIDER_DESCRIPTOR,
+  KERNELSU_PROVIDER_DESCRIPTOR,
   MOCK_PROVIDER_DESCRIPTOR,
   PLANNED_PROVIDER_DESCRIPTORS,
   PROVIDER_DESCRIPTORS,
@@ -45,5 +46,17 @@ export type { PatchAttachment } from "./patch/types";
 export { describeKpm, readKpmInfo } from "./patch/providers/kpm-info";
 export type { KpmInfo } from "./patch/providers/kpm-info";
 export type { ApatchFlavor } from "./patch/providers/apatch-provider";
+export {
+  KERNELSU_CONFIG_ENTRY,
+  KERNELSU_CONFIG_SETTING,
+  KERNELSU_INIT_BACKUP_ENTRY,
+  KERNELSU_INIT_ENTRY,
+  KERNELSU_KMI_SETTING,
+  KERNELSU_MODULE_ENTRY,
+  KERNELSU_MODULE_NAME,
+  KERNELSU_REQUIRED_MANAGER,
+  KernelsuPatchProvider,
+} from "./patch/providers/kernelsu-provider";
+export { KERNELSU_KSUINIT_ID, KERNELSU_KSUINIT_SHA256, KERNELSU_RELEASE } from "./artifacts/catalog";
 export { PatchEngine, createPatchEngine } from "./patch/engine";
 export type { AnalyzedImage, PatchEngineOptions, PatchRunOutcome } from "./patch/engine";

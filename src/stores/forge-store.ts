@@ -22,7 +22,8 @@ export type ForgeStage =
   | "patched"
   | "error";
 
-export interface KpmFile {
+/** A binary payload the user attached: a KernelPatch module or a KernelSU module. */
+export interface AttachmentFile {
   name: string;
   bytes: Uint8Array;
 }
@@ -68,7 +69,7 @@ interface ForgeState {
   selectedProviderId: string | null;
   planResponse: PlanResponse | null;
   providerOptions: PatchOptions | null;
-  kpmFiles: KpmFile[];
+  attachments: AttachmentFile[];
   progress: PatchProgressEvent | null;
   output: ForgeOutput | null;
   error: ImageForgeErrorJson | null;
@@ -78,7 +79,7 @@ interface ForgeState {
   cancelPatch: () => Promise<void>;
   reset: () => Promise<void>;
   dismissError: () => void;
-  setKpmFiles: (files: KpmFile[]) => Promise<void>;
+  setAttachments: (files: AttachmentFile[]) => Promise<void>;
 }
 
 export const useForgeStore = create<ForgeState>((set, get) => ({
@@ -91,7 +92,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
   selectedProviderId: null,
   planResponse: null,
   providerOptions: null,
-  kpmFiles: [],
+  attachments: [],
   progress: null,
   output: null,
   error: null,
@@ -128,6 +129,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     // Re-planning the same provider (for example when an output option changes) keeps the
     // current plan on screen instead of blanking the page while the worker runs.
     const keepPrevious = previous !== null && previous.plan.providerId === providerId;
+    const attachments = get().attachments;
     set({
       stage: "planning",
       isBusy: true,
@@ -136,6 +138,9 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       planResponse: keepPrevious ? previous : null,
       providerOptions: options ?? null,
       output: null,
+      // Payloads belong to the plan that pinned them: a KernelPatch module is meaningless to the
+      // KernelSU provider and the other way round.
+      ...(keepPrevious || attachments.length === 0 ? {} : { attachments: [] }),
     });
     try {
       const planResponse = await active.plan({ providerId, ...(options === undefined ? {} : { options }) });
@@ -160,7 +165,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       progress: { stage: "analyze", progress: 0, message: "Preparing" },
     });
     try {
-      const attachments = state.kpmFiles.map((file) => ({
+      const attachments = state.attachments.map((file) => ({
         id: file.name,
         name: file.name,
         bytes: toStandaloneBuffer(file.bytes),
@@ -234,15 +239,15 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       selectedProviderId: null,
       planResponse: null,
       providerOptions: null,
-      kpmFiles: [],
+      attachments: [],
       progress: null,
       output: null,
       error: null,
     });
   },
 
-  setKpmFiles: async (files) => {
-    set({ kpmFiles: files, error: null });
+  setAttachments: async (files) => {
+    set({ attachments: files, error: null });
     const state = get();
     if (!state.selectedProviderId) return;
     const names = files.map((file) => file.name).join(",");

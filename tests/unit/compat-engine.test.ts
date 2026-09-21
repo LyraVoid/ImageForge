@@ -9,18 +9,18 @@ function setup() {
 }
 
 describe("compatibility engine", () => {
-  it("lists the implemented providers as compatible and the rest as unavailable", async () => {
+  it("lists the implemented providers as compatible and the planned one as unavailable", async () => {
     const { artifacts, providers } = setup();
     const image = parseImage(await buildBootImage({}));
     const result = evaluateCompatibility({ image, providers, artifacts });
 
-    for (const id of ["mock", "apatch"]) {
+    for (const id of ["mock", "apatch", "kernelsu"]) {
       const candidate = result.candidates.find((entry) => entry.providerId === id);
       expect(candidate?.available).toBe(true);
       expect(candidate?.compatible).toBe(true);
     }
 
-    for (const id of ["magisk", "kernelsu"]) {
+    for (const id of ["magisk"]) {
       const candidate = result.candidates.find((entry) => entry.providerId === id);
       expect(candidate?.available).toBe(false);
       expect(candidate?.compatible).toBe(false);

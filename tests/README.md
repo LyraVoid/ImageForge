@@ -37,6 +37,13 @@ skipped (not silently passed) when no image is present. Bundled artifacts
 (`public/wasm/kptools.wasm`, `public/artifacts/apatch/kpimg`) are always checked against
 the digests recorded in the artifact registry.
 
+## Tests that need a real KernelSU module
+
+`tests/integration/kernelsu-real.test.ts` installs KernelSU into a real `init_boot` image with a
+real module and requires the stock `init` to survive as `init.real` byte for byte. KernelSU's
+module is GPL-2.0-only and is never bundled, so the test runs only when a module is supplied through
+`IMAGEFORGE_KERNELSU_MODULE` (default `.research/kernelsu-release/v3.3.0/lkm-aarch64-android15-6.6_kernelsu.ko`).
+
 ## Tests that need a real ramdisk
 
 `tests/integration/ramdisk.test.ts` checks the acceptance criterion of the ramdisk layer against a

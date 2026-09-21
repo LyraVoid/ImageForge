@@ -58,6 +58,30 @@ export const REAL_KPM_PATH = process.env.IMAGEFORGE_TEST_KPM ?? firstModuleOnDis
 
 export const hasRealKpm = REAL_KPM_PATH !== undefined && existsSync(REAL_KPM_PATH);
 
+/** A real init_boot image, used to accept the ramdisk layer and the KernelSU provider. */
+export const INIT_BOOT_IMAGE_PATH =
+  process.env.IMAGEFORGE_INIT_BOOT ?? repoPath(".research", "aster-validation", "init_boot.img");
+
+export const hasInitBootImage = existsSync(INIT_BOOT_IMAGE_PATH);
+
+export function readInitBootImage(): Uint8Array {
+  return new Uint8Array(readFileSync(INIT_BOOT_IMAGE_PATH));
+}
+
+/**
+ * A real KernelSU loadable module. KernelSU's kernel directory is GPL-2.0-only, so no module is
+ * bundled: the test runs only when one is supplied or found next to the workspace.
+ */
+export const KERNELSU_MODULE_PATH =
+  process.env.IMAGEFORGE_KERNELSU_MODULE ??
+  repoPath(".research", "kernelsu-release", "v3.3.0", "lkm-aarch64-android15-6.6_kernelsu.ko");
+
+export const hasKernelsuModule = existsSync(KERNELSU_MODULE_PATH);
+
+export function readKernelsuModule(): Uint8Array {
+  return new Uint8Array(readFileSync(KERNELSU_MODULE_PATH));
+}
+
 /** A small GPL demo module taken from the KernelPatch-Aster 0.13.8 release. */
 export const DEMO_KPM_PATH = repoPath("tests", "fixtures", "kernelpatch", "demo-hello.kpm");
 

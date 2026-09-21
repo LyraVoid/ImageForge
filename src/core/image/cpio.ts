@@ -213,17 +213,21 @@ export function findEntry(archive: CpioArchive, name: string): CpioEntry | undef
   return archive.entries.find((entry) => entry.name === name);
 }
 
-/** Replaces an entry payload, or inserts a new file entry in front of the trailer. */
-export function upsertEntry(archive: CpioArchive, name: string, data: Uint8Array, mode = 0o100644): void {
+/**
+ * Replaces an entry payload (and optionally its mode), or appends a new regular file entry.
+ * Omitting the mode keeps the mode an existing entry already had.
+ */
+export function upsertEntry(archive: CpioArchive, name: string, data: Uint8Array, mode?: number): void {
   const existing = findEntry(archive, name);
   if (existing) {
     existing.data = data;
+    if (mode !== undefined) existing.mode = mode;
     return;
   }
   archive.entries.push({
     name,
     ino: 0,
-    mode,
+    mode: mode ?? 0o100644,
     uid: 0,
     gid: 0,
     nlink: 1,
@@ -235,6 +239,19 @@ export function upsertEntry(archive: CpioArchive, name: string, data: Uint8Array
     check: 0,
     data,
   });
+}
+
+/**
+ * Renames an entry, which is how the KernelSU flow keeps the original init around
+ * (init becomes init.real). Refuses when the target name is taken, so a caller can tell
+ * "already patched" apart from "renaming worked".
+ */
+export function renameEntry(archive: CpioArchive, from: string, to: string): boolean {
+  const entry = findEntry(archive, from);
+  if (!entry) return false;
+  if (findEntry(archive, to)) return false;
+  entry.name = to;
+  return true;
 }
 
 export function removeEntry(archive: CpioArchive, name: string): boolean {

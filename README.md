@@ -24,7 +24,15 @@ Two providers are implemented and self-verifying:
 
 Deliberately honest limits:
 
-* **Magisk and KernelSU are declared but not implemented.** They are `planned` in the
+* **KernelSU (LKM) is the second provider.** It writes the ramdisk the way `ksud` does:
+  `init` becomes `init.real`, a KernelSU init wrapper takes its place, and `kernelsu.ko` is
+  added next to it. It targets `init_boot.img` (GKI 13+) or a `boot.img` that carries a
+  ramdisk, refuses a ramdisk Magisk already patched, and requires the module to match the device
+  KMI (read from the kernel banner when the image has one, otherwise selected). The module is
+  **supplied by the user**: KernelSU's kernel directory is GPL-2.0-only, which cannot be
+  combined with this project's AGPL-3.0-or-later licence, so ImageForge verifies it and reports
+  what it declares instead of shipping it.
+* **Magisk is declared but not implemented.** It is `planned` in the
   registry; both need CPIO read/write and the full compression matrix first, and their
   upstream sources and licenses must be read from the current revision before implementing.
 * **APatch patches arm64 kernels in uncompressed, gzip or LZ4 containers.** The kernel is

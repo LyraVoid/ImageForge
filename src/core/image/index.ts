@@ -5,6 +5,7 @@ export {
   isCpio,
   parseCpio,
   removeEntry,
+  renameEntry,
   serializeCpio,
   upsertEntry,
 } from "./cpio";
@@ -13,6 +14,8 @@ export { decodeRamdisk, encodeRamdisk, ramdiskDecodesTo } from "./ramdisk";
 export type { DecodedRamdisk } from "./ramdisk";
 export { buildImageReport } from "./report";
 export { KNOWN_KMIS, kmiFromRelease, readKernelRelease } from "./kernelrelease";
+export { machineName, readElfObject, readModuleInfo } from "./elf";
+export type { ElfObject, ModuleInfo } from "./elf";
 export type { ImageReport, ReportField, ReportGroup } from "./report";
 export { detectImageFormat, parseImage, tryParseImage, assertBootImage } from "./bootimage/parser";
 export type { ParseOptions } from "./bootimage/parser";

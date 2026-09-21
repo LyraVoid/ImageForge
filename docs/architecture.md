@@ -39,6 +39,26 @@ never parses a raw `boot.img` itself.
 6. **Bundled artifacts are digest verified before execution.** `loadVerifiedPayload`
    refuses bytes whose SHA-256 differs from the registry entry.
 
+## KernelSU (LKM) provider
+
+    init_boot.img (or a boot.img with a ramdisk)
+      -> Image Engine extracts the ramdisk section
+      -> decompress (LZ4 legacy / LZ4 frame / gzip) -> CPIO newc
+      -> checks: not already Magisk patched, module pinned by the plan, module declares name=kernelsu,
+         module vermagic matches the kernel version implied by the KMI
+      -> init -> init.real, add init (ksuinit, 0755), add kernelsu.ko (0755), optional ksu_config
+      -> serialise CPIO -> recompress in the original container -> Image Engine repacks the image
+      -> verification reads the produced ramdisk back and requires init and kernelsu.ko to be there
+
+The KMI decides which module is loadable (GKI keeps the module ABI stable within one). It is read
+from the kernel banner when the image carries a kernel, and has to be selected for `init_boot.img`,
+which carries none; a selection that contradicts the banner is refused rather than trusted.
+
+The module itself is never bundled: KernelSU's `kernel/` directory is GPL-2.0-only, which cannot be
+combined with this project's AGPL-3.0-or-later licence. The user attaches it, and the provider
+reads its `.modinfo` so the licence, name and vermagic of what ends up inside the produced image
+are recorded in the result.
+
 ## Ramdisk layer
 
 Android ramdisks are CPIO `newc` archives, usually inside a gzip or LZ4 container:
