@@ -48,6 +48,18 @@ describe("bundled artifacts", () => {
     expect(await sha256Hex(bytes)).toBe(APATCH_KPIMG_ASTER_SHA256);
   });
 
+  it("ships a KernelSU loadable module for every KMI, digest verified", async () => {
+    const release = registry.resolve({ providerId: "kernelsu", artifactId: "kernelsu-lkm-android15-6.6" }).release;
+    const modules = release.artifacts.filter((artifact) => artifact.type === "loadable-module");
+
+    expect(modules.length).toBeGreaterThanOrEqual(8);
+    for (const module of modules) {
+      const bytes = await registry.loadVerifiedPayload(module);
+      expect(bytes.length).toBe(module.sizeBytes);
+      expect(await sha256Hex(bytes)).toBe(module.sha256);
+    }
+  });
+
   it("matches the shipped kptools WebAssembly digest", async () => {
     const artifact = registry.resolve({ providerId: "apatch", artifactId: APATCH_KPTOOLS_ID }).artifact;
     const bytes = await registry.loadVerifiedPayload(artifact);

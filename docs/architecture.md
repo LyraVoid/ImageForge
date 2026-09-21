@@ -54,10 +54,12 @@ The KMI decides which module is loadable (GKI keeps the module ABI stable within
 from the kernel banner when the image carries a kernel, and has to be selected for `init_boot.img`,
 which carries none; a selection that contradicts the banner is refused rather than trusted.
 
-The module itself is never bundled: KernelSU's `kernel/` directory is GPL-2.0-only, which cannot be
-combined with this project's AGPL-3.0-or-later licence. The user attaches it, and the provider
-reads its `.modinfo` so the licence, name and vermagic of what ends up inside the produced image
-are recorded in the result.
+One module per KMI is bundled and used by default, and a module supplied by the user overrides it.
+The modules come from KernelSU's `kernel/` directory, which is GPL-2.0-only, so they are
+redistributed the way KernelSU itself redistributes them: as separate, unmodified programs under
+their own licence, never linked into this AGPL-3.0-or-later project (`THIRD_PARTY_LICENSES/kernelsu/`).
+Whichever module is used, the provider reads its `.modinfo` and checks the kernel version it was
+built for against the KMI, and the result records its name, licence and vermagic.
 
 ## Ramdisk layer
 

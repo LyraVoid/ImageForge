@@ -5,10 +5,12 @@ import {
   KERNELSU_KMI_SETTING,
   KERNELSU_MODULE_ENTRY,
   KERNELSU_REQUIRED_MANAGER,
+  KNOWN_KMIS,
   ARTIFACT_CATALOG,
   createArtifactRegistry,
   createPatchEngine,
 } from "@/core";
+import { sha256Hex } from "@/core/hash";
 import { PatchError } from "@/core/errors";
 import { assertBootImage, decodeRamdisk, findEntry, parseImage, sectionOf } from "@/core/image";
 import { buildModuleObject } from "../fixtures/elf";
@@ -78,6 +80,46 @@ describe("KernelSU provider", () => {
       expect(embedded.mode & 0o777).toBe(0o755);
       expect(embedded.data.length).toBe(module.length);
       expect(findEntry(archive, "dev/null")).toBeDefined();
+    },
+    TIMEOUT,
+  );
+
+  it(
+    "uses the module this build ships when nothing is attached",
+    async () => {
+      const image = await buildBootImage({ kernel: null, ramdisk: stockRamdisk() });
+      const analyzed = await engine.analyze(image);
+      const outcome = await engine.run(analyzed.image, analyzed.sha256, "kernelsu", {
+        configuration: { [KERNELSU_KMI_SETTING]: KMI },
+      });
+
+      expect(outcome.verification.verification.valid).toBe(true);
+      expect(outcome.result.metadata.moduleOrigin).toBe("bundled (kernelsu-lkm-android15-6.6)");
+      expect(outcome.result.metadata.moduleLicense).toBe("GPL");
+      expect(outcome.result.metadata.moduleVermagic).toContain("6.6");
+
+      const archive = await ramdiskOf(outcome.result.bytes);
+      const embedded = findEntry(archive, KERNELSU_MODULE_ENTRY);
+      if (!embedded) throw new Error("the bundled module was not embedded");
+      expect(await sha256Hex(embedded.data)).toBe(
+        "c31d994aaf285e7bf4cf1ec38c2bbf2d7f303d1a4a7d616405bcd9f850d684e5",
+      );
+    },
+    TIMEOUT,
+  );
+
+  it(
+    "has a module for every KMI it offers",
+    async () => {
+      const analyzed = await engine.analyze(await buildBootImage({ kernel: null, ramdisk: stockRamdisk() }));
+      for (const kmi of KNOWN_KMIS) {
+        const plan = await engine.providers.get("kernelsu")?.resolve(
+          analyzed.image,
+          { configuration: { [KERNELSU_KMI_SETTING]: kmi } },
+          analyzed.sha256,
+        );
+        expect(plan?.configuration.moduleArtifact).toBe("kernelsu-lkm-" + kmi);
+      }
     },
     TIMEOUT,
   );

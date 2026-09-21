@@ -33,8 +33,37 @@ export const KERNELSU_KSUINIT_ID = "kernelsu-ksuinit";
 
 export const KERNELSU_KSUINIT_SHA256 = "b49fff3252cdcd14bf80472becbd96c4f17028a632b364e8d455d335b94f1345";
 
-/** The KernelSU release the wrapper is taken from. */
+/** The KernelSU release the wrapper and the loadable modules are taken from. */
 export const KERNELSU_RELEASE = "v3.3.0";
+
+/**
+ * The loadable module for a KMI. GKI keeps the module ABI stable within one, which is why
+ * KernelSU publishes one build per KMI instead of one per kernel version.
+ */
+export function kernelsuLkmId(kmi: string): string {
+  return "kernelsu-lkm-" + kmi;
+}
+
+/** The file name the release publishes for a KMI, kept verbatim so it stays traceable. */
+export function kernelsuLkmSourceName(kmi: string): string {
+  return "lkm-aarch64-" + kmi + "_kernelsu.ko";
+}
+
+/**
+ * The loadable modules bundled with this build. They are built from KernelSU's kernel directory,
+ * which is GPL-2.0-only, and are redistributed unmodified as separate programs with their own
+ * licence; see THIRD_PARTY_LICENSES/kernelsu/.
+ */
+const KERNELSU_LKM: Array<{ kmi: string; sha256: string; sizeBytes: number }> = [
+  { kmi: "android12-5.10", sha256: "5ca70d239f955139db23cd3028e578975cd038a7f2dc5f54ab4498a13f7ce03a", sizeBytes: 349936 },
+  { kmi: "android13-5.10", sha256: "2bf61d77d1aac8c2cf01be5d6943bcb2b3f6a31ba127f4e2ce914c713ad24e80", sizeBytes: 345952 },
+  { kmi: "android13-5.15", sha256: "251411414ea3b05b045c0aa93c75fe77713d11f732b97c8f375987307a90f003", sizeBytes: 160949 },
+  { kmi: "android14-5.15", sha256: "9839ade0184687d20e05b1c7fd1c56043358eb468a0bff1fb11971bb78efbccb", sizeBytes: 470008 },
+  { kmi: "android14-6.1", sha256: "db47d831e5a61bc4ca1563915ac1c61cd40ceda7dc6c3d19a9572dfdce72d14c", sizeBytes: 386600 },
+  { kmi: "android15-6.6", sha256: "c31d994aaf285e7bf4cf1ec38c2bbf2d7f303d1a4a7d616405bcd9f850d684e5", sizeBytes: 315176 },
+  { kmi: "android16-6.12", sha256: "877286f81d500c4ec546c96e9718c186b7379573c97ba5d5a35dd9a91465d076", sizeBytes: 386624 },
+  { kmi: "android17-6.18", sha256: "adc743246822b3ea96c218425d4208aed2436805a73d2f3e8ed78cfa8602cadf", sizeBytes: 357304 },
+];
 
 export const ARTIFACT_CATALOG: ArtifactCatalog = {
   schemaVersion: 1,
@@ -63,7 +92,7 @@ export const ARTIFACT_CATALOG: ArtifactCatalog = {
       release: KERNELSU_RELEASE,
       releasedAt: "2026-08-28T00:00:00.000Z",
       notes:
-        "Official KernelSU release. Only the userspace init wrapper (ksuinit, GPL-3.0-or-later) is bundled. The loadable module (lkm-aarch64-{kmi}_kernelsu.ko) is built from the kernel directory and is GPL-2.0-only, which cannot be combined with this project's AGPL-3.0-or-later licence, so it is supplied by the user and verified before use. Loadable modules are published per KMI because GKI keeps the module ABI stable within one.",
+        "Official KernelSU release. It ships two separately licensed components, and both are bundled here unmodified: the userspace init wrapper (ksuinit, GPL-3.0-or-later) and one loadable module per KMI (built from KernelSU's kernel directory, GPL-2.0-only). Each keeps its own licence; see THIRD_PARTY_LICENSES/kernelsu/ for the record and the corresponding source. Modules are published per KMI because GKI keeps the module ABI stable within one, so a module built for one kernel version loads on another version of the same KMI.",
       artifacts: [
         {
           id: KERNELSU_KSUINIT_ID,
@@ -74,6 +103,16 @@ export const ARTIFACT_CATALOG: ArtifactCatalog = {
           source: "bundled:/artifacts/kernelsu/ksuinit",
           sizeBytes: 607360,
         },
+        // One module per KMI, redistributed unmodified under its own licence.
+        ...KERNELSU_LKM.map((module) => ({
+          id: kernelsuLkmId(module.kmi),
+          version: KERNELSU_RELEASE + " (" + module.kmi + ")",
+          type: "loadable-module",
+          architecture: "arm64",
+          sha256: module.sha256,
+          source: "bundled:/artifacts/kernelsu/" + kernelsuLkmSourceName(module.kmi),
+          sizeBytes: module.sizeBytes,
+        })),
       ],
     },
     {

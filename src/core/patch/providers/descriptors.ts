@@ -53,7 +53,7 @@ export const KERNELSU_PROVIDER_DESCRIPTOR: PatchProviderDescriptor = {
   website: "https://github.com/tiann/KernelSU",
   notes: [
     "Injects the module into the ramdisk of init_boot.img (GKI 13+) or of a boot.img that carries one, exactly as ksud does: init becomes init.real, a new init (ksuinit) is added, and kernelsu.ko is added next to it.",
-    "The loadable module has to match the device KMI (for example android15-6.6) and is supplied by the user, because KernelSU's kernel directory is GPL-2.0-only and cannot be bundled with this AGPL-3.0-or-later project. The provider verifies it before use.",
+    "The build ships one loadable module per KMI (GPL-2.0-only, redistributed unmodified as a separate program with its own licence; see THIRD_PARTY_LICENSES/kernelsu/). A module supplied by the user overrides the bundled one, and either way its .modinfo and the kernel version it was built for are checked before anything is written.",
     "The KMI is read from the kernel banner when the image carries a kernel, and can be selected otherwise; init_boot.img carries no kernel, so there it has to be selected.",
     "Refuses a ramdisk that is already patched by Magisk, and reports when KernelSU is already installed.",
     "The KernelSU manager app (me.weishu.kernelsu) has to be installed on the device.",

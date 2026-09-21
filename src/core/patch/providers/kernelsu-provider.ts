@@ -1,5 +1,6 @@
 import type { ArtifactRegistry } from "../../artifacts/registry";
-import { KERNELSU_KSUINIT_ID } from "../../artifacts/catalog";
+import { KERNELSU_KSUINIT_ID, kernelsuLkmId } from "../../artifacts/catalog";
+import type { PatchArtifact } from "../../artifacts/types";
 import { AbortedError, IncompatibleProviderError, PatchError } from "../../errors";
 import { sha256Hex } from "../../hash";
 import {
@@ -128,6 +129,19 @@ export class KernelsuPatchProvider implements PatchProvider {
     };
   }
 
+  /**
+   * The module this build ships for a KMI. KernelSU publishes one per KMI, so for every KMI in
+   * the known list there is a module to use; a user supplied module overrides it.
+   */
+  private bundledModule(kmi: string): PatchArtifact | undefined {
+    if (kmi === "" || kmi === "unset") return undefined;
+    try {
+      return this.artifacts.resolve({ providerId: this.id, artifactId: kernelsuLkmId(kmi) }).artifact;
+    } catch {
+      return undefined;
+    }
+  }
+
   private loadRamdisk(image: ParsedImage): { bytes: Uint8Array; descriptor: CompressionDescriptor } {
     if (image.format === "vendor_boot") {
       throw new IncompatibleProviderError(
@@ -203,6 +217,7 @@ export class KernelsuPatchProvider implements PatchProvider {
 
     const carriedModules = planContext?.attachmentNames ?? [];
     const plannedModules = carriedModules.length > 0 ? carriedModules : readFlags(options.configuration?.["modules"]);
+    const bundled = this.bundledModule(kmi.kmi);
     const configFlags = readFlags(options.configuration?.[KERNELSU_CONFIG_SETTING]);
     const preserveImageSize = (options.configuration?.preserveImageSize ?? "false") === "true";
 
@@ -225,7 +240,14 @@ export class KernelsuPatchProvider implements PatchProvider {
         initEntry: KERNELSU_INIT_ENTRY,
         initBackupEntry: KERNELSU_INIT_BACKUP_ENTRY,
         moduleEntry: KERNELSU_MODULE_ENTRY,
-        moduleSource: plannedModules.length === 0 ? "none" : plannedModules.join(","),
+        moduleSource:
+          plannedModules.length > 0
+            ? "supplied: " + plannedModules.join(",")
+            : bundled === undefined
+              ? "unset"
+              : "bundled: " + bundled.id,
+        moduleArtifact: bundled?.id ?? "none",
+        moduleDigest: bundled?.sha256 ?? "none",
         ksuConfig: configFlags.length === 0 ? "none" : configFlags.join(" "),
         requiredManager: KERNELSU_REQUIRED_MANAGER,
         ramdiskCompression: COMPRESSION_LABEL[ramdisk.descriptor.format],
@@ -241,13 +263,23 @@ export class KernelsuPatchProvider implements PatchProvider {
         kmi.kmi === "unset"
           ? "No device KMI is selected yet. Pick it on the patch page before starting: init_boot.img carries no kernel, so it cannot be read from the image."
           : "The KMI is " + kmi.kmi + " (" + kmi.source + ").",
-        plannedModules.length === 0
-          ? "No KernelSU module is attached yet: attach the {kmi}_kernelsu.ko file that matches this KMI before starting the patch."
-          : "The attached module " +
-            plannedModules.join(", ") +
-            " is written to the ramdisk as " +
-            KERNELSU_MODULE_ENTRY +
-            ". Its licence is the user's responsibility (KernelSU's kernel directory is GPL-2.0-only).",
+        bundled === undefined
+          ? plannedModules.length === 0
+            ? "No KernelSU module is available for this KMI yet: select a KMI this build ships a module for, or attach one."
+            : "The attached module " + plannedModules.join(", ") + " is written to the ramdisk as " + KERNELSU_MODULE_ENTRY + "."
+          : plannedModules.length > 0
+            ? "The attached module " +
+              plannedModules.join(", ") +
+              " replaces the bundled " +
+              bundled.id +
+              " and is written to the ramdisk as " +
+              KERNELSU_MODULE_ENTRY +
+              "."
+            : "The bundled module " +
+              bundled.id +
+              " is written to the ramdisk as " +
+              KERNELSU_MODULE_ENTRY +
+              " (GPL-2.0-only, see THIRD_PARTY_LICENSES/kernelsu/).",
         "A ramdisk that Magisk already patched is refused, like ksud does.",
         "Reproducible for the pinned ksuinit artifact: the same input and module yield the same ramdisk.",
       ],
@@ -282,15 +314,9 @@ export class KernelsuPatchProvider implements PatchProvider {
     }
 
     const attachments = context.attachments ?? [];
-    const planned = (plan.configuration.moduleSource ?? "none") === "none"
-      ? []
-      : (plan.configuration.moduleSource ?? "").split(",").filter((name) => name !== "");
-    if (planned.length === 0) {
-      throw new PatchError(
-        "The plan does not pin a KernelSU module, so there is nothing to embed.",
-        "Attach the module that matches the device KMI and plan again.",
-      );
-    }
+    const planned = (plan.configuration.moduleSource ?? "").startsWith("supplied: ")
+      ? (plan.configuration.moduleSource ?? "").slice("supplied: ".length).split(",").filter((name) => name !== "")
+      : [];
     for (const attachment of attachments) {
       if (!planned.includes(attachment.name)) {
         throw new PatchError(
@@ -299,25 +325,7 @@ export class KernelsuPatchProvider implements PatchProvider {
         );
       }
     }
-    const module = attachments[0];
-    if (!module) {
-      throw new PatchError(
-        "The KernelSU module was planned but no module was attached to this run.",
-        "Attach the module that matches the device KMI and try again.",
-      );
-    }
-
-    const moduleInfo = readModuleInfo(module.bytes);
-    if (moduleInfo.name !== KERNELSU_MODULE_NAME) {
-      throw new PatchError(
-        "The attached module declares name=" + String(moduleInfo.name) + " instead of " + KERNELSU_MODULE_NAME + ".",
-        "That file is not a KernelSU loadable module.",
-      );
-    }
-
-    // The KMI pins the kernel version, and a module records the version it was built against in
-    // its vermagic. Comparing them catches a module picked for the wrong KMI, which would not
-    // load and would leave the device unable to boot.
+    // The KMI decides which module is loadable, so it has to be known before anything is chosen.
     const kmiValue = plannedKmi(plan.configuration);
     if (kmiValue === "") {
       throw new PatchError(
@@ -325,6 +333,45 @@ export class KernelsuPatchProvider implements PatchProvider {
         "Select the device KMI (for example android15-6.6) before starting the patch.",
       );
     }
+
+    // A supplied module overrides the bundled one; otherwise the bundled module for this KMI is
+    // used, which is why nothing has to be attached for the common case.
+    const supplied = attachments[0];
+    let moduleBytes: Uint8Array;
+    let moduleOrigin: string;
+    if (supplied) {
+      moduleBytes = supplied.bytes;
+      moduleOrigin = "supplied (" + supplied.name + ")";
+    } else {
+      const artifactId = plan.configuration.moduleArtifact ?? "none";
+      if (artifactId === "none") {
+        const bundled = this.bundledModule(kmiValue);
+        if (!bundled) {
+          throw new PatchError(
+            "This build has no KernelSU module for " + kmiValue + ".",
+            "Select a KMI this build ships a module for, or attach the module yourself.",
+          );
+        }
+      }
+      const artifact = this.artifacts.resolve({
+        providerId: this.id,
+        artifactId: plan.configuration.moduleArtifact ?? kernelsuLkmId(kmiValue),
+      }).artifact;
+      moduleBytes = await this.artifacts.loadVerifiedPayload(artifact);
+      moduleOrigin = "bundled (" + artifact.id + ")";
+    }
+
+    const moduleInfo = readModuleInfo(moduleBytes);
+    if (moduleInfo.name !== KERNELSU_MODULE_NAME) {
+      throw new PatchError(
+        "The attached module declares name=" + String(moduleInfo.name) + " instead of " + KERNELSU_MODULE_NAME + ".",
+        "That file is not a KernelSU loadable module.",
+      );
+    }
+
+    // A module records the kernel version it was built against in its vermagic. Comparing it with
+    // the KMI catches a module picked for the wrong one, which would not load and would leave the
+    // device unable to boot.
     const kmiVersion = kmiValue.includes("-") ? (kmiValue.split("-")[1] ?? "") : "";
     const moduleKernel = (moduleInfo.vermagic ?? "").split(" ")[0] ?? "";
     if (kmiVersion !== "" && moduleKernel !== "" && !moduleKernel.startsWith(kmiVersion + ".")) {
@@ -362,7 +409,7 @@ export class KernelsuPatchProvider implements PatchProvider {
     }
 
     upsertEntry(archive, KERNELSU_INIT_ENTRY, ksuinitBytes, 0o100755);
-    upsertEntry(archive, KERNELSU_MODULE_ENTRY, module.bytes, 0o100755);
+    upsertEntry(archive, KERNELSU_MODULE_ENTRY, moduleBytes, 0o100755);
 
     const configFlags = readFlags(plan.configuration.ksuConfig);
     if (configFlags.length === 0) removeEntry(archive, KERNELSU_CONFIG_ENTRY);
@@ -378,7 +425,7 @@ export class KernelsuPatchProvider implements PatchProvider {
       ...(plan.configuration.preserveImageSize === "true" ? { padTo: image.totalSize } : {}),
     });
     const sha256 = await sha256Hex(outcome.bytes);
-    const moduleSha256 = await sha256Hex(module.bytes);
+    const moduleSha256 = await sha256Hex(moduleBytes);
     const ksuinitSha256 = await sha256Hex(ksuinitBytes);
     const ramdiskSectionSha256 = await sha256Hex(encoded);
 
@@ -404,8 +451,8 @@ export class KernelsuPatchProvider implements PatchProvider {
         kmi: plan.configuration.kmi ?? "unknown",
         kmiSource: plan.configuration.kmiSource ?? "unknown",
         moduleEntry: KERNELSU_MODULE_ENTRY,
-        moduleSource: module.name,
-        moduleSize: String(module.bytes.length),
+        moduleOrigin,
+        moduleSize: String(moduleBytes.length),
         moduleSha256,
         moduleDeclaredName: moduleInfo.name ?? "unknown",
         moduleVermagic: moduleInfo.vermagic ?? "unknown",

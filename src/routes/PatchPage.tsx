@@ -335,7 +335,7 @@ export function PatchPage() {
               />
               <Button variant="secondary" onClick={() => kpmInputRef.current?.click()}>
                 <Layers />
-                {chosenKmi() === "" ? "Attach the KernelSU module" : "Attach " + chosenKmi() + "_kernelsu.ko"}
+                {chosenKmi() === "" ? "Override the bundled module" : "Override with " + chosenKmi() + "_kernelsu.ko"}
               </Button>
               <Badge variant={attachments.length > 0 ? "primary" : "neutral"}>
                 {attachments.length === 0
@@ -349,10 +349,9 @@ export function PatchPage() {
               ) : null}
             </div>
             <p className="text-[11px] leading-4 text-muted-foreground">
-              Select the KMI first, then attach the matching file from the KernelSU releases: it is named{" "}
-              <code className="mx-1">{chosenKmi() === "" ? "{kmi}_kernelsu.ko" : chosenKmi() + "_kernelsu.ko"}</code>
-              . KernelSU's kernel directory is GPL-2.0-only, so ImageForge verifies the module instead of shipping
-              it. Find the KMI with
+              This build already ships the module for the selected KMI and uses it by default; attaching one
+              (named <code className="mx-1">{chosenKmi() === "" ? "{kmi}_kernelsu.ko" : chosenKmi() + "_kernelsu.ko"}</code>
+              ) overrides it. Find the KMI with
               <code className="mx-1">uname -r</code> on the device: 6.6.118-android15-... means android15-6.6.
             </p>
           </CardContent>

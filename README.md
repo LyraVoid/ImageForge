@@ -28,10 +28,11 @@ Deliberately honest limits:
   `init` becomes `init.real`, a KernelSU init wrapper takes its place, and `kernelsu.ko` is
   added next to it. It targets `init_boot.img` (GKI 13+) or a `boot.img` that carries a
   ramdisk, refuses a ramdisk Magisk already patched, and requires the module to match the device
-  KMI (read from the kernel banner when the image has one, otherwise selected). The module is
-  **supplied by the user**: KernelSU's kernel directory is GPL-2.0-only, which cannot be
-  combined with this project's AGPL-3.0-or-later licence, so ImageForge verifies it and reports
-  what it declares instead of shipping it.
+  KMI (read from the kernel banner when the image has one, otherwise selected). One loadable
+  module per KMI is bundled and used by default; a module supplied by the user overrides it. The
+  modules are built from KernelSU's kernel directory, which is GPL-2.0-only, so they are
+  redistributed unmodified as separate programs with their own licence record
+  (`THIRD_PARTY_LICENSES/kernelsu/`) rather than being linked into this AGPL-3.0-or-later project.
 * **Magisk is declared but not implemented.** It is `planned` in the
   registry; both need CPIO read/write and the full compression matrix first, and their
   upstream sources and licenses must be read from the current revision before implementing.
