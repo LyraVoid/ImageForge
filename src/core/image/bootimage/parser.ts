@@ -1,4 +1,4 @@
-import { align, readAscii } from "../../binary";
+import { align, isAllZero, readAscii, startsWith } from "../../binary";
 import { ImageParseError, UnsupportedImageError, type ImageForgeError } from "../../errors";
 import { detectKernelArchitecture } from "../architecture";
 import type {
@@ -30,6 +30,9 @@ interface Region {
   offset: number;
   size: number;
 }
+
+/** AVB vbmeta structures start with this magic ("AVB0"). */
+export const AVB_MAGIC: readonly number[] = [0x41, 0x56, 0x42, 0x30];
 
 function region(name: SectionName, offset: number, size: number): Region {
   return { name, offset, size };
@@ -119,19 +122,34 @@ function parseBootImage(bytes: Uint8Array, header: BootImageHeaderFields, warnin
   if (header.headerVersion >= 3) {
     const sections: ImageSection[] = [];
     const end = bytes.length - header.signatureSize;
-    if (cursor < end) {
-      sections.push(...collect(bytes, [region("bootconfig", cursor, end - cursor)], warnings));
-      if (header.signatureSize === 0) {
-        warnings.push(
-          "The bootconfig region is inferred from the trailing bytes because boot headers do not record its size.",
-        );
-      }
-    }
+
     if (header.signatureSize > 0) {
       sections.push(
         ...collect(bytes, [region("signature", bytes.length - header.signatureSize, header.signatureSize)], warnings),
       );
     }
+
+    if (cursor < end) {
+      const trailing = bytes.subarray(cursor, end);
+      if (startsWith(trailing, AVB_MAGIC)) {
+        // Real GKI boot images keep the AVB vbmeta blob right after the kernel even
+        // though signature_size is 0. It is not a bootconfig section.
+        sections.push(...collect(bytes, [region("signature", cursor, end - cursor)], warnings));
+        warnings.push(
+          "An AVB vbmeta blob follows the kernel while signature_size is 0; it was reported as a signature region instead of bootconfig. Any modification invalidates it.",
+        );
+      } else if (isAllZero(trailing)) {
+        warnings.push(end - cursor + " trailing bytes after the last section are all zero padding.");
+      } else {
+        sections.push(...collect(bytes, [region("bootconfig", cursor, end - cursor)], warnings));
+        if (header.signatureSize === 0) {
+          warnings.push(
+            "The bootconfig region is inferred from the trailing bytes because boot headers do not record its size.",
+          );
+        }
+      }
+    }
+
     const ordered = [...collect(bytes, regions, warnings), ...sections];
     return assembleBootImage(bytes, header, ordered, page, warnings);
   }

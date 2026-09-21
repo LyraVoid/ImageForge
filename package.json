@@ -13,9 +13,11 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "wasm:build": "bash scripts/build-wasm.sh"
+    "wasm:build": "bash scripts/build-wasm.sh",
+    "wasm:build:kptools": "bash scripts/build-kptools-wasm.sh"
   },
   "dependencies": {
+    "@bjorn3/browser_wasi_shim": "^0.4.2",
     "@radix-ui/react-dialog": "^1.1.23",
     "@radix-ui/react-dropdown-menu": "^2.1.24",
     "@radix-ui/react-progress": "^1.1.16",

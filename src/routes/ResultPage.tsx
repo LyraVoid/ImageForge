@@ -91,10 +91,19 @@ export function ResultPage() {
       </Card>
 
       <div className="rounded-lg border border-info/30 bg-info-muted px-4 py-3">
-        <p className="text-[11px] leading-4 text-muted-foreground">
-          Produced by the Mock Provider. This output demonstrates the pipeline, not a root solution: it
-          rewrites the kernel cmdline and the bootconfig manifest. Flashing it will not grant root.
-        </p>
+        {output.plan.providerId === "mock" ? (
+          <p className="text-[11px] leading-4 text-muted-foreground">
+            Produced by the Mock Provider. This output demonstrates the pipeline, not a root solution: it
+            rewrites the kernel cmdline and the bootconfig manifest. Flashing it will not grant root.
+          </p>
+        ) : (
+          <p className="text-[11px] leading-4 text-muted-foreground">
+            Produced by {output.plan.providerName}
+            {output.metadata.kpimgVersion ? " with KernelPatch " + output.metadata.kpimgVersion : ""}. Only the
+            kernel section was modified. The AVB signature was dropped, so verified boot will fail unless the
+            image is re-signed or verification is disabled. ImageForge never flashes a device.
+          </p>
+        )}
       </div>
 
       {warningEntries.length > 0 ? (

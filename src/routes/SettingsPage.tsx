@@ -1,6 +1,6 @@
 import { ExternalLink, Layers, MemoryStick, Terminal } from "lucide-react";
 import { useEffect, useState } from "react";
-import { PLANNED_PROVIDER_DESCRIPTORS, MOCK_PROVIDER_DESCRIPTOR, ARTIFACT_CATALOG, MAX_SUPPORTED_IMAGE_BYTES } from "@/core";
+import { ARTIFACT_CATALOG, MAX_SUPPORTED_IMAGE_BYTES, PROVIDER_DESCRIPTORS } from "@/core";
 import type { PatchProviderDescriptor } from "@/core";
 import { KeyValueList } from "@/components/app/key-value-list";
 import { Badge } from "@/components/ui/badge";
@@ -197,10 +197,10 @@ export function SettingsPage() {
           </div>
         </CardHeader>
         <CardContent className="divide-y divide-border">
-          <ProviderRow descriptor={MOCK_PROVIDER_DESCRIPTOR} />
-          {PLANNED_PROVIDER_DESCRIPTORS.map((descriptor) => (
+          {PROVIDER_DESCRIPTORS.map((descriptor) => (
             <ProviderRow key={descriptor.id} descriptor={descriptor} />
           ))}
+
         </CardContent>
       </Card>
 

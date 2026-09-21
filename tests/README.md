@@ -24,6 +24,19 @@ covering every layout:
 The builders are written directly against the byte layout, so the parser is not tested
 against its own encoder.
 
+## Tests that need a real image
+
+Kernel patching cannot be validated with synthetic kernels: KernelPatch needs real
+kallsyms data. Those tests are skipped unless a real image is available, either at
+`.research/images/gki-a13-5.10/boot-5.10.img` or pointed to by `IMAGEFORGE_TEST_IMAGE`:
+
+    IMAGEFORGE_TEST_IMAGE=/path/to/boot.img pnpm test
+
+They exercise the full APatch pipeline, including the WebAssembly KernelPatch run, and are
+skipped (not silently passed) when no image is present. Bundled artifacts
+(`public/wasm/kptools.wasm`, `public/artifacts/apatch/kpimg`) are always checked against
+the digests recorded in the artifact registry.
+
 ## Environment
 
 The default Vitest environment is `node`; the UI smoke test opts into jsdom with a

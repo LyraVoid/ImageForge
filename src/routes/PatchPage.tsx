@@ -66,11 +66,14 @@ export function PatchPage() {
           <Info className="mt-0.5 size-3.5 shrink-0 text-info" aria-hidden />
           <div className="space-y-1">
             <p className="text-xs font-medium text-foreground">
-              This build only implements the Mock Provider.
+              {plan.providerId === "mock"
+                ? "This is the Mock Provider."
+                : "This runs the upstream " + plan.providerName + " implementation."}
             </p>
             <p className="text-[11px] leading-4 text-muted-foreground">
-              It rewrites the kernel cmdline and writes a bootconfig manifest so the pipeline can be verified
-              end to end. It does not root a device and never claims to be Magisk, KernelSU or APatch.
+              {plan.providerId === "mock"
+                ? "It rewrites the kernel cmdline and writes a bootconfig manifest so the pipeline can be verified end to end. It does not root a device."
+                : "KernelPatch is injected into the kernel image inside boot.img by the upstream kptools build running in WebAssembly. The ramdisk is untouched, the original AVB signature is dropped, and flashing the result is your responsibility."}
             </p>
           </div>
         </div>

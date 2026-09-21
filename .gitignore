@@ -24,5 +24,8 @@ coverage/
 crates/*/target/
 target/
 
+# wasm build scratch space (wasi-sdk, zlib, KernelPatch checkout)
+.wasm-build/
+
 # research notes, intentionally kept out of version control
 .research/

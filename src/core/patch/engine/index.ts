@@ -82,10 +82,11 @@ export class PatchEngine {
     options: PatchOptions,
     context: PatchRunContext = {},
   ): Promise<PatchRunOutcome> {
+    const runContext: PatchRunContext = { ...context, options };
     const plan = await this.plan({ image, sourceImageSha256, providerId, options });
-    const result = await this.execute(image, plan, context);
-    const verification = await this.verify(result, context);
-    context.onProgress?.({ stage: "complete", progress: 100, message: "Patch complete" });
+    const result = await this.execute(image, plan, runContext);
+    const verification = await this.verify(result, runContext);
+    runContext.onProgress?.({ stage: "complete", progress: 100, message: "Patch complete" });
     return { plan, result, verification };
   }
 }

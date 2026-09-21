@@ -12,6 +12,11 @@ export interface PatchProgressEvent {
 export interface PatchRunContext {
   onProgress?: (event: PatchProgressEvent) => void;
   signal?: AbortSignal;
+  /**
+   * Options the caller passed for this run. Providers read settings that must not be
+   * persisted in the plan (such as a superkey) from here.
+   */
+  options?: PatchOptions;
 }
 
 export interface PatchAnalysis {
@@ -86,4 +91,6 @@ export interface PatchProviderDescriptor {
   supportedFormats: ImageFormat[];
   supportedHeaderVersions: number[];
   supportedArchitectures: string[];
+  requiresKernel: boolean;
+  requiresRamdisk: boolean;
 }

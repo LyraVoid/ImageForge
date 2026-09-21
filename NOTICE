@@ -19,8 +19,14 @@ Third-party components
 The distributed npm dependencies keep their own licenses; their license texts ship inside
 node_modules and are not modified by this project.
 
-ImageForge interoperates conceptually with the following upstream projects. No code from
-them is bundled in this build:
+ImageForge bundles the following upstream artifacts, each recorded with its pinned
+revision and SHA-256 digest in THIRD_PARTY_LICENSES/:
+
+  * KernelPatch (GPL-2.0-or-later) - public/wasm/kptools.wasm, compiled from
+    revision 72a904c412754e25f54353c30f31f5c884ed0673
+  * APatch (GPL-3.0-or-later) - public/artifacts/apatch/kpimg, taken from release 11224
+
+The following upstream projects are referenced but not bundled:
 
   * Magisk       - https://github.com/topjohnwu/Magisk
   * KernelSU     - https://github.com/tiann/KernelSU

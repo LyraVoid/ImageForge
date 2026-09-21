@@ -9,22 +9,34 @@ function setup() {
 }
 
 describe("compatibility engine", () => {
-  it("lists the mock provider as compatible and the real providers as unavailable", async () => {
+  it("lists the implemented providers as compatible and the rest as unavailable", async () => {
     const { artifacts, providers } = setup();
     const image = parseImage(await buildBootImage({}));
     const result = evaluateCompatibility({ image, providers, artifacts });
 
-    const mock = result.candidates.find((entry) => entry.providerId === "mock");
-    expect(mock?.compatible).toBe(true);
-    expect(mock?.available).toBe(true);
+    for (const id of ["mock", "apatch"]) {
+      const candidate = result.candidates.find((entry) => entry.providerId === id);
+      expect(candidate?.available).toBe(true);
+      expect(candidate?.compatible).toBe(true);
+    }
 
-    for (const id of ["magisk", "kernelsu", "apatch"]) {
+    for (const id of ["magisk", "kernelsu"]) {
       const candidate = result.candidates.find((entry) => entry.providerId === id);
       expect(candidate?.available).toBe(false);
       expect(candidate?.compatible).toBe(false);
       expect(candidate?.reasons.join(" ")).toMatch(/Not implemented in this build/);
     }
     expect(result.compatible).toBe(true);
+  });
+
+  it("counts the APatch provider as incompatible when the kernel is missing", async () => {
+    const { artifacts, providers } = setup();
+    const image = parseImage(await buildBootImage({ kernel: null }));
+    const result = evaluateCompatibility({ image, providers, artifacts });
+    const candidate = result.candidates.find((entry) => entry.providerId === "apatch");
+
+    expect(candidate?.compatible).toBe(false);
+    expect(candidate?.reasons.join(" ")).toMatch(/no kernel section/);
   });
 
   it("flags an image without a ramdisk", async () => {
@@ -67,6 +79,8 @@ describe("compatibility engine", () => {
       supportedFormats: ["boot", "init_boot", "vendor_boot"],
       supportedHeaderVersions: [0, 1, 2, 3, 4],
       supportedArchitectures: ["arm64"],
+      requiresKernel: false,
+      requiresRamdisk: false,
     });
     providers.register(
       {

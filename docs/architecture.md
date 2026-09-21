@@ -1,7 +1,7 @@
 # Architecture
 
 ImageForge is layered so that the UI never touches binary parsing and a patch provider
-never touches raw `boot.img` bytes.
+never parses a raw `boot.img` itself.
 
 ## Layers
 
@@ -21,12 +21,14 @@ never touches raw `boot.img` bytes.
             |
     Web Worker               task execution, Comlink RPC, progress events
             |
-    WASM                     CPU heavy binary helpers (CRC32, LZ4 block decode)
+    WASM                     binary helpers and bundled upstream tools
 
 ## Hard rules
 
 1. **Providers never parse boot images.** A provider receives the normalized object
-   produced by the Image Engine (`ParsedImage` / `AndroidImage`).
+   produced by the Image Engine (`ParsedImage` / `AndroidImage`). When an upstream tool
+   has to touch a kernel image, the provider hands it the kernel section the Image Engine
+   already extracted, and the Image Engine repacks the container afterwards.
 2. **The React UI never decides compatibility.** Candidates come from the compatibility
    engine.
 3. **Versions are never hardcoded in the UI.** They come from the artifact registry.
@@ -34,6 +36,8 @@ never touches raw `boot.img` bytes.
    run inside the Web Worker.
 5. **The Mock Provider never pretends to be a real root solution.** It is labelled as a
    mock in the UI, in the produced metadata and inside the patched image.
+6. **Bundled artifacts are digest verified before execution.** `loadVerifiedPayload`
+   refuses bytes whose SHA-256 differs from the registry entry.
 
 ## Image Engine
 
@@ -46,17 +50,66 @@ never touches raw `boot.img` bytes.
 | Repack | page aligned rebuild, `recovery_dtbo_offset` fixup, AVB signature drop policy |
 | Verify | re-parse, bounds checks, per-section SHA-256, expectation matching |
 
+Real images shaped two decisions:
+
+* On v4 images an AVB vbmeta blob can follow the kernel while `signature_size` is 0. It is
+  reported as a signature region, never as bootconfig, and it is dropped on repack.
+* The kernel payload is handed to providers as raw section bytes together with its detected
+  compression, so a provider can refuse an unsupported format instead of corrupting it.
+
 Compression support in v0.1: gzip can be expanded (via `DecompressionStream`); LZ4, XZ,
 LZMA, BZip2 and Zstandard are detected and reported but are copied through unchanged.
+Vendor boot images are parsed read-only.
 
-Vendor boot images are parsed read-only; repacking them is a structured error.
+## Patch providers
+
+| Provider | Target | Mechanism |
+| --- | --- | --- |
+| `apatch` | `boot.img` only | KernelPatch core image injected into the kernel by the upstream kptools build in WebAssembly |
+| `mock` | `boot.img`, `init_boot.img` | Rewrites the kernel cmdline and a bootconfig manifest |
+
+Magisk and KernelSU are declared as `planned`. Both need CPIO read/write, the full
+compression matrix and their own upstream artifact and license review before they can be
+implemented.
+
+### APatch pipeline
+
+    boot.img
+      -> Image Engine parses and extracts the kernel section
+      -> compatibility engine checks boot-only, arm64, kernel present, compression supported
+      -> provider preflight runs "kptools -f" and requires CONFIG_KALLSYMS=y
+      -> provider runs "kptools -p -i kernel -k kpimg -o kernel.patched" (no -S by default)
+      -> provider confirms with "kptools -l -i kernel.patched" that patched=true
+      -> Image Engine repacks boot.img with the patched kernel and drops the AVB signature
+      -> verifier re-parses the output and compares the kernel digest with the plan
+
+The superkey is optional. When it is absent (the default, matching the APatch manager where
+authentication is signature based) no `-S` argument is passed. The raw superkey never enters
+the plan: it travels through `PatchRunContext.options`, and only the mode is recorded.
+
+## WASM
+
+| Module | Purpose |
+| --- | --- |
+| `public/wasm/imageforge.wasm` | Rust crate: CRC32 and LZ4 block decoding, with a TypeScript fallback |
+| `public/wasm/kptools.wasm` | Upstream KernelPatch kptools compiled to `wasm32-wasip1` |
+
+`kptools.wasm` is driven by `src/wasm/wasi-runner.ts` on top of
+`@bjorn3/browser_wasi_shim`, which provides an in-memory file system. Upstream sources are
+never modified: the build adds a separate compatibility file for two wasi-libc gaps and
+copies `preset.h` into its own include directory. See
+`third_party/kptools-wasm/README.md`.
+
+Node's native `node:wasi` implementation crashes with SIGSEGV on this module's kallsyms
+path, so tests and production both use the JavaScript shim.
 
 ## Reproducible patch plans
 
 A plan pins provider, release, artifact id, artifact SHA-256, architecture, target image,
 boot header version and configuration. The plan id is the leading 32 hex characters of the
-SHA-256 over the canonicalised plan fields, excluding timestamps, so identical inputs
-produce identical plans and identical output bytes.
+SHA-256 over the canonicalised plan fields, excluding timestamps. The APatch provider
+declares reproducibility only because the test suite checks that patching the same image
+twice yields identical kernel bytes.
 
 ## Worker protocol
 

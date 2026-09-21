@@ -13,18 +13,29 @@ an image to a server.
 
 ## Status (v0.1)
 
-This is the phase-1 skeleton. It is complete and self-verifying, but it is deliberately
-honest about what it is not:
+Two providers are implemented and self-verifying:
 
-* **The Mock Provider is the only implemented provider.** It rewrites the kernel cmdline
-  and writes a bootconfig manifest so the whole pipeline can be exercised and verified end
-  to end. It does not root a device and never pretends to be Magisk, KernelSU or APatch.
-* **Magisk, KernelSU and APatch are declared but not implemented.** They appear in the
-  registry as `planned` with the reason "Not implemented in this build", and their
-  upstream sources, version models, artifact layouts and licenses must be read from the
-  current upstream revision before they are implemented.
-* **Remote artifact downloads are not implemented.** Only the built-in, digested mock
-  artifact can be resolved.
+* **APatch** is the first real provider. It injects the KernelPatch core image into the
+  kernel inside `boot.img` using the **upstream kptools compiled to WebAssembly**, so the
+  actual KernelPatch implementation runs in the browser rather than a reimplementation of
+  it. Verified against a real GKI android13-5.10 boot image.
+* **The Mock Provider** rewrites the kernel cmdline and a bootconfig manifest so the
+  pipeline can be exercised without touching root. It never pretends to be a root solution.
+
+Deliberately honest limits:
+
+* **Magisk and KernelSU are declared but not implemented.** They are `planned` in the
+  registry; both need CPIO read/write and the full compression matrix first, and their
+  upstream sources and licenses must be read from the current revision before implementing.
+* **APatch patches uncompressed arm64 kernels only** in this build. A compressed kernel
+  payload (gzip, LZ4, XZ, ...) is refused with a structured error instead of being patched
+  wrongly. It also requires `CONFIG_KALLSYMS=y`, which is verified before the patch runs.
+* **The superkey is optional and unset by default**, matching the manager default where
+  authentication is signature based. The superkey is never written into the plan.
+* **The AVB signature is dropped** on repack, so verified boot fails unless the produced
+  image is re-signed or verification is disabled.
+* **Remote artifact downloads are not implemented.** Only bundled artifacts (digest
+  verified against the registry) and the built-in mock artifact can be resolved.
 * **Vendor boot images are read-only** in this build.
 
 ## Quick start
@@ -36,11 +47,27 @@ honest about what it is not:
     pnpm test         # unit, integration, worker and wasm tests
     pnpm typecheck    # project wide type check
     pnpm lint         # eslint
-    pnpm wasm:build   # rebuild public/wasm/imageforge.wasm from the Rust crate
+    pnpm wasm:build          # rebuild public/wasm/imageforge.wasm from the Rust crate
+    pnpm wasm:build:kptools  # rebuild public/wasm/kptools.wasm from the pinned KernelPatch revision
 
-Requirements: Node 20+, pnpm 9+. Building WASM additionally requires a Rust toolchain with
-the `wasm32-unknown-unknown` target. The compiled module is committed, so a Rust toolchain
-is optional for app development.
+Requirements: Node 20+, pnpm 9+. Rebuilding the Rust module needs a Rust toolchain with
+the `wasm32-unknown-unknown` target; rebuilding kptools downloads wasi-sdk, zlib and the
+pinned KernelPatch revision and needs no Rust. Both compiled modules are committed, so
+neither toolchain is required for app development.
+
+## APatch provider
+
+    boot.img -> Image Engine extracts the kernel -> kptools.wasm injects kpimg
+             -> Image Engine repacks boot.img -> verification
+
+* Targets `boot.img` only: APatch patches the kernel, and `init_boot.img` carries no kernel.
+* Preflight runs `kptools -f` and refuses the image unless the kernel reports
+  `CONFIG_KALLSYMS=y`; it also warns when `CONFIG_KALLSYMS_ALL` is disabled.
+* Bundles two GPL artifacts, both digest verified before use:
+  `public/wasm/kptools.wasm` (KernelPatch, GPL-2.0-or-later) and
+  `public/artifacts/apatch/kpimg` (APatch release 11224, GPL-3.0-or-later).
+  See `THIRD_PARTY_LICENSES/` and `third_party/kptools-wasm/README.md`.
+* Patching the same image twice produces identical kernel bytes; the test suite enforces it.
 
 ## Architecture
 
@@ -63,7 +90,8 @@ are never hardcoded in the UI, and heavy work never runs on the main thread.
 
     src/core/          image engine, patch engine, artifacts, compatibility, errors
     src/workers/       worker protocol, session, worker entry, Comlink client
-    src/wasm/          ABI, TypeScript fallback, module loader
+    src/wasm/          ABI, TypeScript fallback, module loader, WASI tool runner
+    third_party/       sources added around bundled upstream artifacts (not upstream code)
     src/components/    design system and shared application components
     src/routes/        Home, Analyze, Patch, Processing, Result, Settings
     src/stores/        Zustand stores (workflow + theme)

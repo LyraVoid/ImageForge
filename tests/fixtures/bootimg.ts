@@ -44,6 +44,8 @@ export interface BootImageFixtureOptions {
   name?: string;
   osVersionRaw?: number;
   signatureSize?: number;
+  /** Appended after the last section without touching signature_size, like real GKI images. */
+  trailing?: Uint8Array;
 }
 
 export function bootHeaderSize(headerVersion: number): number {
@@ -87,9 +89,11 @@ export async function buildBootImage(options: BootImageFixtureOptions = {}): Pro
     cursor = offset + entry.data.length;
   }
   const bodyEnd = align(cursor, pageSize);
+  const trailing = options.trailing ?? null;
+  const trailingEnd = trailing ? bodyEnd + trailing.length : bodyEnd;
   const signature =
     headerVersion >= 4 && options.signatureSize ? deterministicBytes(options.signatureSize, 23) : null;
-  const total = signature ? bodyEnd + signature.length : bodyEnd;
+  const total = signature ? trailingEnd + signature.length : trailingEnd;
   const out = new Uint8Array(total);
 
   writeCString(out, 0, 8, "ANDROID!");
@@ -129,7 +133,8 @@ export async function buildBootImage(options: BootImageFixtureOptions = {}): Pro
   }
 
   for (const entry of placed) out.set(entry.data, entry.offset);
-  if (signature) out.set(signature, bodyEnd);
+  if (trailing) out.set(trailing, bodyEnd);
+  if (signature) out.set(signature, trailingEnd);
   return out;
 }
 

@@ -51,10 +51,15 @@ function evaluateCandidate(
     reasons.push("Architecture " + image.architecture + " is not supported.");
   }
 
+  const kernelSection = sectionOf(image, "kernel");
+  if (descriptor.requiresKernel && (!kernelSection || kernelSection.size === 0)) {
+    reasons.push("The image has no kernel section to patch.");
+  }
+
   const ramdisk = sectionOf(image, "ramdisk") ?? sectionOf(image, "vendor_ramdisk");
-  if (!ramdisk) {
+  if (descriptor.requiresRamdisk && !ramdisk) {
     reasons.push("The image has no ramdisk section.");
-  } else {
+  } else if (ramdisk) {
     const compression = detectCompression(ramdisk.data);
     if (!isDecompressionSupported(compression)) {
       warnings.push({
