@@ -65,10 +65,63 @@ const KERNELSU_LKM: Array<{ kmi: string; sha256: string; sizeBytes: number }> = 
   { kmi: "android17-6.18", sha256: "adc743246822b3ea96c218425d4208aed2436805a73d2f3e8ed78cfa8602cadf", sizeBytes: 357304 },
 ];
 
+/** Magisk release the ramdisk payloads are taken from. */
+export const MAGISK_RELEASE = "v30.7";
+
+export const MAGISK_MAGISKINIT_ID = "magisk-magiskinit";
+export const MAGISK_MAGISK_XZ_ID = "magisk-magisk-xz";
+export const MAGISK_STUB_XZ_ID = "magisk-stub-xz";
+export const MAGISK_INIT_LD_XZ_ID = "magisk-init-ld-xz";
+
 export const ARTIFACT_CATALOG: ArtifactCatalog = {
   schemaVersion: 1,
   updatedAt: "2026-09-22T00:00:00.000Z",
   releases: [
+    {
+      providerId: "magisk",
+      release: MAGISK_RELEASE,
+      releasedAt: "2026-02-23T00:00:00.000Z",
+      notes:
+        "Official Magisk release. The patcher injects magiskinit as init and three xz payloads under overlay.d/sbin, then stores its configuration in .backup/.magisk. Magisk compresses those payloads with magiskboot at patch time; a browser cannot run magiskboot, so they are compressed ahead of time with the same settings (preset 6, CRC32) and shipped as artifacts. Magisk is GPL-3.0 throughout, so there is no per-directory licence split to observe.",
+      artifacts: [
+        {
+          id: MAGISK_MAGISKINIT_ID,
+          version: MAGISK_RELEASE,
+          type: "init",
+          architecture: "arm64",
+          sha256: "383670a7ba3a6a4b79e5f3467e1da4b66a5df66a9b356ab9f70916854dd6b468",
+          source: "bundled:/artifacts/magisk/magiskinit",
+          sizeBytes: 199960,
+        },
+        {
+          id: MAGISK_MAGISK_XZ_ID,
+          version: MAGISK_RELEASE,
+          type: "payload",
+          architecture: "arm64",
+          sha256: "36603be2f8c505eb9d8f58e464fda66b25b8a7887364ef83e15c877391c38341",
+          source: "bundled:/artifacts/magisk/magisk.xz",
+          sizeBytes: 158896,
+        },
+        {
+          id: MAGISK_STUB_XZ_ID,
+          version: MAGISK_RELEASE,
+          type: "payload",
+          architecture: "arm64",
+          sha256: "12dcb358399263968c64bc3fce2c6de7b271f48677b1e41002ec43e7994081ba",
+          source: "bundled:/artifacts/magisk/stub.xz",
+          sizeBytes: 65420,
+        },
+        {
+          id: MAGISK_INIT_LD_XZ_ID,
+          version: MAGISK_RELEASE,
+          type: "payload",
+          architecture: "arm64",
+          sha256: "646b99306dd479c2b5e4f123fd962fe49dec4b1d8a368dc3e7210354efdcd10d",
+          source: "bundled:/artifacts/magisk/init-ld.xz",
+          sizeBytes: 1560,
+        },
+      ],
+    },
     {
       providerId: "mock",
       release: "1.0.0",

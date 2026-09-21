@@ -60,6 +60,20 @@ describe("bundled artifacts", () => {
     }
   });
 
+  it("ships the Magisk ramdisk payloads, digest verified", async () => {
+    const release = registry.resolve({ providerId: "magisk", artifactId: "magisk-magiskinit" }).release;
+    expect(release.release).toBe("v30.7");
+    expect(release.artifacts.map((artifact) => artifact.id).sort()).toEqual(
+      ["magisk-init-ld-xz", "magisk-magisk-xz", "magisk-magiskinit", "magisk-stub-xz"].sort(),
+    );
+
+    for (const artifact of release.artifacts) {
+      const bytes = await registry.loadVerifiedPayload(artifact);
+      expect(bytes.length).toBe(artifact.sizeBytes);
+      expect(await sha256Hex(bytes)).toBe(artifact.sha256);
+    }
+  });
+
   it("matches the shipped kptools WebAssembly digest", async () => {
     const artifact = registry.resolve({ providerId: "apatch", artifactId: APATCH_KPTOOLS_ID }).artifact;
     const bytes = await registry.loadVerifiedPayload(artifact);
