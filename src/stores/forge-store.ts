@@ -55,6 +55,7 @@ interface ForgeState {
   analysis: AnalyzeResponse | null;
   selectedProviderId: string | null;
   planResponse: PlanResponse | null;
+  providerOptions: PatchOptions | null;
   progress: PatchProgressEvent | null;
   output: ForgeOutput | null;
   error: ImageForgeErrorJson | null;
@@ -75,6 +76,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
   analysis: null,
   selectedProviderId: null,
   planResponse: null,
+  providerOptions: null,
   progress: null,
   output: null,
   error: null,
@@ -107,12 +109,17 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
 
   selectProvider: async (providerId, options) => {
     const active = getClient();
+    const previous = get().planResponse;
+    // Re-planning the same provider (for example when an output option changes) keeps the
+    // current plan on screen instead of blanking the page while the worker runs.
+    const keepPrevious = previous !== null && previous.plan.providerId === providerId;
     set({
       stage: "planning",
       isBusy: true,
       error: null,
       selectedProviderId: providerId,
-      planResponse: null,
+      planResponse: keepPrevious ? previous : null,
+      providerOptions: options ?? null,
       output: null,
     });
     try {
@@ -138,9 +145,15 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       progress: { stage: "analyze", progress: 0, message: "Preparing" },
     });
     try {
-      const response = await active.patch({ providerId: state.selectedProviderId }, (event) => {
-        set({ progress: event });
-      });
+      const response = await active.patch(
+        {
+          providerId: state.selectedProviderId,
+          ...(state.providerOptions === null ? {} : { options: state.providerOptions }),
+        },
+        (event) => {
+          set({ progress: event });
+        },
+      );
       const blob = new Blob([response.bytes], { type: "application/octet-stream" });
       const output: ForgeOutput = {
         plan: response.plan,
@@ -199,6 +212,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       analysis: null,
       selectedProviderId: null,
       planResponse: null,
+      providerOptions: null,
       progress: null,
       output: null,
       error: null,

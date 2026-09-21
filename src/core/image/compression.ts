@@ -117,26 +117,55 @@ export async function compressSection(
   }
 }
 
+/**
+ * Pipes bytes through a compression transform manually. Blob.stream() and Response are
+ * not available in every runtime (jsdom has neither), while the streams themselves are
+ * polyfilled by the test setup.
+ */
+async function pipeThrough(
+  bytes: Uint8Array,
+  transform: { writable: WritableStream<BufferSource>; readable: ReadableStream<Uint8Array> },
+): Promise<Uint8Array> {
+  const writer = transform.writable.getWriter();
+  const reader = transform.readable.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  const draining = (async () => {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      total += value.length;
+    }
+  })();
+
+  // Node's stream implementation rejects a bare ArrayBuffer here, browsers accept both.
+  await writer.write(bytes as unknown as BufferSource);
+  await writer.close();
+  await draining;
+
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return out;
+}
+
 async function inflateGzip(bytes: Uint8Array): Promise<Uint8Array> {
   if (typeof DecompressionStream === "undefined") {
     throw new Error("DecompressionStream is not available in this runtime.");
   }
-  const stream = new Blob([toArrayBuffer(bytes)]).stream().pipeThrough(new DecompressionStream("gzip"));
-  const buffer = await new Response(stream).arrayBuffer();
-  return new Uint8Array(buffer);
+  return pipeThrough(bytes, new DecompressionStream("gzip"));
 }
 
 export async function compressGzip(bytes: Uint8Array): Promise<Uint8Array> {
   if (typeof CompressionStream === "undefined") {
     throw new Error("CompressionStream is not available in this runtime.");
   }
-  const stream = new Blob([toArrayBuffer(bytes)]).stream().pipeThrough(new CompressionStream("gzip"));
-  const buffer = await new Response(stream).arrayBuffer();
-  return new Uint8Array(buffer);
+  return pipeThrough(bytes, new CompressionStream("gzip"));
 }
 
-function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
-  const copy = new Uint8Array(bytes.length);
-  copy.set(bytes);
-  return copy.buffer;
-}
+

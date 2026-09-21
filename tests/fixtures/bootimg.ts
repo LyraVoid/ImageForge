@@ -1,3 +1,4 @@
+import { gzipSync } from "node:zlib";
 import { align, writeCString, writeUint32LE, writeUint64LE } from "@/core/binary";
 
 export const ARM64_KERNEL_MAGIC = 0x644d5241;
@@ -19,10 +20,16 @@ export function makeKernel(size = 4096, magic = true): Uint8Array {
 }
 
 export async function gzipBytes(bytes: Uint8Array): Promise<Uint8Array> {
-  const copy = new Uint8Array(bytes.length);
-  copy.set(bytes);
-  const stream = new Blob([copy.buffer]).stream().pipeThrough(new CompressionStream("gzip"));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
+  // node:zlib keeps the fixture builders independent of Blob/Response, which jsdom
+  // does not implement.
+  return new Uint8Array(gzipSync(bytes));
+}
+
+/** Wraps bytes in a File whose BlobPart is a plain ArrayBuffer. */
+export function toFile(bytes: Uint8Array, name: string): File {
+  const buffer = new ArrayBuffer(bytes.length);
+  new Uint8Array(buffer).set(bytes);
+  return new File([buffer], name, { type: "application/octet-stream" });
 }
 
 export async function makeRamdisk(payloadSize = 2048, compressed = true): Promise<Uint8Array> {

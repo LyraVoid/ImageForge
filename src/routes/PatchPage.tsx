@@ -1,4 +1,5 @@
 import { ArrowLeft, Info, LoaderCircle, Play } from "lucide-react";
+import { useState } from "react";
 import { Navigate, useNavigate } from "react-router";
 import { ErrorPanel } from "@/components/app/error-panel";
 import { KeyValueList } from "@/components/app/key-value-list";
@@ -17,9 +18,22 @@ export function PatchPage() {
   const error = useForgeStore((state) => state.error);
   const isBusy = useForgeStore((state) => state.isBusy);
   const selectProvider = useForgeStore((state) => state.selectProvider);
+  // Keeps the switch in the position the user chose while the worker rebuilds the plan.
+  const [preserveSizeOverride, setPreserveSizeOverride] = useState<boolean | null>(null);
 
   if (!analysis) return <Navigate to="/" replace />;
-  if (!planResponse || !selectedProviderId) return <Navigate to="/analyze" replace />;
+  if (!selectedProviderId) return <Navigate to="/analyze" replace />;
+  if (!planResponse) {
+    if (!isBusy) return <Navigate to="/analyze" replace />;
+    return (
+      <Card>
+        <CardContent className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
+          <LoaderCircle className="size-4 animate-spin text-primary" aria-hidden />
+          Building the patch plan
+        </CardContent>
+      </Card>
+    );
+  }
 
   const plan = planResponse.plan;
   const candidate = analysis.compatibility.candidates.find((entry) => entry.providerId === selectedProviderId);
@@ -163,9 +177,9 @@ export function PatchPage() {
           </div>
           <Switch
             aria-label="Preserve the original image size"
-            checked={plan.configuration.preserveImageSize === "true"}
-            disabled={isBusy}
+            checked={preserveSizeOverride ?? plan.configuration.preserveImageSize === "true"}
             onCheckedChange={(checked) => {
+              setPreserveSizeOverride(checked);
               if (!selectedProviderId) return;
               void selectProvider(selectedProviderId, {
                 configuration: { preserveImageSize: String(checked) },
