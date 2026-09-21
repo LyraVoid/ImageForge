@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { formatBytes, truncateHash } from "@/lib/format";
 import { APATCH_FLAVOR_SETTING, APATCH_FLAVORS } from "@/core";
+import { mergePlanOptions } from "@/stores/plan-options";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useForgeStore } from "@/stores/forge-store";
@@ -35,7 +36,7 @@ export function PatchPage() {
 
   const applyOption = (patch: Record<string, string>): void => {
     if (!plan || !selectedProviderId) return;
-    const next = { ...optionDraft, ...patch };
+    const next = mergePlanOptions(plan.configuration, optionDraft, patch);
     setOptionDraft(next);
     void selectProvider(selectedProviderId, { configuration: next });
   };
@@ -255,8 +256,16 @@ export function PatchPage() {
                 <Layers />
                 Attach .kpm files
               </Button>
-              <Badge variant={kpmFiles.length > 0 ? "primary" : "neutral"}>
-                {kpmFiles.length === 0 ? "no modules" : kpmFiles.length + " module(s) planned"}
+              <Badge
+                variant={
+                  plan.configuration.kpmModules !== undefined && plan.configuration.kpmModules !== "none"
+                    ? "primary"
+                    : "neutral"
+                }
+              >
+                {plan.configuration.kpmModules === undefined || plan.configuration.kpmModules === "none"
+                  ? "plan: no modules"
+                  : "plan: " + plan.configuration.kpmModules}
               </Badge>
               {kpmFiles.length > 0 ? (
                 <Button variant="ghost" size="sm" onClick={() => void setKpmFiles([])}>

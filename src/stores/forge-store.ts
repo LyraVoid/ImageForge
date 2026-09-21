@@ -7,6 +7,7 @@ import type {
   PatchProgressEvent,
   PatchVerificationResult,
 } from "@/core";
+import { mergePlanOptions } from "./plan-options";
 import { createPatchWorkerClient } from "@/workers/client";
 import type { PatchWorkerClient, WorkerMode } from "@/workers/client";
 import type { AnalyzeResponse, PlanResponse } from "@/workers/protocol";
@@ -245,8 +246,14 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     const state = get();
     if (!state.selectedProviderId) return;
     const names = files.map((file) => file.name).join(",");
+    // The current plan is the base so that modules and the options set on the patch page
+    // survive each other.
     void state.selectProvider(state.selectedProviderId, {
-      configuration: { ...(state.providerOptions?.configuration ?? {}), kpmModules: names },
+      configuration: mergePlanOptions(
+        state.planResponse?.plan.configuration,
+        state.providerOptions?.configuration ?? {},
+        { kpmModules: names },
+      ),
     });
   },
 
