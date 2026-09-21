@@ -15,6 +15,8 @@ export interface RepackBootImageRequest {
   cmdline?: string;
   name?: string;
   keepSignature?: boolean;
+  /** Zero pads the output to this size, e.g. to keep a whole-partition image size. */
+  padTo?: number;
 }
 
 export interface RepackLayoutEntry {
@@ -137,7 +139,21 @@ export function repackBootImage(request: RepackBootImageRequest): RepackOutcome 
   if (recoveryEntry) fields.recoveryDtboOffset = recoveryEntry.offset;
 
   const paddedEnd = align(cursor, page);
-  const totalSize = signature.length > 0 ? paddedEnd + signature.length : paddedEnd;
+  const contentSize = signature.length > 0 ? paddedEnd + signature.length : paddedEnd;
+
+  const requestedPad = request.padTo !== undefined && Number.isFinite(request.padTo)
+    ? Math.max(0, Math.trunc(request.padTo))
+    : 0;
+  const totalSize = requestedPad > contentSize ? requestedPad : contentSize;
+  if (totalSize > contentSize) {
+    warnings.push(
+      "The output was zero padded from " +
+        contentSize +
+        " to " +
+        totalSize +
+        " bytes so it keeps the size of the original image.",
+    );
+  }
 
   const header = encodeBootHeader(fields);
   const out = new Uint8Array(totalSize);

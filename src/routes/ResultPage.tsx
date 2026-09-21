@@ -80,6 +80,14 @@ export function ResultPage() {
             </p>
           ) : null}
 
+          {output.metadata.preserveImageSize === "true" ? (
+            <p className="text-[11px] leading-4 text-muted-foreground">
+              The output was zero padded to {formatBytes(Number(output.metadata.imageSizeAfter))} so it keeps
+              the original image size. The padding is not part of the boot image, and the AVB signature is
+              still invalid.
+            </p>
+          ) : null}
+
           <CodeBlock label="sha-256" value={output.sha256} wrap />
 
           <div className="flex flex-wrap items-center gap-2">

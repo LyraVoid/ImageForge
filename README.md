@@ -68,6 +68,9 @@ neither toolchain is required for app development.
   `public/artifacts/apatch/kpimg` (APatch release 11224, GPL-3.0-or-later).
   See `THIRD_PARTY_LICENSES/` and `third_party/kptools-wasm/README.md`.
 * Patching the same image twice produces identical kernel bytes; the test suite enforces it.
+* The output is a compact boot image by default. The patch page can zero pad it back to the
+  original image size for tools that expect a partition sized file; the AVB signature is
+  dropped either way.
 
 ## Architecture
 

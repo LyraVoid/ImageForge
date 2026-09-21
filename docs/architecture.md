@@ -87,6 +87,12 @@ The superkey is optional. When it is absent (the default, matching the APatch ma
 authentication is signature based) no `-S` argument is passed. The raw superkey never enters
 the plan: it travels through `PatchRunContext.options`, and only the mode is recorded.
 
+Device images are usually whole-partition dumps, so the repacked image is compact by
+default: partition padding and the AVB blob are not part of a boot image. When the plan
+configuration asks for `preserveImageSize`, a provider passes `padTo: image.totalSize` to
+`repackBootImage`, which zero pads the output and reports the padding as a warning. The
+layout of the image itself is unchanged, and the AVB signature is dropped either way.
+
 ## WASM
 
 | Module | Purpose |

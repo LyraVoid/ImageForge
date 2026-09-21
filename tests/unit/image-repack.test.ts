@@ -55,6 +55,27 @@ describe("repackBootImage", () => {
     expect(reparsed.sections.some((section) => section.name === "ramdisk")).toBe(false);
   });
 
+  it("zero pads the output when a target size is requested", async () => {
+    const original = assertBootImage(parseImage(await buildBootImage({})));
+    const target = original.totalSize + 8 * 4096;
+    const outcome = repackBootImage({ image: original, padTo: target });
+
+    expect(outcome.bytes.length).toBe(target);
+    expect(outcome.warnings.join(" ")).toMatch(/zero padded/);
+    expect(Array.from(outcome.bytes.subarray(target - 256)).every((byte) => byte === 0)).toBe(true);
+
+    const reparsed = assertBootImage(parseImage(outcome.bytes));
+    expect(reparsed.header.kernelSize).toBe(original.header.kernelSize);
+    expect(reparsed.totalSize).toBe(target);
+  });
+
+  it("ignores a padding target smaller than the content", async () => {
+    const original = parseImage(await buildBootImage({}));
+    const outcome = repackBootImage({ image: original, padTo: 1024 });
+    expect(outcome.bytes.length).toBeGreaterThan(1024);
+    expect(outcome.warnings.join(" ")).not.toMatch(/zero padded/);
+  });
+
   it("refuses to repack vendor_boot images", async () => {
     const vendor = parseImage(await buildVendorBootImage({}));
     const replacement = await makeRamdisk(512);

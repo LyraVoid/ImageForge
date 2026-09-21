@@ -155,11 +155,13 @@ export class MockPatchProvider implements PatchProvider {
     const cmdline = appendCmdlineMarker(image.cmdline, MOCK_CMDLINE_MARKER);
 
     emit("patch", 60, "Applying the mock patch");
+    const preserveImageSize = (context.options?.configuration?.preserveImageSize ?? "false") === "true";
     const outcome = repackBootImage({
       image,
       ramdisk,
       cmdline,
       ...(bootconfig === undefined ? {} : { bootconfig }),
+      ...(preserveImageSize ? { padTo: image.totalSize } : {}),
     });
 
     emit("repack", 80, "Repacking the boot image");
@@ -189,6 +191,7 @@ export class MockPatchProvider implements PatchProvider {
         manifestKind: useBootconfig ? "bootconfig" : "cmdline",
         imageSizeBefore: String(image.totalSize),
         imageSizeAfter: String(outcome.bytes.length),
+        preserveImageSize: preserveImageSize ? "true" : "false",
         sourceImageSha256: plan.sourceImageSha256,
         planId: plan.id,
         reproducible: "true",

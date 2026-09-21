@@ -1,6 +1,12 @@
 import { create } from "zustand";
 import { toImageForgeError } from "@/core/errors";
-import type { ImageForgeErrorJson, PatchPlan, PatchProgressEvent, PatchVerificationResult } from "@/core";
+import type {
+  ImageForgeErrorJson,
+  PatchOptions,
+  PatchPlan,
+  PatchProgressEvent,
+  PatchVerificationResult,
+} from "@/core";
 import { createPatchWorkerClient } from "@/workers/client";
 import type { PatchWorkerClient, WorkerMode } from "@/workers/client";
 import type { AnalyzeResponse, PlanResponse } from "@/workers/protocol";
@@ -53,7 +59,7 @@ interface ForgeState {
   output: ForgeOutput | null;
   error: ImageForgeErrorJson | null;
   analyzeFile: (file: File) => Promise<AnalyzeResponse | null>;
-  selectProvider: (providerId: string) => Promise<PatchPlan | null>;
+  selectProvider: (providerId: string, options?: PatchOptions) => Promise<PatchPlan | null>;
   runPatch: () => Promise<boolean>;
   cancelPatch: () => Promise<void>;
   reset: () => Promise<void>;
@@ -99,7 +105,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     }
   },
 
-  selectProvider: async (providerId) => {
+  selectProvider: async (providerId, options) => {
     const active = getClient();
     set({
       stage: "planning",
@@ -110,7 +116,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       output: null,
     });
     try {
-      const planResponse = await active.plan({ providerId });
+      const planResponse = await active.plan({ providerId, ...(options === undefined ? {} : { options }) });
       set({ planResponse, stage: "planned", isBusy: false });
       return planResponse.plan;
     } catch (error) {

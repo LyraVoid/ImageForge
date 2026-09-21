@@ -5,6 +5,7 @@ import { KeyValueList } from "@/components/app/key-value-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { formatBytes, truncateHash } from "@/lib/format";
 import { useForgeStore } from "@/stores/forge-store";
 
@@ -15,6 +16,7 @@ export function PatchPage() {
   const selectedProviderId = useForgeStore((state) => state.selectedProviderId);
   const error = useForgeStore((state) => state.error);
   const isBusy = useForgeStore((state) => state.isBusy);
+  const selectProvider = useForgeStore((state) => state.selectProvider);
 
   if (!analysis) return <Navigate to="/" replace />;
   if (!planResponse || !selectedProviderId) return <Navigate to="/analyze" replace />;
@@ -142,6 +144,36 @@ export function PatchPage() {
           </CardContent>
         </Card>
       ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Output</CardTitle>
+          <CardDescription>
+            Device images are usually whole-partition dumps, so only the boot image itself is kept by
+            default.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-foreground">Preserve the original image size</p>
+            <p className="text-[11px] leading-4 text-muted-foreground">
+              Zero pads the output to {formatBytes(analysis.summary.totalSize)} so tools that expect a
+              partition sized image keep their file size. The AVB signature stays invalid either way.
+            </p>
+          </div>
+          <Switch
+            aria-label="Preserve the original image size"
+            checked={plan.configuration.preserveImageSize === "true"}
+            disabled={isBusy}
+            onCheckedChange={(checked) => {
+              if (!selectedProviderId) return;
+              void selectProvider(selectedProviderId, {
+                configuration: { preserveImageSize: String(checked) },
+              });
+            }}
+          />
+        </CardContent>
+      </Card>
 
       <div className="flex flex-wrap items-center justify-end gap-2">
         <Button variant="ghost" onClick={() => navigate("/analyze")}>

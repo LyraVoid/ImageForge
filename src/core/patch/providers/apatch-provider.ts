@@ -254,7 +254,12 @@ export class ApatchPatchProvider implements PatchProvider {
     }
 
     emit("repack", 80, "Repacking the boot image");
-    const outcome = repackBootImage({ image, kernel: patchedKernel });
+    const preserveImageSize = (context.options?.configuration?.preserveImageSize ?? "false") === "true";
+    const outcome = repackBootImage({
+      image,
+      kernel: patchedKernel,
+      ...(preserveImageSize ? { padTo: image.totalSize } : {}),
+    });
     const sha256 = await sha256Hex(outcome.bytes);
 
     emit("verify", 95, "Verifying the produced image");
@@ -286,6 +291,7 @@ export class ApatchPatchProvider implements PatchProvider {
         kernelSizeAfter: String(patchedKernel.length),
         imageSizeBefore: String(image.totalSize),
         imageSizeAfter: String(outcome.bytes.length),
+        preserveImageSize: preserveImageSize ? "true" : "false",
         kptoolsConfirmation: "patched=true",
         target: plan.target,
         headerVersion: "v" + plan.headerVersion,

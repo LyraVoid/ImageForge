@@ -98,6 +98,20 @@ describe("patch pipeline", () => {
     ).rejects.toThrowError();
   });
 
+  it("keeps the original image size when the caller asks for it", async () => {
+    // The fixture already carries a bootconfig so the mock manifest does not grow the image.
+    const bytes = await buildBootImage({ bootconfig: new TextEncoder().encode("x".repeat(8192)) });
+    const analyzed = await engine.analyze(bytes);
+    const outcome = await engine.run(analyzed.image, analyzed.sha256, "mock", {
+      configuration: { preserveImageSize: "true" },
+    });
+
+    expect(outcome.result.bytes.length).toBe(bytes.length);
+    expect(outcome.result.metadata.preserveImageSize).toBe("true");
+    expect(outcome.result.metadata.imageSizeAfter).toBe(String(bytes.length));
+    expect(parseImage(outcome.result.bytes).headerVersion).toBe(4);
+  });
+
   it("keeps the produced image parseable and page aligned", async () => {
     const bytes = await buildBootImage({ signatureSize: 1024 });
     const analyzed = await engine.analyze(bytes);

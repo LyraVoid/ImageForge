@@ -58,6 +58,22 @@ describe.skipIf(!hasRealImage)("APatch against a real GKI boot image", () => {
   );
 
   it(
+    "can keep the original partition image size",
+    async () => {
+      const bytes = readRealImage();
+      const analyzed = await engine.analyze(bytes);
+      const outcome = await engine.run(analyzed.image, analyzed.sha256, "apatch", {
+        configuration: { preserveImageSize: "true" },
+      });
+
+      expect(outcome.result.bytes.length).toBe(bytes.length);
+      expect(outcome.result.metadata.preserveImageSize).toBe("true");
+      expect(outcome.result.warnings.join(" ")).toMatch(/zero padded/);
+    },
+    TIMEOUT,
+  );
+
+  it(
     "produces the same patched kernel on a second run",
     async () => {
       const analyzed = await engine.analyze(readRealImage());
