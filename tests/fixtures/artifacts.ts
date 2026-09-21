@@ -58,6 +58,13 @@ export const REAL_KPM_PATH = process.env.IMAGEFORGE_TEST_KPM ?? firstModuleOnDis
 
 export const hasRealKpm = REAL_KPM_PATH !== undefined && existsSync(REAL_KPM_PATH);
 
+/** A small GPL demo module taken from the KernelPatch-Aster 0.13.8 release. */
+export const DEMO_KPM_PATH = repoPath("tests", "fixtures", "kernelpatch", "demo-hello.kpm");
+
+export function readDemoKpm(): Uint8Array {
+  return new Uint8Array(readFileSync(DEMO_KPM_PATH));
+}
+
 export function readStockImage(): Uint8Array {
   return new Uint8Array(readFileSync(STOCK_IMAGE_PATH));
 }

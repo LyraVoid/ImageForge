@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { APATCH_KPM_SETTING, ARTIFACT_CATALOG, createArtifactRegistry, createPatchEngine } from "@/core";
+import {
+  APATCH_KPM_SETTING,
+  ARTIFACT_CATALOG,
+  createArtifactRegistry,
+  createPatchEngine,
+  readKpmInfo,
+} from "@/core";
 import { PatchError } from "@/core/errors";
 import { assertBootImage, parseImage, sectionOf } from "@/core/image";
 import { buildKpm } from "../fixtures/kpm";
-import { fsPayloadLoader, hasRealImage, readRealImage } from "../fixtures/artifacts";
+import { fsPayloadLoader, hasRealImage, readDemoKpm, readRealImage } from "../fixtures/artifacts";
 import { APATCH_KPTOOLS_ID } from "@/core";
 import { compileWasiModule, runWasiTool } from "@/wasm/wasi-runner";
 
@@ -26,7 +32,9 @@ describe.skipIf(!hasRealImage)("APatch KernelPatch module embedding", () => {
     "embeds a module, reports it and keeps it out of the plan",
     async () => {
       const analyzed = await engine.analyze(readRealImage());
-      const kpm = buildKpm({ name: "imageforge-demo", version: "1.2.3", author: "ImageForge" });
+      // A real module from the KernelPatch-Aster 0.13.8 release rather than a synthetic one.
+      const kpm = readDemoKpm();
+      const declared = readKpmInfo(kpm);
       const options = { configuration: { [APATCH_KPM_SETTING]: MODULE_NAME } };
 
       const provider = engine.providers.get("apatch");
@@ -40,7 +48,8 @@ describe.skipIf(!hasRealImage)("APatch KernelPatch module embedding", () => {
       });
 
       expect(withModule.result.metadata.kpmCount).toBe("1");
-      expect(withModule.result.metadata.kpmModules).toContain("imageforge-demo 1.2.3 [GPL] by ImageForge");
+      expect(declared.name).toBeTruthy();
+      expect(withModule.result.metadata.kpmModules).toContain(String(declared.name));
       expect(withModule.result.metadata.kpmModules).toContain(MODULE_NAME);
       expect(withModule.result.metadata.kpmModules).toMatch(/sha256 [0-9a-f]{16}/);
       expect(withModule.result.metadata.kpmModules).not.toContain("description=");
@@ -52,10 +61,10 @@ describe.skipIf(!hasRealImage)("APatch KernelPatch module embedding", () => {
       expect(moduleKernel.length).toBeGreaterThan(plainKernel.length);
       expect(moduleKernel.length - plainKernel.length).toBeGreaterThanOrEqual(kpm.length);
 
-      const listing = await kptoolsList(moduleKernel);
-      expect(listing.join("\n")).toMatch(/num=1/);
-      expect(listing.join("\n")).toContain("imageforge-demo");
-      expect(listing.join("\n")).toContain("1.2.3");
+      const listing = (await kptoolsList(moduleKernel)).join("\n");
+      expect(listing).toMatch(/num=1/);
+      expect(listing).toContain(String(declared.name));
+      if (declared.version) expect(listing).toContain(String(declared.version));
     },
     TIMEOUT,
   );

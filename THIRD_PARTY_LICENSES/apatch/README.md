@@ -30,21 +30,24 @@ for, and a patch made with one flavour is only usable with that manager.
 | Local modifications | `aster: trust the Aster manager, and accept its v2+v3 signature` — touches only `kernel/patch/android/userd.c` and `lkm/manager/apk_sign.c`. The trusted manager list is reduced to `me.yuki.aster` with the SHA-256 of that APK's v2 signing certificate, and a v3 signature next to v2 is no longer rejected. `tools/` (what kptools is built from) is untouched. |
 | Reported version | KernelPatch image `0.13.8` (`0xd08`), compile time `05:10:47 Sep 15 2026` |
 | Trusted manager | `me.yuki.aster` |
-| Bundled artifact | `public/artifacts/apatch/kpimg-aster.bin`, 340880 bytes, sha256 `8c506ca7a445af8734ca4218bebffd2afeadb023d2c6ac16ce466fceb25f842c` |
+| Release used for the artifact | `0.13.8` (`LyraVoid/KernelPatch-Aster`), asset `kpimg-android` |
+| Bundled artifact | `public/artifacts/apatch/kpimg-aster.bin`, 340880 bytes, sha256 `429718afcabe5bbcf51389ce41a2c983940b3392fb3fa20b99454f3465849a94` |
+| Test fixtures from the same release | `tests/fixtures/kernelpatch/demo-hello.kpm` (sha256 `db436f009757563740e5af864588625104d7c1de2e6da69b6b742fc35f35668b`) and `demo-inlinehook.kpm` |
 | License | GPL-2.0-or-later (inherited from upstream KernelPatch; see THIRD_PARTY_LICENSES/kernelpatch/) |
 
-### Where this artifact came from
+### Provenance
 
-It was extracted from a boot partition dumped from a device that had been flashed with a
-build of that revision, not from a release package. The provenance was verified as follows:
+The artifact is the official `kpimg-android` asset of the fork's `0.13.8` release:
 
-* the embedded compile time `05:10:47 Sep 15 2026` is 43 seconds after the commit time of
-  `0ff4ae2` (`2026-09-15 13:10:04 +0800`, i.e. `05:10:04 UTC`);
-* `kptools -v -k` reports `d08`, matching the fork's `version` file (0.13.8);
-* injection is verified to be reproducible on the supplied material.
+    https://github.com/LyraVoid/KernelPatch-Aster/releases/download/0.13.8/kpimg-android
 
-Ideally this file would be replaced by the fork's own release artifact. If that happens, only
-the SHA-256, size and source note in `src/core/artifacts/catalog.ts` need to be updated.
+It reports KernelPatch image `0.13.8` with compile time `05:10:47 Sep 15 2026`, 43 seconds
+after the commit time of `0ff4ae2` (`2026-09-15 13:10:04 +0800` = `05:10:04 UTC`).
+
+A boot partition dumped from a device flashed with a build of the same revision carries a
+kpimg that differs from this asset in 107 bytes, all inside the preset area that kptools
+rewrites when it embeds the image. Both files produce an identical patched kernel, which is
+why the reproduction check below still passes with the release asset.
 
 ## Verified reproduction
 
@@ -59,3 +62,7 @@ reproduces the flashed boot image byte for byte:
 The test that enforces this is
 `tests/integration/apatch-aster-reproduction.test.ts`; it runs when a stock image and a
 flashed dump are supplied through `IMAGEFORGE_STOCK_IMAGE` and `IMAGEFORGE_ASTER_DUMP`.
+
+The same kernel was also reproduced with the fork's official `kptools-linux` release binary,
+and our WebAssembly build of kptools produced byte identical output to it, so the toolchain
+used in the browser matches the released native tool.

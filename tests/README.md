@@ -47,6 +47,10 @@ itself as skipped.
 
 ## KernelPatch module fixtures
 
+`tests/fixtures/kernelpatch/` holds two small modules from the KernelPatch-Aster `0.13.8`
+release (`demo-hello.kpm`, `demo-inlinehook.kpm`, GPL-2.0-or-later) so the embedding path is
+covered with a real module; see THIRD_PARTY_LICENSES/apatch/ for the record.
+
 `tests/fixtures/kpm.ts` builds a minimal KernelPatch module: a relocatable aarch64 ELF with a
 `.kpm.info` section, which is exactly what `kptools` checks before embedding one
 (`tools/kpm.c:get_kpm_info`). The embedding path is therefore covered without shipping a

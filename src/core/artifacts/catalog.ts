@@ -24,7 +24,7 @@ export const APATCH_KPTOOLS_ID = "apatch-kptools-wasm";
 
 export const APATCH_KPIMG_SHA256 = "8f472d389d00f11c2d34c7059e1df8d580b9cb7d8c9f99b70877801b52992e2a";
 
-export const APATCH_KPIMG_ASTER_SHA256 = "8c506ca7a445af8734ca4218bebffd2afeadb023d2c6ac16ce466fceb25f842c";
+export const APATCH_KPIMG_ASTER_SHA256 = "429718afcabe5bbcf51389ce41a2c983940b3392fb3fa20b99454f3465849a94";
 
 export const APATCH_KPTOOLS_SHA256 = "bb53abeae8be16f4d2127af1b700d95ff8a75b38eea2829251c9f774c9b61c4c";
 
@@ -82,7 +82,7 @@ export const ARTIFACT_CATALOG: ArtifactCatalog = {
       release: "aster-0ff4ae2",
       releasedAt: "2026-09-15T00:00:00.000Z",
       notes:
-        "KernelPatch core image built from LyraVoid/KernelPatch-Aster revision 0ff4ae2b8cad8058c408d8a5bdb12569b1a84981, which is upstream KernelPatch 0.13.8 plus one commit that trusts the Aster manager (me.yuki.aster) only and accepts its v2+v3 signature. Reports KernelPatch image version 0.13.8. Extracted from a boot partition image produced by a build of that revision and verified to reproduce that image byte for byte.",
+        "Official KernelPatch-Aster release 0.13.8 (asset kpimg-android), the release built from revision 0ff4ae2b8cad8058c408d8a5bdb12569b1a84981: upstream KernelPatch 0.13.8 plus one commit that trusts the Aster manager (me.yuki.aster) only and accepts its v2+v3 signature. Reports KernelPatch image version 0.13.8. Patching a stock boot image with it reproduces the boot partition of a device flashed from the same revision byte for byte, and our WebAssembly kptools build produces exactly the same kernel as the official kptools-linux release binary.",
       artifacts: [
         {
           id: APATCH_KPIMG_ASTER_ID,
