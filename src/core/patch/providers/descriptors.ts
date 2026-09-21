@@ -27,7 +27,7 @@ export const APATCH_PROVIDER_DESCRIPTOR: PatchProviderDescriptor = {
   notes: [
     "Patches the kernel only, therefore boot.img is the only valid target: init_boot.img carries no kernel.",
     "Requires CONFIG_KALLSYMS=y in the target kernel. This is verified before the patch runs.",
-    "The kernel section must be an uncompressed arm64 Image in this build.",
+    "Uncompressed, gzip and LZ4 (frame or legacy, independent or dependent blocks) kernels are supported and re-compressed in the original container; XZ, LZMA, BZip2 and Zstandard kernels are refused.",
     "The superkey is optional and unset by default, matching the manager default where authentication is signature based.",
     "Runs the upstream KernelPatch kptools, compiled to WebAssembly, inside the patch worker.",
   ],

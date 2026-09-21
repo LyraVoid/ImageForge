@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { COMPRESSION_LABEL, compressGzip, decompress, detectCompression, isDecompressionSupported } from "@/core/image";
+import {
+  COMPRESSION_LABEL,
+  compressGzip,
+  decompress,
+  decompressSection,
+  describeCompression,
+  detectCompression,
+  isDecompressionSupported,
+} from "@/core/image";
+import { encodeLz4 } from "@/core/image/lz4";
 import { deterministicBytes } from "../fixtures/bootimg";
 
 describe("compression detection", () => {
@@ -21,11 +30,22 @@ describe("compression detection", () => {
     expect(detectCompression(new Uint8Array(0))).toBe("none");
   });
 
-  it("marks only gzip as expandable in this build", () => {
+  it("marks gzip and both LZ4 containers as expandable", () => {
     expect(isDecompressionSupported("gzip")).toBe(true);
-    expect(isDecompressionSupported("lz4-legacy")).toBe(false);
+    expect(isDecompressionSupported("lz4-legacy")).toBe(true);
+    expect(isDecompressionSupported("lz4-frame")).toBe(true);
     expect(isDecompressionSupported("zstd")).toBe(false);
+    expect(isDecompressionSupported("xz")).toBe(false);
     expect(COMPRESSION_LABEL["lz4-frame"]).toBe("LZ4 (frame)");
+  });
+
+  it("describes a payload with the settings needed to reproduce it", async () => {
+    const payload = deterministicBytes(4096, 21);
+    const legacy = await encodeLz4(payload, { kind: "lz4-legacy", blockMaxSize: 8 * 1024 * 1024 });
+    const descriptor = describeCompression(legacy);
+    expect(descriptor.format).toBe("lz4-legacy");
+    expect(descriptor.lz4?.kind).toBe("lz4-legacy");
+    expect(Array.from(await decompressSection(legacy, descriptor))).toEqual(Array.from(payload));
   });
 
   it("round trips a gzip payload", async () => {

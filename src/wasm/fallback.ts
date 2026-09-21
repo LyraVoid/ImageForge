@@ -30,10 +30,16 @@ export function lz4BlockMaxSize(srcLength: number): number {
   return srcLength * 255 + 16;
 }
 
-export function lz4DecompressBlock(input: Uint8Array, expectedSize: number): Uint8Array {
-  const output = new Uint8Array(expectedSize);
+export function lz4DecompressBlock(
+  input: Uint8Array,
+  expectedSize: number,
+  prefix?: Uint8Array,
+): Uint8Array {
+  const prefixLength = prefix ? prefix.length : 0;
+  const output = new Uint8Array(prefixLength + expectedSize);
+  if (prefix && prefixLength > 0) output.set(prefix, 0);
   let sp = 0;
-  let dp = 0;
+  let dp = prefixLength;
 
   while (sp < input.length) {
     const token = input[sp];
@@ -80,7 +86,96 @@ export function lz4DecompressBlock(input: Uint8Array, expectedSize: number): Uin
     dp += matchLength;
   }
 
-  return output.subarray(0, dp);
+  return output.subarray(prefixLength, dp);
+}
+
+const MIN_MATCH = 4;
+const LAST_LITERALS = 5;
+const MF_LIMIT = 12;
+const MAX_OFFSET = 65535;
+const HASH_LOG = 16;
+
+function hash4(value: number): number {
+  return Math.imul(value, 2654435761) >>> (32 - HASH_LOG);
+}
+
+function readU32(data: Uint8Array, index: number): number {
+  return (data[index] | (data[index + 1] << 8) | (data[index + 2] << 16) | (data[index + 3] << 24)) >>> 0;
+}
+
+function writeLength(output: Uint8Array, start: number, length: number): number {
+  let pos = start;
+  let remaining = length;
+  while (remaining >= 255) {
+    output[pos] = 255;
+    pos += 1;
+    remaining -= 255;
+  }
+  output[pos] = remaining;
+  return pos + 1;
+}
+
+/**
+ * Greedy LZ4 block compressor. It mirrors crates/imageforge-wasm exactly, so the
+ * WebAssembly path and this fallback produce identical bytes.
+ */
+export function lz4CompressBlock(input: Uint8Array): Uint8Array {
+  const n = input.length;
+  if (n === 0) return new Uint8Array(0);
+
+  const output = new Uint8Array(n + Math.ceil(n / 255) + 32);
+  const table = new Uint32Array(1 << HASH_LOG);
+  const matchLimit = n - LAST_LITERALS;
+  let pos = 0;
+  let anchor = 0;
+  let i = 0;
+
+  while (i + MF_LIMIT <= n) {
+    const sequence = readU32(input, i);
+    const slot = hash4(sequence);
+    const candidate = table[slot];
+    table[slot] = i;
+
+    if (candidate < i && i - candidate <= MAX_OFFSET && readU32(input, candidate) === sequence) {
+      let matchLength = MIN_MATCH;
+      while (i + matchLength < matchLimit && input[candidate + matchLength] === input[i + matchLength]) {
+        matchLength += 1;
+      }
+
+      const literalLength = i - anchor;
+      const matchCode = matchLength - MIN_MATCH;
+      const tokenPos = pos;
+      pos += 1;
+      output[tokenPos] =
+        ((literalLength >= 15 ? 15 : literalLength) << 4) | (matchCode >= 15 ? 15 : matchCode);
+
+      if (literalLength >= 15) pos = writeLength(output, pos, literalLength - 15);
+      output.set(input.subarray(anchor, anchor + literalLength), pos);
+      pos += literalLength;
+
+      const offset = i - candidate;
+      output[pos] = offset & 0xff;
+      output[pos + 1] = (offset >> 8) & 0xff;
+      pos += 2;
+
+      if (matchCode >= 15) pos = writeLength(output, pos, matchCode - 15);
+
+      i += matchLength;
+      anchor = i;
+    } else {
+      i += 1;
+    }
+  }
+
+  const literalLength = n - anchor;
+  const tokenPos = pos;
+  pos += 1;
+  output[tokenPos] = (literalLength >= 15 ? 15 : literalLength) << 4;
+  if (literalLength >= 15) pos = writeLength(output, pos, literalLength - 15);
+  output.set(input.subarray(anchor, n), pos);
+  pos += literalLength;
+
+  return output.subarray(0, pos);
 }
 
 export function createTypeScriptModule(reason = "The WebAssembly module is not loaded."): WasmImageModule {
@@ -90,6 +185,7 @@ export function createTypeScriptModule(reason = "The WebAssembly module is not l
     status,
     crc32,
     lz4DecompressBlock,
+    lz4CompressBlock,
     lz4BlockMaxSize,
   };
 }

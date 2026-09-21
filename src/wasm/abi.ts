@@ -9,8 +9,10 @@ export interface WasmImageModule {
   readonly kind: "wasm" | "typescript";
   readonly status: WasmStatus;
   crc32(bytes: Uint8Array): number;
-  lz4DecompressBlock(input: Uint8Array, expectedSize: number): Uint8Array;
   lz4BlockMaxSize(srcLength: number): number;
+  /** `prefix` holds the previous 64 KiB window for LZ4 frames with dependent blocks. */
+  lz4DecompressBlock(input: Uint8Array, expectedSize: number, prefix?: Uint8Array): Uint8Array;
+  lz4CompressBlock(input: Uint8Array): Uint8Array;
 }
 
 export const WASM_PATH = "/wasm/imageforge.wasm";

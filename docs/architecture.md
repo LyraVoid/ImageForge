@@ -57,8 +57,18 @@ Real images shaped two decisions:
 * The kernel payload is handed to providers as raw section bytes together with its detected
   compression, so a provider can refuse an unsupported format instead of corrupting it.
 
-Compression support in v0.1: gzip can be expanded (via `DecompressionStream`); LZ4, XZ,
-LZMA, BZip2 and Zstandard are detected and reported but are copied through unchanged.
+Compression support: gzip is expanded through `DecompressionStream`; LZ4 legacy and LZ4
+frame payloads are expanded by the WebAssembly codec, which also keeps a 64 KiB window so
+frames with dependent blocks decode correctly. XZ, LZMA, BZip2 and Zstandard are detected
+and reported but cannot be expanded. "unknown" means no container magic matched, which is
+what a plain arm64 `Image` looks like, so those payloads are passed through unchanged.
+
+When a provider has to rewrite a compressed section, `describeCompression` captures the
+container settings (block size, block and content checksums, content size, dictionary id)
+and `compressSection` writes the payload back into the same container using our LZ4 block
+compressor and XXH32. Without that step the bootloader would try to decompress an
+uncompressed payload.
+
 Vendor boot images are parsed read-only.
 
 ## Patch providers
@@ -97,7 +107,7 @@ layout of the image itself is unchanged, and the AVB signature is dropped either
 
 | Module | Purpose |
 | --- | --- |
-| `public/wasm/imageforge.wasm` | Rust crate: CRC32 and LZ4 block decoding, with a TypeScript fallback |
+| `public/wasm/imageforge.wasm` | Rust crate: CRC32, LZ4 block decoding (windowed) and LZ4 block compression, with an identical TypeScript fallback |
 | `public/wasm/kptools.wasm` | Upstream KernelPatch kptools compiled to `wasm32-wasip1` |
 
 `kptools.wasm` is driven by `src/wasm/wasi-runner.ts` on top of

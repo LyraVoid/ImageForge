@@ -14,6 +14,13 @@ interface WasmExports {
     sourceLength: number,
     destination: number,
     destinationCapacity: number,
+    prefixLength: number,
+  ): number | bigint;
+  imageforge_lz4_compress_block(
+    source: number,
+    sourceLength: number,
+    destination: number,
+    destinationCapacity: number,
   ): number | bigint;
 }
 
@@ -72,23 +79,52 @@ function createWasmModule(exports: WasmExports): WasmImageModule {
     lz4BlockMaxSize(sourceLength: number): number {
       return exports.imageforge_lz4_block_max_size(sourceLength);
     },
-    lz4DecompressBlock(input: Uint8Array, expectedSize: number): Uint8Array {
+    lz4DecompressBlock(input: Uint8Array, expectedSize: number, prefix?: Uint8Array): Uint8Array {
+      const prefixLength = prefix ? prefix.length : 0;
       const source = writeHeap(input);
-      const destinationSize = Math.max(1, expectedSize);
+      const destinationSize = prefixLength + Math.max(1, expectedSize);
       const destination = exports.alloc(destinationSize);
       if (destination === 0) {
         exports.dealloc(source.pointer, Math.max(1, source.size));
         throw new Error("imageforge wasm: allocation failed.");
       }
       try {
+        if (prefix && prefixLength > 0) {
+          new Uint8Array(exports.memory.buffer, destination, prefixLength).set(prefix);
+        }
         const written = Number(
-          exports.imageforge_lz4_decompress_block(source.pointer, source.size, destination, expectedSize),
+          exports.imageforge_lz4_decompress_block(
+            source.pointer,
+            source.size,
+            destination,
+            destinationSize,
+            prefixLength,
+          ),
         );
         if (written < 0) throw new Error("Invalid LZ4 block.");
-        return new Uint8Array(exports.memory.buffer, destination, written).slice();
+        return new Uint8Array(exports.memory.buffer, destination + prefixLength, written).slice();
       } finally {
         exports.dealloc(source.pointer, Math.max(1, source.size));
         exports.dealloc(destination, destinationSize);
+      }
+    },
+    lz4CompressBlock(input: Uint8Array): Uint8Array {
+      const capacity = Math.max(16, exports.imageforge_lz4_block_max_size(input.length));
+      const source = writeHeap(input);
+      const destination = exports.alloc(capacity);
+      if (destination === 0) {
+        exports.dealloc(source.pointer, Math.max(1, source.size));
+        throw new Error("imageforge wasm: allocation failed.");
+      }
+      try {
+        const written = Number(
+          exports.imageforge_lz4_compress_block(source.pointer, source.size, destination, capacity),
+        );
+        if (written < 0) throw new Error("imageforge wasm: LZ4 compression failed.");
+        return new Uint8Array(exports.memory.buffer, destination, written).slice();
+      } finally {
+        exports.dealloc(source.pointer, Math.max(1, source.size));
+        exports.dealloc(destination, capacity);
       }
     },
   };

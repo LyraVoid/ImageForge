@@ -59,12 +59,20 @@ describe("compatibility engine", () => {
 
   it("warns when the ramdisk payload cannot be expanded", async () => {
     const { artifacts, providers } = setup();
-    const lz4Payload = new Uint8Array([0x02, 0x21, 0x4c, 0x18, 0x00, 0x00, 0x00, 0x00]);
-    const image = parseImage(await buildBootImage({ ramdisk: lz4Payload }));
+    const zstdPayload = new Uint8Array([0x28, 0xb5, 0x2f, 0xfd, 0x00, 0x00, 0x00, 0x00]);
+    const image = parseImage(await buildBootImage({ ramdisk: zstdPayload }));
     const result = evaluateCompatibility({ image, providers, artifacts });
     const mock = result.candidates.find((entry) => entry.providerId === "mock");
     expect(mock?.warnings.map((warning) => warning.code)).toContain("unsupported-compression");
-    expect(result.warnings.join(" ")).toMatch(/LZ4/);
+    expect(result.warnings.join(" ")).toMatch(/Zstandard/);
+  });
+
+  it("does not warn about a plain uncompressed kernel", async () => {
+    const { artifacts, providers } = setup();
+    const image = parseImage(await buildBootImage({}));
+    const result = evaluateCompatibility({ image, providers, artifacts });
+    const apatch = result.candidates.find((entry) => entry.providerId === "apatch");
+    expect(apatch?.warnings.map((warning) => warning.code)).not.toContain("unsupported-kernel-compression");
   });
 
   it("reports no artifact release for a provider that has none", async () => {

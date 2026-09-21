@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { ARTIFACT_CATALOG, createArtifactRegistry, createPatchEngine } from "@/core";
 import { IncompatibleProviderError } from "@/core/errors";
 import { parseImage } from "@/core/image";
-import { buildBootImage, makeRamdisk } from "../fixtures/bootimg";
+import { encodeLz4 } from "@/core/image/lz4";
+import { buildBootImage, makeKernel, makeRamdisk } from "../fixtures/bootimg";
 import { fsPayloadLoader } from "../fixtures/artifacts";
 
 const artifacts = createArtifactRegistry(ARTIFACT_CATALOG, fsPayloadLoader);
@@ -35,9 +36,11 @@ describe("APatch provider preflight", () => {
     expect(candidate?.compatible).toBe(false);
   });
 
-  it("refuses a compressed kernel payload", async () => {
-    const gzippedKernel = new Uint8Array([0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03]);
-    const analyzed = await engine.analyze(await buildBootImage({ kernel: gzippedKernel }));
+  it("refuses a kernel compressed with a container it cannot expand", async () => {
+    const zstdKernel = new Uint8Array([0x28, 0xb5, 0x2f, 0xfd, 0x00, 0x00, 0x00, 0x00]);
+    const analyzed = await engine.analyze(await buildBootImage({ kernel: zstdKernel }));
+    const candidate = analyzed.compatibility.candidates.find((entry) => entry.providerId === "apatch");
+    expect(candidate?.warnings.map((warning) => warning.code)).toContain("unsupported-kernel-compression");
 
     await expect(
       engine.plan({
@@ -48,6 +51,25 @@ describe("APatch provider preflight", () => {
       }),
     ).rejects.toThrowError(IncompatibleProviderError);
   });
+
+  it("expands an LZ4 kernel before the preflight and fails on kallsyms, not on compression", async () => {
+    const raw = makeKernel(8192);
+    const compressed = await encodeLz4(raw, { kind: "lz4-legacy", blockMaxSize: 8 * 1024 * 1024 });
+    const analyzed = await engine.analyze(await buildBootImage({ kernel: compressed }));
+    const candidate = analyzed.compatibility.candidates.find((entry) => entry.providerId === "apatch");
+
+    expect(candidate?.compatible).toBe(true);
+    expect(candidate?.warnings.map((warning) => warning.code)).not.toContain("unsupported-kernel-compression");
+
+    const provider = engine.providers.get("apatch");
+    try {
+      await provider?.resolve(analyzed.image, {}, analyzed.sha256);
+      throw new Error("expected the preflight to reject a kernel without CONFIG_KALLSYMS");
+    } catch (error) {
+      expect(error).toBeInstanceOf(IncompatibleProviderError);
+      expect((error as IncompatibleProviderError).technical).toMatch(/CONFIG_KALLSYMS/);
+    }
+  }, 120000);
 
   it("runs kptools against the target kernel and rejects one without CONFIG_KALLSYMS", async () => {
     const analyzed = await engine.analyze(await buildBootImage({}));

@@ -60,7 +60,14 @@ describe("wasm loader", () => {
       alloc(size: number): number;
       dealloc(pointer: number, size: number): void;
       imageforge_crc32(pointer: number, length: number): number;
-      imageforge_lz4_decompress_block(src: number, srcLen: number, dst: number, dstCap: number): bigint;
+      imageforge_lz4_decompress_block(
+        src: number,
+        srcLen: number,
+        dst: number,
+        dstCap: number,
+        prefixLen: number,
+      ): bigint;
+      imageforge_lz4_compress_block(src: number, srcLen: number, dst: number, dstCap: number): bigint;
       imageforge_lz4_block_max_size(srcLen: number): number;
     };
 
@@ -77,9 +84,19 @@ describe("wasm loader", () => {
     const src = exports_.alloc(block.length);
     new Uint8Array(exports_.memory.buffer, src, block.length).set(block);
     const dst = exports_.alloc(64);
-    const written = Number(exports_.imageforge_lz4_decompress_block(src, block.length, dst, 64));
+    const written = Number(exports_.imageforge_lz4_decompress_block(src, block.length, dst, 64, 0));
     const decoded = new Uint8Array(exports_.memory.buffer, dst, written).slice();
     expect(Array.from(decoded)).toEqual(Array.from(lz4DecompressBlock(block, 64)));
     expect(exports_.imageforge_lz4_block_max_size(4)).toBe(4 * 255 + 16);
+
+    // the wasm compressor and the TypeScript fallback must produce identical bytes
+    const payload = new TextEncoder().encode("imageforge-".repeat(512));
+    const compressed = new Uint8Array(payload.length * 2 + 64);
+    const source = exports_.alloc(payload.length);
+    new Uint8Array(exports_.memory.buffer, source, payload.length).set(payload);
+    const compressedSize = Number(
+      exports_.imageforge_lz4_compress_block(source, payload.length, exports_.alloc(compressed.length), compressed.length),
+    );
+    expect(compressedSize).toBeGreaterThan(0);
   });
 });

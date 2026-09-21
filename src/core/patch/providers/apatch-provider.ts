@@ -9,11 +9,15 @@ import { AbortedError, IncompatibleProviderError, PatchError } from "../../error
 import { sha256Hex } from "../../hash";
 import {
   COMPRESSION_LABEL,
-  detectCompression,
+  compressSection,
+  decompressSection,
+  describeCompression,
+  isPayloadUsable,
   repackBootImage,
   sectionOf,
   verifyImage,
 } from "../../image";
+import type { CompressionDescriptor } from "../../image";
 import type { ParsedImage, VerifyExpectations } from "../../image";
 import { compileWasiModule, runWasiTool } from "../../../wasm/wasi-runner";
 import type {
@@ -103,7 +107,11 @@ export class ApatchPatchProvider implements PatchProvider {
     return { kpimg: kpimg.artifact, kptools: kptools.artifact };
   }
 
-  private loadKernel(image: ParsedImage): Uint8Array {
+  /**
+   * Returns the raw kernel section together with the descriptor needed to write the
+   * exact same container again after patching.
+   */
+  private loadKernel(image: ParsedImage): { bytes: Uint8Array; descriptor: CompressionDescriptor } {
     const kernel = sectionOf(image, "kernel");
     if (!kernel || kernel.size === 0) {
       throw new IncompatibleProviderError(
@@ -111,14 +119,14 @@ export class ApatchPatchProvider implements PatchProvider {
         "This image has no kernel to patch.",
       );
     }
-    const compression = detectCompression(kernel.data);
-    if (compression !== "none" && compression !== "unknown") {
+    const descriptor = describeCompression(kernel.data);
+    if (!isPayloadUsable(descriptor.format)) {
       throw new IncompatibleProviderError(
-        "Kernel payload compression is " + COMPRESSION_LABEL[compression] + ".",
-        "This build can only patch uncompressed arm64 kernel images.",
+        "Kernel payload compression is " + COMPRESSION_LABEL[descriptor.format] + ".",
+        "This build cannot expand that kernel compression, so the kernel cannot be patched safely.",
       );
     }
-    return kernel.data;
+    return { bytes: kernel.data, descriptor };
   }
 
   async resolve(image: ParsedImage, options: PatchOptions, sourceImageSha256: string): Promise<PatchPlan> {
@@ -131,6 +139,7 @@ export class ApatchPatchProvider implements PatchProvider {
 
     const { kpimg, kptools } = this.resolveArtifacts();
     const kernel = this.loadKernel(image);
+    const rawKernel = await decompressSection(kernel.bytes, kernel.descriptor);
 
     const kptoolsBytes = await this.artifacts.loadVerifiedPayload(kptools);
     const module = await compileWasiModule(kptools.id + ":" + String(kptools.sha256), kptoolsBytes);
@@ -138,7 +147,7 @@ export class ApatchPatchProvider implements PatchProvider {
     const flags = await runWasiTool({
       module,
       args: ["-i", "/" + KERNEL_FILE, "-f"],
-      files: { [KERNEL_FILE]: kernel },
+      files: { [KERNEL_FILE]: rawKernel },
     });
     const kallsymsEnabled = flags.stdout.some((line) => line.includes("CONFIG_KALLSYMS=y"));
     if (!kallsymsEnabled) {
@@ -172,8 +181,9 @@ export class ApatchPatchProvider implements PatchProvider {
         ...(options.configuration ?? {}),
         kernelPatchMode: "static",
         superkeyMode: superkey === "" ? "none" : "custom",
-        kernelCompression: COMPRESSION_LABEL[detectCompression(kernel)],
-        kernelSize: String(kernel.length),
+        kernelCompression: COMPRESSION_LABEL[kernel.descriptor.format],
+        kernelSize: String(rawKernel.length),
+        kernelSectionSize: String(kernel.bytes.length),
         kallsyms: "enabled",
         kallsymsAll: kallsymsAll ? "enabled" : "disabled",
         kpimgVersion: versionFromStdout(kpimgInfo.stdout, kpimg.version),
@@ -205,8 +215,9 @@ export class ApatchPatchProvider implements PatchProvider {
       throw new PatchError("APatch can only patch boot images (plan target is " + plan.target + ").");
     }
 
-    emit("extract", 20, "Extracting the kernel image");
+    emit("extract", 20, "Extracting and expanding the kernel image");
     const kernel = this.loadKernel(image);
+    const rawKernel = await decompressSection(kernel.bytes, kernel.descriptor);
 
     emit("prepare", 40, "Loading KernelPatch artifacts");
     const kptools = this.artifacts.resolve({ providerId: this.id, artifactId: APATCH_KPTOOLS_ID }).artifact;
@@ -222,7 +233,7 @@ export class ApatchPatchProvider implements PatchProvider {
     const run = await runWasiTool({
       module,
       args: patchArgs,
-      files: { [KERNEL_FILE]: kernel, [KPIMG_FILE]: kpimgBytes },
+      files: { [KERNEL_FILE]: rawKernel, [KPIMG_FILE]: kpimgBytes },
       onStdout: (line) => context.onProgress?.({ stage: "patch", progress: 65, message: line }),
       onStderr: (line) => context.onProgress?.({ stage: "patch", progress: 65, message: line }),
       signal: context.signal,
@@ -255,15 +266,17 @@ export class ApatchPatchProvider implements PatchProvider {
 
     emit("repack", 80, "Repacking the boot image");
     const preserveImageSize = (context.options?.configuration?.preserveImageSize ?? "false") === "true";
+    const recompressed = await compressSection(patchedKernel, kernel.descriptor);
     const outcome = repackBootImage({
       image,
-      kernel: patchedKernel,
+      kernel: recompressed,
       ...(preserveImageSize ? { padTo: image.totalSize } : {}),
     });
     const sha256 = await sha256Hex(outcome.bytes);
 
     emit("verify", 95, "Verifying the produced image");
     const kernelSha256 = await sha256Hex(patchedKernel);
+    const kernelSectionSha256 = await sha256Hex(recompressed);
 
     return {
       plan,
@@ -287,8 +300,12 @@ export class ApatchPatchProvider implements PatchProvider {
         kptoolsSha256: kptools.sha256 ?? "unknown",
         superkeyMode: superkey === "" ? "none" : "custom",
         kernelSha256,
-        kernelSizeBefore: String(kernel.length),
-        kernelSizeAfter: String(patchedKernel.length),
+        kernelSectionSha256,
+        kernelCompression: COMPRESSION_LABEL[kernel.descriptor.format],
+        kernelSizeBefore: String(kernel.bytes.length),
+        kernelSizeAfter: String(recompressed.length),
+        kernelRawSizeBefore: String(rawKernel.length),
+        kernelRawSizeAfter: String(patchedKernel.length),
         imageSizeBefore: String(image.totalSize),
         imageSizeAfter: String(outcome.bytes.length),
         preserveImageSize: preserveImageSize ? "true" : "false",
@@ -308,8 +325,8 @@ export class ApatchPatchProvider implements PatchProvider {
       format: "boot",
       headerVersion: result.plan.headerVersion,
     };
-    const kernelSha256 = result.metadata.kernelSha256;
-    if (kernelSha256) expectations.kernelSha256 = kernelSha256;
+    const kernelSectionSha256 = result.metadata.kernelSectionSha256 ?? result.metadata.kernelSha256;
+    if (kernelSectionSha256) expectations.kernelSha256 = kernelSectionSha256;
     const verification = await verifyImage(result.bytes, expectations);
     return {
       verification,

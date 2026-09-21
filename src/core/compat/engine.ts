@@ -1,5 +1,5 @@
 import type { ArtifactRegistry } from "../artifacts/registry";
-import { COMPRESSION_LABEL, detectCompression, isDecompressionSupported, sectionOf } from "../image";
+import { COMPRESSION_LABEL, detectCompression, isPayloadUsable, sectionOf } from "../image";
 import type { ParsedImage } from "../image";
 import type { ProviderRegistry } from "../patch/providers/registry";
 import type { PatchProviderDescriptor } from "../patch/types";
@@ -54,6 +54,18 @@ function evaluateCandidate(
   const kernelSection = sectionOf(image, "kernel");
   if (descriptor.requiresKernel && (!kernelSection || kernelSection.size === 0)) {
     reasons.push("The image has no kernel section to patch.");
+  } else if (descriptor.requiresKernel && kernelSection) {
+    const kernelCompression = detectCompression(kernelSection.data);
+    if (!isPayloadUsable(kernelCompression)) {
+      warnings.push({
+        code: "unsupported-kernel-compression",
+        message:
+          "The kernel payload is " +
+          COMPRESSION_LABEL[kernelCompression] +
+          ", which this build cannot expand; the kernel could not be patched safely.",
+        severity: "warning",
+      });
+    }
   }
 
   const ramdisk = sectionOf(image, "ramdisk") ?? sectionOf(image, "vendor_ramdisk");
@@ -61,7 +73,7 @@ function evaluateCandidate(
     reasons.push("The image has no ramdisk section.");
   } else if (ramdisk) {
     const compression = detectCompression(ramdisk.data);
-    if (!isDecompressionSupported(compression)) {
+    if (!isPayloadUsable(compression)) {
       warnings.push({
         code: "unsupported-compression",
         message:

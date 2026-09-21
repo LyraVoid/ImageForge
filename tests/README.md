@@ -37,6 +37,13 @@ skipped (not silently passed) when no image is present. Bundled artifacts
 (`public/wasm/kptools.wasm`, `public/artifacts/apatch/kpimg`) are always checked against
 the digests recorded in the artifact registry.
 
+## Tests that need the reference lz4 tool
+
+`tests/unit/lz4.test.ts` cross checks our codec against the reference `lz4` binary whenever
+it is installed: frames, legacy frames and dependent-block frames (`-BD`) are decoded, and
+our own frames are handed back to `lz4 -d`. The inner round trips always run, so the codec
+is covered even without the tool.
+
 ## Environment
 
 The default Vitest environment is `node`; the UI smoke test opts into jsdom with a

@@ -15,10 +15,16 @@ export {
 export {
   COMPRESSION_LABEL,
   compressGzip,
+  compressSection,
   decompress,
+  decompressSection,
+  describeCompression,
   detectCompression,
   isDecompressionSupported,
+  isPayloadUsable,
 } from "./compression";
-export type { CompressionFormat } from "./compression";
+export type { CompressionDescriptor, CompressionFormat } from "./compression";
+export { decodeLz4, encodeLz4, parseLz4Settings, xxh32 } from "./lz4";
+export type { Lz4FrameSettings, Lz4LegacySettings, Lz4Settings } from "./lz4";
 export { decodeOsVersion, detectKernelArchitecture } from "./architecture";
 export type { ArchitectureGuess } from "./architecture";

@@ -1,4 +1,6 @@
 import { startsWith } from "../binary";
+import { decodeLz4, encodeLz4, parseLz4Settings } from "./lz4";
+import type { Lz4Settings } from "./lz4";
 
 export type CompressionFormat =
   | "none"
@@ -25,7 +27,13 @@ export const COMPRESSION_LABEL: Record<CompressionFormat, string> = {
   unknown: "Unknown",
 };
 
-const SUPPORTED: readonly CompressionFormat[] = ["none", "cpio", "gzip"];
+const SUPPORTED: readonly CompressionFormat[] = ["none", "cpio", "gzip", "lz4-frame", "lz4-legacy"];
+
+/** Everything needed to reproduce the exact compression of a section. */
+export interface CompressionDescriptor {
+  format: CompressionFormat;
+  lz4?: Lz4Settings;
+}
 
 export function detectCompression(bytes: Uint8Array): CompressionFormat {
   if (bytes.length === 0) return "none";
@@ -44,11 +52,72 @@ export function isDecompressionSupported(format: CompressionFormat): boolean {
   return SUPPORTED.includes(format);
 }
 
+/**
+ * True when a section can be handed to a provider as it is: either it is already raw
+ * ("none", or "unknown" which means no recognised container magic matched, as with a
+ * plain arm64 Image) or this build can expand it.
+ */
+export function isPayloadUsable(format: CompressionFormat): boolean {
+  return format === "none" || format === "unknown" || isDecompressionSupported(format);
+}
+
+/**
+ * Detects the compression of a section and captures the settings needed to write
+ * the same container again. An LZ4 payload with a header we cannot reproduce is
+ * reported as unknown so nothing tries to rewrite it.
+ */
+export function describeCompression(bytes: Uint8Array): CompressionDescriptor {
+  const format = detectCompression(bytes);
+  if (format === "lz4-frame" || format === "lz4-legacy") {
+    try {
+      return { format, lz4: parseLz4Settings(bytes) };
+    } catch {
+      return { format: "unknown" };
+    }
+  }
+  return { format };
+}
+
 export async function decompress(bytes: Uint8Array, format: CompressionFormat): Promise<Uint8Array> {
   if (format === "none" || format === "cpio" || format === "unknown") return bytes;
-  if (format !== "gzip") {
+  if (!isDecompressionSupported(format)) {
     throw new Error("Decompression for " + COMPRESSION_LABEL[format] + " is not available in this build.");
   }
+  return decompressSection(bytes, { format });
+}
+
+export async function decompressSection(
+  bytes: Uint8Array,
+  descriptor: CompressionDescriptor,
+): Promise<Uint8Array> {
+  switch (descriptor.format) {
+    case "gzip":
+      return inflateGzip(bytes);
+    case "lz4-frame":
+    case "lz4-legacy":
+      return decodeLz4(bytes, descriptor.lz4);
+    default:
+      return bytes;
+  }
+}
+
+export async function compressSection(
+  raw: Uint8Array,
+  descriptor: CompressionDescriptor,
+): Promise<Uint8Array> {
+  switch (descriptor.format) {
+    case "gzip":
+      return compressGzip(raw);
+    case "lz4-frame":
+    case "lz4-legacy":
+      if (!descriptor.lz4) throw new Error("LZ4 settings are missing, cannot recompress the section.");
+      return encodeLz4(raw, descriptor.lz4);
+    default:
+      return raw;
+  }
+}
+
+async function inflateGzip(bytes: Uint8Array): Promise<Uint8Array> {
   if (typeof DecompressionStream === "undefined") {
     throw new Error("DecompressionStream is not available in this runtime.");
   }

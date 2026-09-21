@@ -27,9 +27,11 @@ Deliberately honest limits:
 * **Magisk and KernelSU are declared but not implemented.** They are `planned` in the
   registry; both need CPIO read/write and the full compression matrix first, and their
   upstream sources and licenses must be read from the current revision before implementing.
-* **APatch patches uncompressed arm64 kernels only** in this build. A compressed kernel
-  payload (gzip, LZ4, XZ, ...) is refused with a structured error instead of being patched
-  wrongly. It also requires `CONFIG_KALLSYMS=y`, which is verified before the patch runs.
+* **APatch patches arm64 kernels in uncompressed, gzip or LZ4 containers.** The kernel is
+  expanded, patched and written back into the same container (LZ4 frames with dependent
+  blocks included). XZ, LZMA, BZip2 and Zstandard kernels are refused with a structured
+  error instead of being patched wrongly. It also requires `CONFIG_KALLSYMS=y`, which is
+  verified before the patch runs.
 * **The superkey is optional and unset by default**, matching the manager default where
   authentication is signature based. The superkey is never written into the plan.
 * **The AVB signature is dropped** on repack, so verified boot fails unless the produced
@@ -61,6 +63,8 @@ neither toolchain is required for app development.
              -> Image Engine repacks boot.img -> verification
 
 * Targets `boot.img` only: APatch patches the kernel, and `init_boot.img` carries no kernel.
+* The kernel is expanded before patching and re-compressed into the original container, so
+  the bootloader still finds the compression format it expects.
 * Preflight runs `kptools -f` and refuses the image unless the kernel reports
   `CONFIG_KALLSYMS=y`; it also warns when `CONFIG_KALLSYMS_ALL` is disabled.
 * Bundles two GPL artifacts, both digest verified before use:
@@ -111,7 +115,8 @@ are never hardcoded in the UI, and heavy work never runs on the main thread.
 | vendor boot header v3 / v4 | parse and extract (read-only) |
 | Kernel architecture detection | arm64, arm (zImage), x86_64 (bzImage) heuristics |
 | Compression detection | gzip, LZ4 (legacy and frame), XZ, LZMA, BZip2, Zstandard, CPIO |
-| Compression expansion | gzip only |
+| Compression expansion | gzip, LZ4 legacy and LZ4 frame (including dependent blocks) |
+| Compression re-encoding | gzip and LZ4, reproducing the original block size, checksums, content size and dictionary id |
 | AVB signature | detected, dropped on repack with a warning |
 
 ## Verification model
