@@ -28,6 +28,14 @@ export const APATCH_KPIMG_ASTER_SHA256 = "429718afcabe5bbcf51389ce41a2c983940b33
 
 export const APATCH_KPTOOLS_SHA256 = "bb53abeae8be16f4d2127af1b700d95ff8a75b38eea2829251c9f774c9b61c4c";
 
+/** KernelSU userspace init wrapper; see THIRD_PARTY_LICENSES/kernelsu/. */
+export const KERNELSU_KSUINIT_ID = "kernelsu-ksuinit";
+
+export const KERNELSU_KSUINIT_SHA256 = "b49fff3252cdcd14bf80472becbd96c4f17028a632b364e8d455d335b94f1345";
+
+/** The KernelSU release the wrapper is taken from. */
+export const KERNELSU_RELEASE = "v3.3.0";
+
 export const ARTIFACT_CATALOG: ArtifactCatalog = {
   schemaVersion: 1,
   updatedAt: "2026-09-22T00:00:00.000Z",
@@ -47,6 +55,24 @@ export const ARTIFACT_CATALOG: ArtifactCatalog = {
           sha256: MOCK_ARTIFACT_SHA256,
           source: "builtin:mock",
           sizeBytes: MOCK_ARTIFACT_SIZE_BYTES,
+        },
+      ],
+    },
+    {
+      providerId: "kernelsu",
+      release: KERNELSU_RELEASE,
+      releasedAt: "2026-08-28T00:00:00.000Z",
+      notes:
+        "Official KernelSU release. Only the userspace init wrapper (ksuinit, GPL-3.0-or-later) is bundled. The loadable module (lkm-aarch64-{kmi}_kernelsu.ko) is built from the kernel directory and is GPL-2.0-only, which cannot be combined with this project's AGPL-3.0-or-later licence, so it is supplied by the user and verified before use. Loadable modules are published per KMI because GKI keeps the module ABI stable within one.",
+      artifacts: [
+        {
+          id: KERNELSU_KSUINIT_ID,
+          version: KERNELSU_RELEASE,
+          type: "init-wrapper",
+          architecture: "arm64",
+          sha256: KERNELSU_KSUINIT_SHA256,
+          source: "bundled:/artifacts/kernelsu/ksuinit",
+          sizeBytes: 607360,
         },
       ],
     },

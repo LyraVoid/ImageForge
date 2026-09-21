@@ -65,14 +65,16 @@ export const PLANNED_PROVIDER_DESCRIPTORS: PatchProviderDescriptor[] = [
   {
     id: "kernelsu",
     name: "KernelSU",
-    description: "Kernel based root with a loadable kernel module and patcher components.",
+    description:
+      "Kernel based root: the KernelSU loadable module is injected into the ramdisk, which replaces init.",
     status: "planned",
-    website: "https://github.com/tiann/KernelSU",
     notes: [
-      "Not implemented in this build.",
-      "LKM mode modifies the ramdisk, so on Android 13+ it targets init_boot instead of boot; GKI mode always replaces the kernel in boot.",
-      "KernelSU ships distinct artifacts (LKM plus patcher or injection components) that must be modelled individually.",
+      "Under construction: the ramdisk layer it depends on is finished, the provider itself is not.",
+      "Injects the module into the ramdisk of init_boot.img (GKI 13+) or of a boot.img that carries one, exactly as ksud does: init becomes init.real, a new init (ksuinit) is added, and kernelsu.ko is added next to it.",
+      "The loadable module has to match the device KMI (for example android15-6.6) and is supplied by the user, because KernelSU's kernel directory is GPL-2.0-only and cannot be bundled with this AGPL-3.0-or-later project. The provider verifies the module before using it.",
+      "Refuses a ramdisk that is already patched by Magisk, and reports when KernelSU is already installed.",
     ],
+    website: "https://github.com/tiann/KernelSU",
     supportedFormats: ["boot", "init_boot"],
     supportedHeaderVersions: [0, 1, 2, 3, 4],
     supportedArchitectures: ["arm64"],
