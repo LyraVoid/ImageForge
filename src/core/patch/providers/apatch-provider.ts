@@ -38,6 +38,18 @@ export const APATCH_SUPERKEY_SETTING = "superkey";
 /** Plan configuration key selecting which KernelPatch core image is injected. */
 export const APATCH_FLAVOR_SETTING = "kernelPatchFlavor";
 
+/** Plan configuration key listing the KernelPatch modules embedded into the image. */
+export const APATCH_KPM_SETTING = "kpmModules";
+
+function readModuleNames(configuration: Record<string, string> | undefined): string[] {
+  const raw = (configuration?.[APATCH_KPM_SETTING] ?? "").trim();
+  if (raw === "" || raw === "none") return [];
+  return raw
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry !== "");
+}
+
 export interface ApatchFlavor {
   id: string;
   label: string;
@@ -216,6 +228,7 @@ export class ApatchPatchProvider implements PatchProvider {
     });
 
     const superkey = readSuperkey(options.configuration);
+    const moduleNames = readModuleNames(options.configuration);
     // The superkey is a credential. It is used for this run and never written into the plan,
     // which is displayed in the UI and exported with the result.
     const { superkey: _superkey, ...configurationWithoutSecret } = options.configuration ?? {};
@@ -240,6 +253,7 @@ export class ApatchPatchProvider implements PatchProvider {
         kernelCompression: COMPRESSION_LABEL[kernel.descriptor.format],
         kernelSize: String(rawKernel.length),
         kernelSectionSize: String(kernel.bytes.length),
+        [APATCH_KPM_SETTING]: moduleNames.length === 0 ? "none" : moduleNames.join(","),
         kallsyms: "enabled",
         kallsymsAll: kallsymsAll ? "enabled" : "disabled",
         kpimgVersion: versionFromStdout(kpimgInfo.stdout, kpimg.version),
@@ -251,6 +265,12 @@ export class ApatchPatchProvider implements PatchProvider {
       notes: [
         "KernelPatch is injected into the kernel image; the ramdisk and every other section are left untouched.",
         "The " + flavor.label + " core image only trusts the " + flavor.managerPackage + " manager, which must be installed for the patch to be usable.",
+        moduleNames.length === 0
+          ? "No KernelPatch modules are embedded."
+          : moduleNames.length +
+            " KernelPatch module(s) will be embedded: " +
+            moduleNames.join(", ") +
+            ". The modules stay in the browser and their licences are the user's responsibility.",
         "Reproducible for the pinned kpimg and kptools artifacts: patching the same image twice yields identical kernel bytes, which the test suite enforces.",
         "The superkey is never written into the plan; only the mode is recorded.",
         kallsymsAll
@@ -287,10 +307,31 @@ export class ApatchPatchProvider implements PatchProvider {
     const patchArgs = ["-p", "-i", "/" + KERNEL_FILE, "-k", "/" + KPIMG_FILE, "-o", "/" + PATCHED_FILE];
     if (superkey !== "") patchArgs.push("-S", superkey);
 
+    // KernelPatch modules: the plan pins the names, this run carries the bytes.
+    const plannedModules = readModuleNames(plan.configuration);
+    const attachments = context.attachments ?? [];
+    for (const attachment of attachments) {
+      if (!plannedModules.includes(attachment.name)) {
+        throw new PatchError(
+          "Attachment " + attachment.name + " is not part of the plan (" + plannedModules.join(", ") + ").",
+          "Re-plan after attaching or removing KernelPatch modules.",
+        );
+      }
+    }
+    const moduleFiles: Record<string, Uint8Array> = {};
+    for (const attachment of attachments) {
+      moduleFiles[attachment.name] = attachment.bytes;
+      // Same option shape the FolkTool uses: one -M/-N/-T group per module.
+      patchArgs.push("-M", "/" + attachment.name, "-N", attachment.name, "-T", "kpm");
+    }
+    if (attachments.length > 0) {
+      emit("patch", 62, "Embedding " + attachments.length + " KernelPatch module(s)");
+    }
+
     const run = await runWasiTool({
       module,
       args: patchArgs,
-      files: { [KERNEL_FILE]: rawKernel, [KPIMG_FILE]: kpimgBytes },
+      files: { [KERNEL_FILE]: rawKernel, [KPIMG_FILE]: kpimgBytes, ...moduleFiles },
       onStdout: (line) => context.onProgress?.({ stage: "patch", progress: 65, message: line }),
       onStderr: (line) => context.onProgress?.({ stage: "patch", progress: 65, message: line }),
       signal: context.signal,
@@ -320,6 +361,15 @@ export class ApatchPatchProvider implements PatchProvider {
         "The KernelPatch injection could not be confirmed.",
       );
     }
+    const reportedModules = Number(
+      (confirmation.stdout.find((line) => /^num=\d+$/.test(line.trim())) ?? "num=0").trim().slice(4),
+    );
+    if (reportedModules !== attachments.length) {
+      throw new PatchError(
+        "kptools reported " + reportedModules + " embedded module(s) but " + attachments.length + " were requested.",
+        "The embedded KernelPatch modules could not be confirmed.",
+      );
+    }
 
     emit("repack", 80, "Repacking the boot image");
     const preserveImageSize =
@@ -336,6 +386,13 @@ export class ApatchPatchProvider implements PatchProvider {
     emit("verify", 95, "Verifying the produced image");
     const kernelSha256 = await sha256Hex(patchedKernel);
     const kernelSectionSha256 = await sha256Hex(recompressed);
+
+    const moduleDigests: string[] = [];
+    for (const attachment of attachments) {
+      moduleDigests.push(
+        attachment.name + ":" + attachment.bytes.length + ":" + (await sha256Hex(attachment.bytes)).slice(0, 16),
+      );
+    }
 
     return {
       plan,
@@ -358,6 +415,8 @@ export class ApatchPatchProvider implements PatchProvider {
         kptoolsVersion: kptools.version,
         kptoolsSha256: kptools.sha256 ?? "unknown",
         superkeyMode: superkey === "" ? "none" : "custom",
+        kpmCount: String(attachments.length),
+        kpmModules: moduleDigests.length === 0 ? "none" : moduleDigests.join(","),
         kernelPatchFlavor: plan.configuration.kernelPatchFlavor ?? APATCH_DEFAULT_FLAVOR,
         requiredManager: plan.configuration.requiredManager ?? "unknown",
         kernelSha256,

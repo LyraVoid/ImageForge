@@ -37,9 +37,11 @@ export {
   APATCH_DEFAULT_FLAVOR,
   APATCH_FLAVORS,
   APATCH_FLAVOR_SETTING,
+  APATCH_KPM_SETTING,
   APATCH_SUPERKEY_SETTING,
   ApatchPatchProvider,
 } from "./patch/providers/apatch-provider";
+export type { PatchAttachment } from "./patch/types";
 export type { ApatchFlavor } from "./patch/providers/apatch-provider";
 export { PatchEngine, createPatchEngine } from "./patch/engine";
 export type { AnalyzedImage, PatchEngineOptions, PatchRunOutcome } from "./patch/engine";

@@ -89,9 +89,15 @@ implemented.
       -> compatibility engine checks boot-only, arm64, kernel present, compression supported
       -> provider preflight runs "kptools -f" and requires CONFIG_KALLSYMS=y
       -> provider runs "kptools -p -i kernel -k kpimg -o kernel.patched" (no -S by default)
-      -> provider confirms with "kptools -l -i kernel.patched" that patched=true
+      -> optional: one "-M <module> -N <module> -T kpm" group per attached KernelPatch module
+      -> provider confirms with "kptools -l -i kernel.patched" that patched=true and that the
+         reported module count matches the attachments
       -> Image Engine repacks boot.img with the patched kernel and drops the AVB signature
       -> verifier re-parses the output and compares the kernel digest with the plan
+
+Binary payloads such as KernelPatch modules travel as `PatchAttachment` entries on the run
+context, never through the plan: the plan records only the file names, and the provider
+refuses an attachment the plan does not pin.
 
 The superkey is optional. When it is absent (the default, matching the APatch manager where
 authentication is signature based) no `-S` argument is passed. When it is set, kptools stores

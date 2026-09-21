@@ -21,6 +21,11 @@ export type ForgeStage =
   | "patched"
   | "error";
 
+export interface KpmFile {
+  name: string;
+  bytes: Uint8Array;
+}
+
 export interface ForgeOutput {
   plan: PatchPlan;
   sha256: string;
@@ -37,6 +42,12 @@ let client: PatchWorkerClient | null = null;
 function getClient(): PatchWorkerClient {
   if (!client) client = createPatchWorkerClient();
   return client;
+}
+
+function toStandaloneBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.length);
+  copy.set(bytes);
+  return copy.buffer;
 }
 
 export function outputFileName(sourceName: string | undefined): string {
@@ -56,6 +67,7 @@ interface ForgeState {
   selectedProviderId: string | null;
   planResponse: PlanResponse | null;
   providerOptions: PatchOptions | null;
+  kpmFiles: KpmFile[];
   progress: PatchProgressEvent | null;
   output: ForgeOutput | null;
   error: ImageForgeErrorJson | null;
@@ -65,6 +77,7 @@ interface ForgeState {
   cancelPatch: () => Promise<void>;
   reset: () => Promise<void>;
   dismissError: () => void;
+  setKpmFiles: (files: KpmFile[]) => Promise<void>;
 }
 
 export const useForgeStore = create<ForgeState>((set, get) => ({
@@ -77,6 +90,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
   selectedProviderId: null,
   planResponse: null,
   providerOptions: null,
+  kpmFiles: [],
   progress: null,
   output: null,
   error: null,
@@ -145,10 +159,16 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       progress: { stage: "analyze", progress: 0, message: "Preparing" },
     });
     try {
+      const attachments = state.kpmFiles.map((file) => ({
+        id: file.name,
+        name: file.name,
+        bytes: toStandaloneBuffer(file.bytes),
+      }));
       const response = await active.patch(
         {
           providerId: state.selectedProviderId,
           ...(state.providerOptions === null ? {} : { options: state.providerOptions }),
+          ...(attachments.length === 0 ? {} : { attachments }),
         },
         (event) => {
           set({ progress: event });
@@ -213,9 +233,20 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       selectedProviderId: null,
       planResponse: null,
       providerOptions: null,
+      kpmFiles: [],
       progress: null,
       output: null,
       error: null,
+    });
+  },
+
+  setKpmFiles: async (files) => {
+    set({ kpmFiles: files, error: null });
+    const state = get();
+    if (!state.selectedProviderId) return;
+    const names = files.map((file) => file.name).join(",");
+    void state.selectProvider(state.selectedProviderId, {
+      configuration: { ...(state.providerOptions?.configuration ?? {}), kpmModules: names },
     });
   },
 

@@ -83,6 +83,9 @@ neither toolchain is required for app development.
 * The output is a compact boot image by default. The patch page can zero pad it back to the
   original image size for tools that expect a partition sized file; the AVB signature is
   dropped either way.
+* **KernelPatch modules (KPM) can be embedded optionally.** The patch page attaches `.kpm`
+  files; the plan pins their names and the run carries their bytes, so nothing binary enters
+  the plan. Embedding and the reported module list are verified through `kptools -l`.
 
 ## Architecture
 

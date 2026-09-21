@@ -37,6 +37,13 @@ skipped (not silently passed) when no image is present. Bundled artifacts
 (`public/wasm/kptools.wasm`, `public/artifacts/apatch/kpimg`) are always checked against
 the digests recorded in the artifact registry.
 
+## KernelPatch module fixtures
+
+`tests/fixtures/kpm.ts` builds a minimal KernelPatch module: a relocatable aarch64 ELF with a
+`.kpm.info` section, which is exactly what `kptools` checks before embedding one
+(`tools/kpm.c:get_kpm_info`). The embedding path is therefore covered without shipping a
+compiled kernel module.
+
 ## Tests that need a flashed device dump
 
 `tests/integration/apatch-aster-reproduction.test.ts` is the strongest check in the suite:

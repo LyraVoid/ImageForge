@@ -100,12 +100,17 @@ export class PatchWorkerSession implements PatchWorkerApi {
     const controller = new AbortController();
     this.controller = controller;
     try {
+      const attachments = (request.attachments ?? []).map((attachment) => ({
+        id: attachment.id,
+        name: attachment.name,
+        bytes: new Uint8Array(attachment.bytes),
+      }));
       const outcome = await this.engine.run(
         state.image,
         state.sha256,
         request.providerId,
         request.options ?? {},
-        { onProgress, signal: controller.signal },
+        { onProgress, signal: controller.signal, attachments },
       );
       return {
         plan: outcome.plan,

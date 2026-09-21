@@ -53,9 +53,17 @@ export interface PlanResponse {
   providerNotes: string[];
 }
 
+export interface PatchAttachmentPayload {
+  id: string;
+  name: string;
+  bytes: ArrayBuffer;
+}
+
 export interface PatchRequest {
   providerId: string;
   options?: PatchOptions;
+  /** Binary payloads such as KernelPatch modules, transferred to the worker. */
+  attachments?: PatchAttachmentPayload[];
 }
 
 export interface PatchResponse {

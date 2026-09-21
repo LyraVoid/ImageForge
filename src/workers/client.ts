@@ -30,8 +30,13 @@ function createWorkerBackedClient(worker: Worker): PatchWorkerClient {
     version: () => remote.version(),
     analyze: (file, name) => remote.analyze(Comlink.transfer(file, [file]), name),
     plan: (request) => remote.plan(request),
-    patch: (request, onProgress) =>
-      remote.patch(Comlink.transfer(request, []), onProgress ? Comlink.proxy(onProgress) : undefined),
+    patch: (request, onProgress) => {
+      const buffers = (request.attachments ?? []).map((attachment) => attachment.bytes);
+      return remote.patch(
+        Comlink.transfer(request, buffers),
+        onProgress ? Comlink.proxy(onProgress) : undefined,
+      );
+    },
     cancel: () => remote.cancel(),
     reset: () => remote.reset(),
     terminate: () => worker.terminate(),

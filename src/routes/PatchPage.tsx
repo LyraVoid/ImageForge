@@ -1,5 +1,6 @@
-import { ArrowLeft, Info, LoaderCircle, Play } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, Info, Layers, LoaderCircle, Play } from "lucide-react";
+import { useRef, useState } from "react";
+import type { ChangeEvent } from "react";
 import { Navigate, useNavigate } from "react-router";
 import { ErrorPanel } from "@/components/app/error-panel";
 import { KeyValueList } from "@/components/app/key-value-list";
@@ -25,6 +26,9 @@ export function PatchPage() {
   // the plan stays the single source of truth, and they keep the inputs responsive.
   const [optionDraft, setOptionDraft] = useState<Record<string, string>>({});
   const [superkeyDraft, setSuperkeyDraft] = useState("");
+  const kpmInputRef = useRef<HTMLInputElement>(null);
+  const kpmFiles = useForgeStore((state) => state.kpmFiles);
+  const setKpmFiles = useForgeStore((state) => state.setKpmFiles);
 
   const readOption = (key: string, fallback: string): string =>
     optionDraft[key] ?? plan?.configuration[key] ?? fallback;
@@ -34,6 +38,20 @@ export function PatchPage() {
     const next = { ...optionDraft, ...patch };
     setOptionDraft(next);
     void selectProvider(selectedProviderId, { configuration: next });
+  };
+
+  const handleKpmSelection = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const selected = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (selected.length === 0) return;
+    const loaded = await Promise.all(
+      selected.map(async (file) => ({ name: file.name, bytes: new Uint8Array(await file.arrayBuffer()) })),
+    );
+    const merged = [
+      ...kpmFiles.filter((existing) => !loaded.some((entry) => entry.name === existing.name)),
+      ...loaded,
+    ];
+    await setKpmFiles(merged);
   };
 
   if (!analysis) return <Navigate to="/" replace />;
@@ -209,6 +227,58 @@ export function PatchPage() {
                 {APATCH_FLAVORS.find((flavor) => flavor.id === readOption(APATCH_FLAVOR_SETTING, "upstream"))
                   ?.managerPackage ?? "unknown"}
               </span>
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {plan.providerId === "apatch" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>KernelPatch modules (KPM)</CardTitle>
+            <CardDescription>
+              Optional. Each module is embedded into the patched kernel image. The bytes stay in your
+              browser and are only handed to the patch worker for this run; the plan records the names.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                ref={kpmInputRef}
+                type="file"
+                multiple
+                accept=".kpm"
+                className="hidden"
+                onChange={(event) => void handleKpmSelection(event)}
+              />
+              <Button variant="secondary" onClick={() => kpmInputRef.current?.click()}>
+                <Layers />
+                Attach .kpm files
+              </Button>
+              <Badge variant={kpmFiles.length > 0 ? "primary" : "neutral"}>
+                {kpmFiles.length === 0 ? "no modules" : kpmFiles.length + " module(s) planned"}
+              </Badge>
+              {kpmFiles.length > 0 ? (
+                <Button variant="ghost" size="sm" onClick={() => void setKpmFiles([])}>
+                  Clear
+                </Button>
+              ) : null}
+            </div>
+            {kpmFiles.length > 0 ? (
+              <ul className="space-y-1">
+                {kpmFiles.map((file) => (
+                  <li key={file.name} className="flex items-center justify-between gap-3">
+                    <span className="truncate font-mono text-[11px] text-foreground">{file.name}</span>
+                    <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
+                      {formatBytes(file.bytes.length)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <p className="text-[11px] leading-4 text-muted-foreground">
+              Modules are embedded exactly as provided. Whether a module loads at boot depends on the
+              module and the kernel, and its licence is yours to check.
             </p>
           </CardContent>
         </Card>

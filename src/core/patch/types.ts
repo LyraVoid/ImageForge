@@ -9,9 +9,18 @@ export interface PatchProgressEvent {
   message?: string;
 }
 
+/** A binary payload the caller hands to a provider for this run only. */
+export interface PatchAttachment {
+  id: string;
+  name: string;
+  bytes: Uint8Array;
+}
+
 export interface PatchRunContext {
   onProgress?: (event: PatchProgressEvent) => void;
   signal?: AbortSignal;
+  /** Extra payloads such as KernelPatch modules, never part of the plan. */
+  attachments?: PatchAttachment[];
   /**
    * Options the caller passed for this run. Providers read settings that must not be
    * persisted in the plan (such as a superkey) from here.
