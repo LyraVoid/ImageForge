@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { APATCH_KPIMG_ASTER_SHA256, ARTIFACT_CATALOG, createArtifactRegistry, createPatchEngine } from "@/core";
-import { assertBootImage, parseImage, sectionOf } from "@/core/image";
+import { assertBootImage, buildImageReport, parseImage, sectionOf } from "@/core/image";
 import { sha256Hex } from "@/core/hash";
 import { buildBootImage } from "../fixtures/bootimg";
 import {
@@ -45,6 +45,10 @@ describe.skipIf(!hasAsterReproductionMaterial)("Aster flavour against a flashed 
 
     expect(patchedKernel.length).toBe(flashedKernel.length);
     expect(await sha256Hex(patchedKernel)).toBe(await sha256Hex(flashedKernel));
+
+    // the dump from the flashed device is recognised as an already patched image
+    const report = await buildImageReport(parseImage(readAsterDump()));
+    expect(report.existingPatch?.join(" ")).toMatch(/KernelPatch \(APatch or Aster\)/);
   }, TIMEOUT);
 
   it("reports which material the reproduction uses", () => {

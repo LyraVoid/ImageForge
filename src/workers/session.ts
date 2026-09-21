@@ -72,6 +72,7 @@ export class PatchWorkerSession implements PatchWorkerApi {
     const report = await buildImageReport(image, { sourceName: name, sourceSize: bytes.length });
     return {
       summary: toImageSummary(image),
+      ...(report.existingPatch === undefined ? {} : { existingPatch: report.existingPatch }),
       report,
       compatibility: this.engine.compatibility(image),
       sha256,

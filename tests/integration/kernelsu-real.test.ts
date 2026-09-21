@@ -7,7 +7,7 @@ import {
   KERNELSU_MODULE_ENTRY,
   KERNELSU_REQUIRED_MANAGER,
 } from "@/core";
-import { assertBootImage, decodeRamdisk, findEntry, parseImage, sectionOf } from "@/core/image";
+import { assertBootImage, buildImageReport, decodeRamdisk, findEntry, parseImage, sectionOf } from "@/core/image";
 import { sha256Hex } from "@/core/hash";
 import {
   fsPayloadLoader,
@@ -82,6 +82,11 @@ describe.skipIf(!hasInitBootImage || !hasKernelsuModule)("KernelSU provider agai
         const name = entry.name === "init" ? "init.real" : entry.name;
         expect(findEntry(archive, name)).toBeDefined();
       }
+
+      // the produced image is recognised as already patched when it is analysed again
+      const reanalyzed = await engine.analyze(outcome.result.bytes);
+      const report = await buildImageReport(reanalyzed.image, { sourceName: "produced.img" });
+      expect(report.existingPatch?.join(" ")).toMatch(/KernelSU: kernelsu.ko/);
       // init keeps its entry (renamed), a new init and the module are added
       expect(archive.entries.length).toBe(stock.entries.length + 2);
     },

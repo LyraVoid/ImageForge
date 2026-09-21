@@ -35,6 +35,8 @@ export interface ImageSummary {
 
 export interface AnalyzeResponse {
   summary: ImageSummary;
+  /** Patch programs that already left their marks in this image, read from the image itself. */
+  existingPatch?: string[];
   report: ImageReport;
   compatibility: CompatibilityResult;
   sha256: string;

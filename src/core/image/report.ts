@@ -7,7 +7,8 @@ import {
   detectCompression,
   isDecompressionSupported,
 } from "./compression";
-import { isCpio, parseCpio } from "./cpio";
+import { findEntry, isCpio, parseCpio } from "./cpio";
+import type { CpioArchive } from "./cpio";
 import type { ImageSection, ParsedImage } from "./types";
 import { sectionOf } from "./types";
 
@@ -29,6 +30,37 @@ export interface ImageReport {
   compression: string;
   architecture: string;
   sectionSummary: Array<{ name: string; offset: number; size: number; sizeLabel: string; sha256: string }>;
+  /** Patch programs that already left their marks in this image, read from the image itself. */
+  existingPatch?: string[];
+}
+
+/** The magic a KernelPatch core image carries; finding it means the kernel is already patched. */
+const KERNELPATCH_MAGIC = "KP1158";
+
+/**
+ * Looks for the marks known patch programs leave behind, so that stacking a second root solution on
+ * top of an existing one is a visible decision rather than an accident. Everything here comes from
+ * the image being analysed: a ramdisk entry, or the magic inside a kernel that is not compressed.
+ */
+function detectExistingPatch(image: ParsedImage, archive: CpioArchive | undefined): string[] {
+  const found: string[] = [];
+
+  const kernel = sectionOf(image, "kernel");
+  if (kernel && kernel.size > 0 && detectCompression(kernel.data) === "unknown") {
+    if (new TextDecoder("latin1").decode(kernel.data).includes(KERNELPATCH_MAGIC)) {
+      found.push("KernelPatch (APatch or Aster): the kernel carries " + KERNELPATCH_MAGIC);
+    }
+  }
+
+  if (archive) {
+    if (archive.entries.some((entry) => entry.name === ".backup/.magisk" || entry.name.startsWith("overlay.d/"))) {
+      found.push("Magisk: overlay.d/ or .backup/.magisk is in the ramdisk");
+    }
+    if (findEntry(archive, "kernelsu.ko")) found.push("KernelSU: kernelsu.ko is in the ramdisk");
+    if (findEntry(archive, "init.real")) found.push("a previous ramdisk patch kept init.real");
+  }
+
+  return found;
 }
 
 function field(label: string, value: string, hint?: string): ReportField {
@@ -48,6 +80,7 @@ export async function buildImageReport(
   const ramdisk = sectionOf(image, "ramdisk") ?? sectionOf(image, "vendor_ramdisk");
   const compression = ramdisk ? detectCompression(ramdisk.data) : "none";
   const kernel = sectionOf(image, "kernel");
+  let ramdiskArchive: CpioArchive | undefined;
 
   const imageFields: ReportField[] = [];
   if (options.sourceName) imageFields.push(field("File", options.sourceName));
@@ -84,6 +117,7 @@ export async function buildImageReport(
 
       if (isCpio(expanded)) {
         const archive = parseCpio(expanded);
+        ramdiskArchive = archive;
         const kinds = { directory: 0, file: 0, link: 0, other: 0 };
         for (const entry of archive.entries) {
           const type = (entry.mode & 0o170000) >>> 12;
@@ -176,6 +210,9 @@ export async function buildImageReport(
   }
   for (const warning of image.warnings) technicalFields.push(field("warning", warning));
 
+  const existingPatch = detectExistingPatch(image, ramdiskArchive);
+  if (existingPatch.length > 0) metadataFields.push(field("Existing patch", existingPatch.join("; ")));
+
   return {
     groups: [
       { id: "image", title: "Image", fields: imageFields },
@@ -188,5 +225,6 @@ export async function buildImageReport(
     compression: COMPRESSION_LABEL[compression],
     architecture: image.architecture ?? "undetermined",
     sectionSummary,
+    ...(existingPatch.length === 0 ? {} : { existingPatch }),
   };
 }
