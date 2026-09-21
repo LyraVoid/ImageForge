@@ -1,0 +1,34 @@
+ImageForge
+Copyright (C) 2024 ImageForge contributors
+
+This program is free software: you can redistribute it and/or modify it under the terms of
+the GNU Affero General Public License as published by the Free Software Foundation, either
+version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+See the GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License along with this
+program. If not, see <https://www.gnu.org/licenses/>.
+
+------------------------------------------------------------------------------
+Third-party components
+------------------------------------------------------------------------------
+
+The distributed npm dependencies keep their own licenses; their license texts ship inside
+node_modules and are not modified by this project.
+
+ImageForge interoperates conceptually with the following upstream projects. No code from
+them is bundled in this build:
+
+  * Magisk       - https://github.com/topjohnwu/Magisk
+  * KernelSU     - https://github.com/tiann/KernelSU
+  * APatch       - https://github.com/bmax121/APatch
+  * KernelPatch  - https://github.com/bmax121/KernelPatch
+
+Whenever code, binaries or artifacts from any of these projects are added to this
+repository, the original LICENSE file, copyright notices and the exact upstream revision
+MUST be copied into THIRD_PARTY_LICENSES/<project>/ before the change is merged. The
+licenses of third-party components are never re-licensed or merged into the ImageForge
+license.

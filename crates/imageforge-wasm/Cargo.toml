@@ -1,0 +1,17 @@
+[package]
+name = "imageforge-wasm"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+description = "Minimal binary helpers for ImageForge: CRC32 and LZ4 block decoding."
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+name = "imageforge_wasm"
+
+[profile.release]
+opt-level = "z"
+lto = true
+panic = "abort"
+strip = true

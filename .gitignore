@@ -1,1 +1,28 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+dist-ssr/
+coverage/
+*.tsbuildinfo
+.vite/
+
+# local environment
+*.local
+.env
+.env.*
+!.env.example
+
+# editors / os
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# rust
+crates/*/target/
+target/
+
+# research notes, intentionally kept out of version control
 .research/
