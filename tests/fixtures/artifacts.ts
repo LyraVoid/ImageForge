@@ -23,3 +23,24 @@ export const hasRealImage = existsSync(REAL_IMAGE_PATH);
 export function readRealImage(): Uint8Array {
   return new Uint8Array(readFileSync(REAL_IMAGE_PATH));
 }
+
+/**
+ * Material for the byte exact reproduction check: a stock boot image and a boot partition
+ * dumped from a device flashed with the Aster KernelPatch build.
+ */
+export const STOCK_IMAGE_PATH =
+  process.env.IMAGEFORGE_STOCK_IMAGE ?? repoPath(".research", "aster-validation", "boot.img");
+
+export const ASTER_DUMP_PATH =
+  process.env.IMAGEFORGE_ASTER_DUMP ??
+  repoPath(".research", "aster-validation", "boot_a-patched.img");
+
+export const hasAsterReproductionMaterial = existsSync(STOCK_IMAGE_PATH) && existsSync(ASTER_DUMP_PATH);
+
+export function readStockImage(): Uint8Array {
+  return new Uint8Array(readFileSync(STOCK_IMAGE_PATH));
+}
+
+export function readAsterDump(): Uint8Array {
+  return new Uint8Array(readFileSync(ASTER_DUMP_PATH));
+}

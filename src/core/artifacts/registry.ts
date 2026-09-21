@@ -81,24 +81,27 @@ export class ArtifactRegistry {
         "No artifact registry entry is available for this patch method yet.",
       );
     }
-    const release = request.release
-      ? releases.find((entry) => entry.release === request.release)
-      : releases.at(-1);
-    if (!release) {
-      throw new ArtifactError("Release " + request.release + " is not registered for " + request.providerId + ".");
+    const scoped = request.release
+      ? releases.filter((entry) => entry.release === request.release)
+      : releases;
+    if (scoped.length === 0) {
+      throw new ArtifactError("Release " + String(request.release) + " is not registered for " + request.providerId + ".");
     }
-    const candidates = release.artifacts.filter(
-      (artifact) =>
-        (!request.artifactId || artifact.id === request.artifactId) &&
-        (!request.architecture || !artifact.architecture || artifact.architecture === request.architecture),
-    );
-    const artifact = candidates.at(0);
-    if (!artifact) {
-      throw new ArtifactError(
-        "No artifact matched " + JSON.stringify(request) + " in release " + release.release + ".",
+
+    // Newest release first, so a provider can pick a flavour by artifact id while the
+    // tooling artifacts stay in the shared release.
+    for (const release of [...scoped].reverse()) {
+      const artifact = release.artifacts.find(
+        (entry) =>
+          (!request.artifactId || entry.id === request.artifactId) &&
+          (!request.architecture || !entry.architecture || entry.architecture === request.architecture),
       );
+      if (artifact) return { artifact, release };
     }
-    return { artifact, release };
+
+    throw new ArtifactError(
+      "No artifact matched " + JSON.stringify(request) + " for " + request.providerId + ".",
+    );
   }
 
   async loadPayload(artifact: PatchArtifact): Promise<Uint8Array> {

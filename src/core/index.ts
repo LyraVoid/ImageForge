@@ -4,6 +4,8 @@ export * from "./binary";
 export * from "./hash";
 export * from "./artifacts/types";
 export {
+  APATCH_KPIMG_ASTER_ID,
+  APATCH_KPIMG_ASTER_SHA256,
   APATCH_KPIMG_ID,
   APATCH_KPIMG_SHA256,
   APATCH_KPTOOLS_ID,
@@ -31,6 +33,13 @@ export {
   PLANNED_PROVIDER_DESCRIPTORS,
   PROVIDER_DESCRIPTORS,
 } from "./patch/providers/descriptors";
-export { APATCH_SUPERKEY_SETTING, ApatchPatchProvider } from "./patch/providers/apatch-provider";
+export {
+  APATCH_DEFAULT_FLAVOR,
+  APATCH_FLAVORS,
+  APATCH_FLAVOR_SETTING,
+  APATCH_SUPERKEY_SETTING,
+  ApatchPatchProvider,
+} from "./patch/providers/apatch-provider";
+export type { ApatchFlavor } from "./patch/providers/apatch-provider";
 export { PatchEngine, createPatchEngine } from "./patch/engine";
 export type { AnalyzedImage, PatchEngineOptions, PatchRunOutcome } from "./patch/engine";

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  APATCH_KPIMG_ASTER_SHA256,
   APATCH_KPIMG_SHA256,
   APATCH_KPTOOLS_ID,
   ARTIFACT_CATALOG,
@@ -100,6 +101,25 @@ describe.skipIf(!hasRealImage)("APatch against a real GKI boot image", () => {
       const decoded = await decodeLz4(patchedSection);
       const confirmation = await kptoolsList(decoded);
       expect(confirmation.some((line) => line.includes("patched=true"))).toBe(true);
+    },
+    TIMEOUT,
+  );
+
+  it(
+    "can inject the Aster KernelPatch build instead of the upstream one",
+    async () => {
+      const analyzed = await engine.analyze(readRealImage());
+      const outcome = await engine.run(analyzed.image, analyzed.sha256, "apatch", {
+        configuration: { kernelPatchFlavor: "aster" },
+      });
+
+      expect(outcome.result.metadata.kernelPatchFlavor).toBe("aster");
+      expect(outcome.result.metadata.requiredManager).toBe("me.yuki.aster");
+      expect(outcome.result.metadata.artifactSha256).toBe(APATCH_KPIMG_ASTER_SHA256);
+      expect(outcome.verification.verification.valid).toBe(true);
+      expect(Number(outcome.result.metadata.kernelSizeAfter)).toBeGreaterThan(
+        Number(outcome.result.metadata.kernelSizeBefore),
+      );
     },
     TIMEOUT,
   );

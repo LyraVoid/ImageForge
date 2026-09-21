@@ -1,6 +1,7 @@
 import type { ArtifactRegistry } from "../../artifacts/registry";
 import type { PatchArtifact } from "../../artifacts/types";
 import {
+  APATCH_KPIMG_ASTER_ID,
   APATCH_KPIMG_ID,
   APATCH_KPTOOLS_ID,
 } from "../../artifacts/catalog";
@@ -33,6 +34,50 @@ import type {
 
 /** Plan configuration key holding an optional superkey. Empty means the APatch default. */
 export const APATCH_SUPERKEY_SETTING = "superkey";
+
+/** Plan configuration key selecting which KernelPatch core image is injected. */
+export const APATCH_FLAVOR_SETTING = "kernelPatchFlavor";
+
+export interface ApatchFlavor {
+  id: string;
+  label: string;
+  artifactId: string;
+  /** The manager package the injected KernelPatch trusts. */
+  managerPackage: string;
+  source: string;
+}
+
+export const APATCH_FLAVORS: ApatchFlavor[] = [
+  {
+    id: "upstream",
+    label: "Upstream KernelPatch",
+    artifactId: APATCH_KPIMG_ID,
+    managerPackage: "me.bmax.apatch",
+    source: "official APatch release 11224 (KernelPatch 0.13.3)",
+  },
+  {
+    id: "aster",
+    label: "Aster fork",
+    artifactId: APATCH_KPIMG_ASTER_ID,
+    managerPackage: "me.yuki.aster",
+    source:
+      "LyraVoid/KernelPatch-Aster 0ff4ae2b8cad8058c408d8a5bdb12569b1a84981 (upstream 0.13.8 plus the Aster manager trust commit)",
+  },
+];
+
+export const APATCH_DEFAULT_FLAVOR = "upstream";
+
+function resolveFlavor(configuration: Record<string, string> | undefined): ApatchFlavor {
+  const requested = (configuration?.[APATCH_FLAVOR_SETTING] ?? APATCH_DEFAULT_FLAVOR).trim().toLowerCase();
+  const flavor = APATCH_FLAVORS.find((entry) => entry.id === requested);
+  if (!flavor) {
+    throw new IncompatibleProviderError(
+      "Unknown KernelPatch flavour " + JSON.stringify(requested) + ".",
+      "This KernelPatch flavour is not registered in the artifact registry.",
+    );
+  }
+  return flavor;
+}
 
 const KERNEL_FILE = "kernel";
 const KPIMG_FILE = "kpimg";
@@ -101,10 +146,14 @@ export class ApatchPatchProvider implements PatchProvider {
     };
   }
 
-  private resolveArtifacts(): { kpimg: PatchArtifact; kptools: PatchArtifact } {
-    const kpimg = this.artifacts.resolve({ providerId: this.id, artifactId: APATCH_KPIMG_ID });
+  private resolveArtifacts(flavor: ApatchFlavor): {
+    kpimg: PatchArtifact;
+    kptools: PatchArtifact;
+    release: string;
+  } {
+    const kpimg = this.artifacts.resolve({ providerId: this.id, artifactId: flavor.artifactId });
     const kptools = this.artifacts.resolve({ providerId: this.id, artifactId: APATCH_KPTOOLS_ID });
-    return { kpimg: kpimg.artifact, kptools: kptools.artifact };
+    return { kpimg: kpimg.artifact, kptools: kptools.artifact, release: kpimg.release.release };
   }
 
   /**
@@ -137,7 +186,8 @@ export class ApatchPatchProvider implements PatchProvider {
       );
     }
 
-    const { kpimg, kptools } = this.resolveArtifacts();
+    const flavor = resolveFlavor(options.configuration);
+    const { kpimg, kptools, release } = this.resolveArtifacts(flavor);
     const kernel = this.loadKernel(image);
     const rawKernel = await decompressSection(kernel.bytes, kernel.descriptor);
 
@@ -170,7 +220,7 @@ export class ApatchPatchProvider implements PatchProvider {
       id: "",
       providerId: this.id,
       providerName: this.name,
-      release: "11224",
+      release,
       artifact: kpimg,
       architecture: image.architecture ?? "unknown",
       target: image.format,
@@ -180,6 +230,9 @@ export class ApatchPatchProvider implements PatchProvider {
       configuration: {
         ...(options.configuration ?? {}),
         kernelPatchMode: "static",
+        kernelPatchFlavor: flavor.id,
+        kernelPatchSource: flavor.source,
+        requiredManager: flavor.managerPackage,
         superkeyMode: superkey === "" ? "none" : "custom",
         kernelCompression: COMPRESSION_LABEL[kernel.descriptor.format],
         kernelSize: String(rawKernel.length),
@@ -194,6 +247,7 @@ export class ApatchPatchProvider implements PatchProvider {
       reproducible: true,
       notes: [
         "KernelPatch is injected into the kernel image; the ramdisk and every other section are left untouched.",
+        "The " + flavor.label + " core image only trusts the " + flavor.managerPackage + " manager, which must be installed for the patch to be usable.",
         "Reproducible for the pinned kpimg and kptools artifacts: patching the same image twice yields identical kernel bytes, which the test suite enforces.",
         "The superkey is never written into the plan; only the mode is recorded.",
         kallsymsAll
@@ -265,7 +319,9 @@ export class ApatchPatchProvider implements PatchProvider {
     }
 
     emit("repack", 80, "Repacking the boot image");
-    const preserveImageSize = (context.options?.configuration?.preserveImageSize ?? "false") === "true";
+    const preserveImageSize =
+      (context.options?.configuration?.preserveImageSize ?? plan.configuration.preserveImageSize ?? "false") ===
+      "true";
     const recompressed = await compressSection(patchedKernel, kernel.descriptor);
     const outcome = repackBootImage({
       image,
@@ -299,6 +355,8 @@ export class ApatchPatchProvider implements PatchProvider {
         kptoolsVersion: kptools.version,
         kptoolsSha256: kptools.sha256 ?? "unknown",
         superkeyMode: superkey === "" ? "none" : "custom",
+        kernelPatchFlavor: plan.configuration.kernelPatchFlavor ?? APATCH_DEFAULT_FLAVOR,
+        requiredManager: plan.configuration.requiredManager ?? "unknown",
         kernelSha256,
         kernelSectionSha256,
         kernelCompression: COMPRESSION_LABEL[kernel.descriptor.format],

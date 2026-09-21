@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { ARTIFACT_CATALOG, createArtifactRegistry, createPatchEngine } from "@/core";
+import {
+  APATCH_DEFAULT_FLAVOR,
+  APATCH_FLAVORS,
+  ARTIFACT_CATALOG,
+  createArtifactRegistry,
+  createPatchEngine,
+} from "@/core";
 import { IncompatibleProviderError } from "@/core/errors";
 import { parseImage } from "@/core/image";
 import { encodeLz4 } from "@/core/image/lz4";
@@ -85,6 +91,30 @@ describe("APatch provider preflight", () => {
       expect((error as IncompatibleProviderError).technical).toMatch(/CONFIG_KALLSYMS/);
     }
   }, 120000);
+
+  it("maps each flavour to a bundled core image and the manager it trusts", () => {
+    expect(APATCH_DEFAULT_FLAVOR).toBe("upstream");
+    expect(APATCH_FLAVORS.map((flavor) => flavor.id)).toEqual(["upstream", "aster"]);
+
+    for (const flavor of APATCH_FLAVORS) {
+      const resolved = artifacts.resolve({ providerId: "apatch", artifactId: flavor.artifactId });
+      expect(resolved.artifact.id).toBe(flavor.artifactId);
+      expect(resolved.artifact.sha256).toBeDefined();
+      expect(resolved.artifact.sizeBytes).toBeGreaterThan(0);
+      expect(flavor.managerPackage).toMatch(/^me\./);
+    }
+
+    expect(APATCH_FLAVORS[0].managerPackage).toBe("me.bmax.apatch");
+    expect(APATCH_FLAVORS[1].managerPackage).toBe("me.yuki.aster");
+  });
+
+  it("rejects an unknown KernelPatch flavour", async () => {
+    const analyzed = await engine.analyze(await buildBootImage({}));
+    const provider = engine.providers.get("apatch");
+    await expect(
+      provider?.resolve(analyzed.image, { configuration: { kernelPatchFlavor: "nope" } }, analyzed.sha256),
+    ).rejects.toThrowError(IncompatibleProviderError);
+  });
 
   it("exposes its analyze notes", async () => {
     const provider = engine.providers.get("apatch");

@@ -75,7 +75,7 @@ Vendor boot images are parsed read-only.
 
 | Provider | Target | Mechanism |
 | --- | --- | --- |
-| `apatch` | `boot.img` only | KernelPatch core image injected into the kernel by the upstream kptools build in WebAssembly |
+| `apatch` | `boot.img` only | KernelPatch core image injected into the kernel by the upstream kptools build in WebAssembly. Two core images are registered as artifacts (upstream and the Aster fork); each only trusts its own manager app, so the plan records `kernelPatchFlavor` and `requiredManager` |
 | `mock` | `boot.img`, `init_boot.img` | Rewrites the kernel cmdline and a bootconfig manifest |
 
 Magisk and KernelSU are declared as `planned`. Both need CPIO read/write, the full

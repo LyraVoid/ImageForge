@@ -37,6 +37,18 @@ skipped (not silently passed) when no image is present. Bundled artifacts
 (`public/wasm/kptools.wasm`, `public/artifacts/apatch/kpimg`) are always checked against
 the digests recorded in the artifact registry.
 
+## Tests that need a flashed device dump
+
+`tests/integration/apatch-aster-reproduction.test.ts` is the strongest check in the suite:
+it patches a stock boot image with the bundled Aster KernelPatch core image and requires the
+result to be **byte identical** to a boot partition dumped from a device flashed with that
+build. It runs when both files are supplied:
+
+    IMAGEFORGE_STOCK_IMAGE=/path/to/stock-boot.img \
+    IMAGEFORGE_ASTER_DUMP=/path/to/flashed-boot.img pnpm test
+
+Without them the file reports itself as skipped.
+
 ## Tests that need the reference lz4 tool
 
 `tests/unit/lz4.test.ts` cross checks our codec against the reference `lz4` binary whenever

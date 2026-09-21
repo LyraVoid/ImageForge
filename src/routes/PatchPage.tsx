@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { formatBytes, truncateHash } from "@/lib/format";
+import { APATCH_FLAVOR_SETTING, APATCH_FLAVORS } from "@/core";
+import { Select } from "@/components/ui/select";
 import { useForgeStore } from "@/stores/forge-store";
 
 export function PatchPage() {
@@ -18,8 +20,19 @@ export function PatchPage() {
   const error = useForgeStore((state) => state.error);
   const isBusy = useForgeStore((state) => state.isBusy);
   const selectProvider = useForgeStore((state) => state.selectProvider);
-  // Keeps the switch in the position the user chose while the worker rebuilds the plan.
-  const [preserveSizeOverride, setPreserveSizeOverride] = useState<boolean | null>(null);
+  // Options the user changed on this page. They are sent to the worker as a re-plan so
+  // the plan stays the single source of truth, and they keep the inputs responsive.
+  const [optionDraft, setOptionDraft] = useState<Record<string, string>>({});
+
+  const readOption = (key: string, fallback: string): string =>
+    optionDraft[key] ?? plan?.configuration[key] ?? fallback;
+
+  const applyOption = (patch: Record<string, string>): void => {
+    if (!plan || !selectedProviderId) return;
+    const next = { ...optionDraft, ...patch };
+    setOptionDraft(next);
+    void selectProvider(selectedProviderId, { configuration: next });
+  };
 
   if (!analysis) return <Navigate to="/" replace />;
   if (!selectedProviderId) return <Navigate to="/analyze" replace />;
@@ -159,6 +172,46 @@ export function PatchPage() {
         </Card>
       ) : null}
 
+      {plan.providerId === "apatch" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>KernelPatch flavour</CardTitle>
+            <CardDescription>
+              Which core image is injected. Each build only trusts its own manager app, so the
+              manager below must be installed for the patch to be usable.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex items-start justify-between gap-4">
+            <div className="min-w-0 space-y-1">
+              <Select
+                aria-label="KernelPatch flavour"
+                className="max-w-xs"
+                value={readOption(APATCH_FLAVOR_SETTING, "upstream")}
+                onChange={(event) => applyOption({ [APATCH_FLAVOR_SETTING]: event.target.value })}
+              >
+                {APATCH_FLAVORS.map((flavor) => (
+                  <option key={flavor.id} value={flavor.id}>
+                    {flavor.label}
+                  </option>
+                ))}
+              </Select>
+              <p className="text-[11px] leading-4 text-muted-foreground">
+                {APATCH_FLAVORS.find((flavor) => flavor.id === readOption(APATCH_FLAVOR_SETTING, "upstream"))
+                  ?.source ?? ""}
+              </p>
+            </div>
+            <p className="shrink-0 text-right font-mono text-[11px] text-muted-foreground">
+              required manager
+              <br />
+              <span className="text-foreground">
+                {APATCH_FLAVORS.find((flavor) => flavor.id === readOption(APATCH_FLAVOR_SETTING, "upstream"))
+                  ?.managerPackage ?? "unknown"}
+              </span>
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card>
         <CardHeader>
           <CardTitle>Output</CardTitle>
@@ -177,14 +230,8 @@ export function PatchPage() {
           </div>
           <Switch
             aria-label="Preserve the original image size"
-            checked={preserveSizeOverride ?? plan.configuration.preserveImageSize === "true"}
-            onCheckedChange={(checked) => {
-              setPreserveSizeOverride(checked);
-              if (!selectedProviderId) return;
-              void selectProvider(selectedProviderId, {
-                configuration: { preserveImageSize: String(checked) },
-              });
-            }}
+            checked={readOption("preserveImageSize", "false") === "true"}
+            onCheckedChange={(checked) => applyOption({ preserveImageSize: String(checked) })}
           />
         </CardContent>
       </Card>

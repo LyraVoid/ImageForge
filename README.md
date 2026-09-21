@@ -67,9 +67,15 @@ neither toolchain is required for app development.
   the bootloader still finds the compression format it expects.
 * Preflight runs `kptools -f` and refuses the image unless the kernel reports
   `CONFIG_KALLSYMS=y`; it also warns when `CONFIG_KALLSYMS_ALL` is disabled.
-* Bundles two GPL artifacts, both digest verified before use:
-  `public/wasm/kptools.wasm` (KernelPatch, GPL-2.0-or-later) and
-  `public/artifacts/apatch/kpimg` (APatch release 11224, GPL-3.0-or-later).
+* **Two KernelPatch core images are registered** because each build only trusts its own
+  manager app: the official upstream build (`me.bmax.apatch` manager, KernelPatch 0.13.3)
+  and the Aster fork build (`me.yuki.aster` manager, KernelPatch 0.13.8, built from
+  `LyraVoid/KernelPatch-Aster`). The patch page selects the flavour and names the manager
+  that the produced image requires.
+* Bundles three GPL artifacts, all digest verified before use:
+  `public/wasm/kptools.wasm` (KernelPatch, GPL-2.0-or-later),
+  `public/artifacts/apatch/kpimg` (APatch release 11224, GPL-3.0-or-later) and
+  `public/artifacts/apatch/kpimg-aster.bin` (Aster fork `0ff4ae2`, GPL-2.0-or-later).
   See `THIRD_PARTY_LICENSES/` and `third_party/kptools-wasm/README.md`.
 * Patching the same image twice produces identical kernel bytes; the test suite enforces it.
 * The output is a compact boot image by default. The patch page can zero pad it back to the
