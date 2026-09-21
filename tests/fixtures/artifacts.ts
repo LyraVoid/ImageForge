@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { PayloadLoader } from "@/core";
@@ -36,6 +36,27 @@ export const ASTER_DUMP_PATH =
   repoPath(".research", "aster-validation", "boot_a-patched.img");
 
 export const hasAsterReproductionMaterial = existsSync(STOCK_IMAGE_PATH) && existsSync(ASTER_DUMP_PATH);
+
+/**
+ * A real third-party KernelPatch module. Such modules are usually proprietary, so they are
+ * never bundled: the test only runs when one is supplied or found next to the workspace.
+ */
+function firstModuleOnDisk(): string | undefined {
+  const directory = process.env.IMAGEFORGE_KPM_DIR ?? repoPath("..", "..", "images", "kpm");
+  try {
+    const entry = readdirSync(directory)
+      .filter((name) => name.toLowerCase().endsWith(".kpm"))
+      .sort()
+      .at(0);
+    return entry ? join(directory, entry) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export const REAL_KPM_PATH = process.env.IMAGEFORGE_TEST_KPM ?? firstModuleOnDisk();
+
+export const hasRealKpm = REAL_KPM_PATH !== undefined && existsSync(REAL_KPM_PATH);
 
 export function readStockImage(): Uint8Array {
   return new Uint8Array(readFileSync(STOCK_IMAGE_PATH));

@@ -85,7 +85,10 @@ neither toolchain is required for app development.
   dropped either way.
 * **KernelPatch modules (KPM) can be embedded optionally.** The patch page attaches `.kpm`
   files; the plan pins their names and the run carries their bytes, so nothing binary enters
-  the plan. Embedding and the reported module list are verified through `kptools -l`.
+  the plan. A module is checked before it is embedded (relocatable aarch64 ELF with an
+  allocated `.kpm.info` section) and its declared name, version and licence are reported in
+  the result. Third-party modules are never bundled: they are the user's files and their
+  licences are the user's responsibility.
 
 ## Architecture
 

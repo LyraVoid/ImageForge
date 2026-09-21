@@ -21,6 +21,7 @@ import {
 import type { CompressionDescriptor } from "../../image";
 import type { ParsedImage, VerifyExpectations } from "../../image";
 import { compileWasiModule, runWasiTool } from "../../../wasm/wasi-runner";
+import { describeKpm, readKpmInfo } from "./kpm-info";
 import type {
   PatchAnalysis,
   PatchOptions,
@@ -320,6 +321,14 @@ export class ApatchPatchProvider implements PatchProvider {
     }
     const moduleFiles: Record<string, Uint8Array> = {};
     for (const attachment of attachments) {
+      try {
+        readKpmInfo(attachment.bytes);
+      } catch (error) {
+        throw new PatchError(
+          attachment.name + " is not a valid KernelPatch module: " + (error as Error).message,
+          "A KernelPatch module has to be a relocatable aarch64 ELF with a .kpm.info section.",
+        );
+      }
       moduleFiles[attachment.name] = attachment.bytes;
       // Same option shape the FolkTool uses: one -M/-N/-T group per module.
       patchArgs.push("-M", "/" + attachment.name, "-N", attachment.name, "-T", "kpm");
@@ -389,8 +398,16 @@ export class ApatchPatchProvider implements PatchProvider {
 
     const moduleDigests: string[] = [];
     for (const attachment of attachments) {
+      const info = readKpmInfo(attachment.bytes);
       moduleDigests.push(
-        attachment.name + ":" + attachment.bytes.length + ":" + (await sha256Hex(attachment.bytes)).slice(0, 16),
+        describeKpm(info) +
+          " (" +
+          attachment.name +
+          ", " +
+          attachment.bytes.length +
+          " bytes, sha256 " +
+          (await sha256Hex(attachment.bytes)).slice(0, 16) +
+          ")",
       );
     }
 

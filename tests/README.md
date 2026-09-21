@@ -37,6 +37,14 @@ skipped (not silently passed) when no image is present. Bundled artifacts
 (`public/wasm/kptools.wasm`, `public/artifacts/apatch/kpimg`) are always checked against
 the digests recorded in the artifact registry.
 
+## Tests that need a real KernelPatch module
+
+`tests/integration/apatch-real-kpm.test.ts` embeds a real third-party module and checks that
+kptools reports its declared identity back. Such modules are usually proprietary, so none is
+bundled: the test runs when one is supplied through `IMAGEFORGE_TEST_KPM`, or found through
+`IMAGEFORGE_KPM_DIR` (default `../images/kpm` next to the workspace). Without one it reports
+itself as skipped.
+
 ## KernelPatch module fixtures
 
 `tests/fixtures/kpm.ts` builds a minimal KernelPatch module: a relocatable aarch64 ELF with a

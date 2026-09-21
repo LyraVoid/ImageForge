@@ -40,8 +40,10 @@ describe.skipIf(!hasRealImage)("APatch KernelPatch module embedding", () => {
       });
 
       expect(withModule.result.metadata.kpmCount).toBe("1");
-      expect(withModule.result.metadata.kpmModules).toMatch(new RegExp("^" + MODULE_NAME + ":" + kpm.length + ":"));
-      expect(withModule.result.metadata.kpmModules).not.toContain("name=imageforge-demo");
+      expect(withModule.result.metadata.kpmModules).toContain("imageforge-demo 1.2.3 [GPL] by ImageForge");
+      expect(withModule.result.metadata.kpmModules).toContain(MODULE_NAME);
+      expect(withModule.result.metadata.kpmModules).toMatch(/sha256 [0-9a-f]{16}/);
+      expect(withModule.result.metadata.kpmModules).not.toContain("description=");
       expect(withModule.verification.verification.valid).toBe(true);
 
       const plainKernel = sectionOf(assertBootImage(parseImage(plain.result.bytes)), "kernel")?.data ?? new Uint8Array();
