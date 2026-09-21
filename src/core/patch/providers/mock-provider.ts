@@ -187,6 +187,8 @@ export class MockPatchProvider implements PatchProvider {
         target: plan.target,
         headerVersion: "v" + plan.headerVersion,
         manifestKind: useBootconfig ? "bootconfig" : "cmdline",
+        imageSizeBefore: String(image.totalSize),
+        imageSizeAfter: String(outcome.bytes.length),
         sourceImageSha256: plan.sourceImageSha256,
         planId: plan.id,
         reproducible: "true",

@@ -69,6 +69,17 @@ export function ResultPage() {
             </div>
           </div>
 
+          {output.metadata.imageSizeBefore !== undefined &&
+          output.metadata.imageSizeBefore !== output.metadata.imageSizeAfter ? (
+            <p className="text-[11px] leading-4 text-muted-foreground">
+              Input {formatBytes(Number(output.metadata.imageSizeBefore))} → output{" "}
+              {formatBytes(Number(output.metadata.imageSizeAfter))}. The input was a whole-partition image:
+              partition padding and the AVB blob are not part of a boot image, so the output is the compact
+              boot image that mkbootimg and Magisk also produce. The kernel itself is unchanged apart from the
+              patch.
+            </p>
+          ) : null}
+
           <CodeBlock label="sha-256" value={output.sha256} wrap />
 
           <div className="flex flex-wrap items-center gap-2">

@@ -284,6 +284,8 @@ export class ApatchPatchProvider implements PatchProvider {
         kernelSha256,
         kernelSizeBefore: String(kernel.length),
         kernelSizeAfter: String(patchedKernel.length),
+        imageSizeBefore: String(image.totalSize),
+        imageSizeAfter: String(outcome.bytes.length),
         kptoolsConfirmation: "patched=true",
         target: plan.target,
         headerVersion: "v" + plan.headerVersion,
