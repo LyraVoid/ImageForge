@@ -56,6 +56,7 @@ export {
   KERNELSU_MODULE_NAME,
   KERNELSU_REQUIRED_MANAGER,
   KernelsuPatchProvider,
+  plannedKmi,
 } from "./patch/providers/kernelsu-provider";
 export { KERNELSU_KSUINIT_ID, KERNELSU_KSUINIT_SHA256, KERNELSU_RELEASE } from "./artifacts/catalog";
 export { PatchEngine, createPatchEngine } from "./patch/engine";

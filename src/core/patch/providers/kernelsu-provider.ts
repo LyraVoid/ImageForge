@@ -47,6 +47,16 @@ export const KERNELSU_MODULE_ENTRY = "kernelsu.ko";
 export const KERNELSU_CONFIG_ENTRY = "ksu_config";
 
 export const KERNELSU_REQUIRED_MANAGER = "me.weishu.kernelsu";
+
+/**
+ * The KMI a plan pins, or an empty string when it has not been chosen yet. The plan stores the
+ * sentinel "unset" so it can be displayed, but nothing outside the plan should ever have to know
+ * that: this turns it back into "not chosen".
+ */
+export function plannedKmi(configuration: Record<string, string> | undefined): string {
+  const value = (configuration?.[KERNELSU_KMI_SETTING] ?? "").trim();
+  return value === "unset" || value === "none" ? "" : value;
+}
 export const KERNELSU_MODULE_NAME = "kernelsu";
 
 /**
@@ -308,8 +318,8 @@ export class KernelsuPatchProvider implements PatchProvider {
     // The KMI pins the kernel version, and a module records the version it was built against in
     // its vermagic. Comparing them catches a module picked for the wrong KMI, which would not
     // load and would leave the device unable to boot.
-    const kmiValue = plan.configuration.kmi ?? "";
-    if (kmiValue === "" || kmiValue === "unset") {
+    const kmiValue = plannedKmi(plan.configuration);
+    if (kmiValue === "") {
       throw new PatchError(
         "This plan has no device KMI.",
         "Select the device KMI (for example android15-6.6) before starting the patch.",

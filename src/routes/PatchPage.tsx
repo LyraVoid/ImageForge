@@ -9,7 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { formatBytes, truncateHash } from "@/lib/format";
-import { APATCH_FLAVOR_SETTING, APATCH_FLAVORS, KERNELSU_KMI_SETTING, KNOWN_KMIS } from "@/core";
+import {
+  APATCH_FLAVOR_SETTING,
+  APATCH_FLAVORS,
+  KERNELSU_KMI_SETTING,
+  KNOWN_KMIS,
+  plannedKmi,
+} from "@/core";
 import { mergePlanOptions } from "@/stores/plan-options";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -33,6 +39,9 @@ export function PatchPage() {
 
   const readOption = (key: string, fallback: string): string =>
     optionDraft[key] ?? plan?.configuration[key] ?? fallback;
+
+  // A plan can pin kmi="unset" (nothing chosen yet); the sentinel must never reach the UI.
+  const chosenKmi = (): string => plannedKmi(plan?.configuration);
 
   const applyOption = (patch: Record<string, string>): void => {
     if (!plan || !selectedProviderId) return;
@@ -306,7 +315,7 @@ export function PatchPage() {
             <Select
               aria-label="Kernel module interface"
               className="max-w-xs"
-              value={readOption(KERNELSU_KMI_SETTING, "")}
+              value={chosenKmi()}
               onChange={(event) => applyOption({ [KERNELSU_KMI_SETTING]: event.target.value })}
             >
               <option value="">select the device KMI</option>
@@ -326,7 +335,7 @@ export function PatchPage() {
               />
               <Button variant="secondary" onClick={() => kpmInputRef.current?.click()}>
                 <Layers />
-                Attach {readOption(KERNELSU_KMI_SETTING, "") || "{kmi}"}_kernelsu.ko
+                {chosenKmi() === "" ? "Attach the KernelSU module" : "Attach " + chosenKmi() + "_kernelsu.ko"}
               </Button>
               <Badge variant={attachments.length > 0 ? "primary" : "neutral"}>
                 {attachments.length === 0
@@ -340,8 +349,10 @@ export function PatchPage() {
               ) : null}
             </div>
             <p className="text-[11px] leading-4 text-muted-foreground">
-              Download the module for this KMI from the KernelSU releases and attach it: KernelSU's kernel
-              directory is GPL-2.0-only, so ImageForge verifies it instead of shipping it. Find the KMI with
+              Select the KMI first, then attach the matching file from the KernelSU releases: it is named{" "}
+              <code className="mx-1">{chosenKmi() === "" ? "{kmi}_kernelsu.ko" : chosenKmi() + "_kernelsu.ko"}</code>
+              . KernelSU's kernel directory is GPL-2.0-only, so ImageForge verifies the module instead of shipping
+              it. Find the KMI with
               <code className="mx-1">uname -r</code> on the device: 6.6.118-android15-... means android15-6.6.
             </p>
           </CardContent>
