@@ -139,11 +139,27 @@ export function repackBootImage(request: RepackBootImageRequest): RepackOutcome 
   if (recoveryEntry) fields.recoveryDtboOffset = recoveryEntry.offset;
 
   const paddedEnd = align(cursor, page);
-  const contentSize = signature.length > 0 ? paddedEnd + signature.length : paddedEnd;
 
   const requestedPad = request.padTo !== undefined && Number.isFinite(request.padTo)
     ? Math.max(0, Math.trunc(request.padTo))
     : 0;
+
+  // The stale signature bytes have to move when the content grows, so they can push the output past
+  // the size it has to fit. Fitting wins: the bytes are invalid after a patch either way.
+  let keptSignature = signature;
+  if (requestedPad > 0 && keptSignature.length > 0 && paddedEnd + keptSignature.length > requestedPad) {
+    warnings.push(
+      "The original signature bytes were dropped: keeping them would have made the output " +
+        (paddedEnd + keptSignature.length) +
+        " bytes, past the " +
+        requestedPad +
+        " bytes it has to fit into. They are stale after a patch either way.",
+    );
+    keptSignature = EMPTY;
+    fields.signatureSize = 0;
+  }
+
+  const contentSize = keptSignature.length > 0 ? paddedEnd + keptSignature.length : paddedEnd;
   const totalSize = requestedPad > contentSize ? requestedPad : contentSize;
   if (totalSize > contentSize) {
     warnings.push(
@@ -163,7 +179,7 @@ export function repackBootImage(request: RepackBootImageRequest): RepackOutcome 
     if (!entry) continue;
     out.set(section.data, entry.offset);
   }
-  if (signature.length > 0) out.set(signature, paddedEnd);
+  if (keptSignature.length > 0) out.set(keptSignature, paddedEnd);
 
   return { bytes: out, warnings, layout };
 }

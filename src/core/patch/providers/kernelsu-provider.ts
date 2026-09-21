@@ -1,6 +1,7 @@
 import type { ArtifactRegistry } from "../../artifacts/registry";
 import { KERNELSU_KSUINIT_ID, kernelsuLkmId } from "../../artifacts/catalog";
 import type { PatchArtifact } from "../../artifacts/types";
+import { KEEP_SIGNATURE_SETTING, outputOptions } from "./output-options";
 import { AbortedError, IncompatibleProviderError, PatchError } from "../../errors";
 import { sha256Hex } from "../../hash";
 import {
@@ -219,7 +220,7 @@ export class KernelsuPatchProvider implements PatchProvider {
     const plannedModules = carriedModules.length > 0 ? carriedModules : readFlags(options.configuration?.["modules"]);
     const bundled = this.bundledModule(kmi.kmi);
     const configFlags = readFlags(options.configuration?.[KERNELSU_CONFIG_SETTING]);
-    const preserveImageSize = (options.configuration?.preserveImageSize ?? "false") === "true";
+    const output = outputOptions(options.configuration, undefined);
 
     const plan: PatchPlan = {
       id: "",
@@ -252,7 +253,8 @@ export class KernelsuPatchProvider implements PatchProvider {
         requiredManager: KERNELSU_REQUIRED_MANAGER,
         ramdiskCompression: COMPRESSION_LABEL[ramdisk.descriptor.format],
         ramdiskSectionSize: String(ramdisk.bytes.length),
-        preserveImageSize: preserveImageSize ? "true" : "false",
+        preserveImageSize: output.preserveImageSize ? "true" : "false",
+        [KEEP_SIGNATURE_SETTING]: output.keepSignature ? "true" : "false",
       },
       steps: PLAN_STEPS.map((step) => ({ ...step })),
       createdAt: new Date().toISOString(),
@@ -419,10 +421,12 @@ export class KernelsuPatchProvider implements PatchProvider {
 
     emit("repack", 80, "Repacking the boot image");
     const encoded = await encodeRamdisk(archive, decoded.descriptor);
+    const output = outputOptions(plan.configuration, context.options?.configuration);
     const outcome = repackBootImage({
       image,
       ramdisk: encoded,
-      ...(plan.configuration.preserveImageSize === "true" ? { padTo: image.totalSize } : {}),
+      keepSignature: output.keepSignature,
+      ...(output.preserveImageSize ? { padTo: image.totalSize } : {}),
     });
     const sha256 = await sha256Hex(outcome.bytes);
     const moduleSha256 = await sha256Hex(moduleBytes);
@@ -470,7 +474,8 @@ export class KernelsuPatchProvider implements PatchProvider {
         ramdiskSectionSha256,
         imageSizeBefore: String(image.totalSize),
         imageSizeAfter: String(outcome.bytes.length),
-        preserveImageSize: plan.configuration.preserveImageSize ?? "false",
+        preserveImageSize: output.preserveImageSize ? "true" : "false",
+        [KEEP_SIGNATURE_SETTING]: output.keepSignature ? "true" : "false",
         target: plan.target,
         headerVersion: "v" + plan.headerVersion,
         sourceImageSha256: plan.sourceImageSha256,

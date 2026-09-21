@@ -22,6 +22,7 @@ import type { CompressionDescriptor } from "../../image";
 import type { ParsedImage, VerifyExpectations } from "../../image";
 import { compileWasiModule, runWasiTool } from "../../../wasm/wasi-runner";
 import { describeKpm, readKpmInfo } from "./kpm-info";
+import { KEEP_SIGNATURE_SETTING, outputOptions } from "./output-options";
 import type {
   PatchAnalysis,
   PatchOptions,
@@ -235,6 +236,7 @@ export class ApatchPatchProvider implements PatchProvider {
     });
 
     const superkey = readSuperkey(options.configuration);
+    const output = outputOptions(options.configuration, undefined);
     // Modules the run carries are authoritative: the plan must pin exactly those.
     const carriedModules = planContext?.attachmentNames ?? [];
     const moduleNames = carriedModules.length > 0 ? carriedModules : readModuleNames(options.configuration);
@@ -267,6 +269,8 @@ export class ApatchPatchProvider implements PatchProvider {
         kallsymsAll: kallsymsAll ? "enabled" : "disabled",
         kpimgVersion: versionFromStdout(kpimgInfo.stdout, kpimg.version),
         kptoolsVersion: kptools.version,
+        preserveImageSize: output.preserveImageSize ? "true" : "false",
+        [KEEP_SIGNATURE_SETTING]: output.keepSignature ? "true" : "false",
       },
       steps: PLAN_STEPS.map((step) => ({ ...step })),
       createdAt: new Date().toISOString(),
@@ -389,14 +393,13 @@ export class ApatchPatchProvider implements PatchProvider {
     }
 
     emit("repack", 80, "Repacking the boot image");
-    const preserveImageSize =
-      (context.options?.configuration?.preserveImageSize ?? plan.configuration.preserveImageSize ?? "false") ===
-      "true";
+    const output = outputOptions(plan.configuration, context.options?.configuration);
     const recompressed = await compressSection(patchedKernel, kernel.descriptor);
     const outcome = repackBootImage({
       image,
       kernel: recompressed,
-      ...(preserveImageSize ? { padTo: image.totalSize } : {}),
+      keepSignature: output.keepSignature,
+      ...(output.preserveImageSize ? { padTo: image.totalSize } : {}),
     });
     const sha256 = await sha256Hex(outcome.bytes);
 
@@ -453,7 +456,8 @@ export class ApatchPatchProvider implements PatchProvider {
         kernelRawSizeAfter: String(patchedKernel.length),
         imageSizeBefore: String(image.totalSize),
         imageSizeAfter: String(outcome.bytes.length),
-        preserveImageSize: preserveImageSize ? "true" : "false",
+        preserveImageSize: output.preserveImageSize ? "true" : "false",
+        [KEEP_SIGNATURE_SETTING]: output.keepSignature ? "true" : "false",
         kptoolsConfirmation: "patched=true",
         target: plan.target,
         headerVersion: "v" + plan.headerVersion,

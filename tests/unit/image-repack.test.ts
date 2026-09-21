@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { RepackError } from "@/core/errors";
-import { assertBootImage, parseImage, repackBootImage, verifyImage } from "@/core/image";
+import { assertBootImage, parseImage, repackBootImage, sectionOf, verifyImage } from "@/core/image";
 import {
   buildBootImage,
   buildVendorBootImage,
@@ -119,5 +119,40 @@ describe("verifyImage", () => {
     const verification = await verifyImage(deterministicBytes(2048, 2));
     expect(verification.valid).toBe(false);
     expect(verification.checks.find((entry) => entry.id === "structure")?.status).toBe("fail");
+  });
+});
+function avbTrailer(size = 256): Uint8Array {
+  const blob = new Uint8Array(size);
+  blob.set(new TextEncoder().encode("AVB0"), 0);
+  for (let i = 4; i < size; i += 1) blob[i] = (i * 7) & 0xff;
+  return blob;
+}
+
+describe("keeping the source signature bytes", () => {
+  it("keeps them when asked", async () => {
+    const bytes = await buildBootImage({ trailing: avbTrailer() });
+    const image = assertBootImage(parseImage(bytes));
+    const outcome = repackBootImage({ image, kernel: new Uint8Array(8192), keepSignature: true });
+
+    expect(sectionOf(assertBootImage(parseImage(outcome.bytes)), "signature")).toBeDefined();
+  });
+
+  it("drops them instead of growing past the size the image has to fit", async () => {
+    // layout: 4096 header + 1000 kernel, padded to 8192, plus 256 signature bytes
+    const bytes = await buildBootImage({ kernel: new Uint8Array(1000), ramdisk: null, trailing: avbTrailer() });
+    const image = assertBootImage(parseImage(bytes));
+    expect(bytes.length).toBe(8192 + 256);
+
+    const outcome = repackBootImage({
+      image,
+      kernel: new Uint8Array(1000),
+      keepSignature: true,
+      padTo: 8300,
+    });
+
+    // 8192 fits into 8300, 8192 + 256 does not, so the stale bytes are dropped
+    expect(outcome.bytes.length).toBe(8300);
+    expect(sectionOf(assertBootImage(parseImage(outcome.bytes)), "signature")).toBeUndefined();
+    expect(outcome.warnings.join(" ")).toMatch(/signature bytes were dropped/);
   });
 });

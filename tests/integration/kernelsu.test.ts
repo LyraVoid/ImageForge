@@ -5,6 +5,7 @@ import {
   KERNELSU_KMI_SETTING,
   KERNELSU_MODULE_ENTRY,
   KERNELSU_REQUIRED_MANAGER,
+  KEEP_SIGNATURE_SETTING,
   KNOWN_KMIS,
   ARTIFACT_CATALOG,
   createArtifactRegistry,
@@ -120,6 +121,32 @@ describe("KernelSU provider", () => {
         );
         expect(plan?.configuration.moduleArtifact).toBe("kernelsu-lkm-" + kmi);
       }
+    },
+    TIMEOUT,
+  );
+
+  it(
+    "keeps the original signature bytes by default and drops them on request",
+    async () => {
+      const trailing = new Uint8Array(256);
+      trailing.set(new TextEncoder().encode("AVB0"), 0);
+      for (let i = 4; i < trailing.length; i += 1) trailing[i] = (i * 7) & 0xff;
+
+      const image = await buildBootImage({ kernel: null, ramdisk: stockRamdisk(), trailing });
+      const analyzed = await engine.analyze(image);
+      expect(sectionOf(analyzed.image, "signature")).toBeDefined();
+
+      const kept = await engine.run(analyzed.image, analyzed.sha256, "kernelsu", {
+        configuration: { [KERNELSU_KMI_SETTING]: KMI },
+      });
+      expect(kept.result.metadata[KEEP_SIGNATURE_SETTING]).toBe("true");
+      expect(sectionOf(assertBootImage(parseImage(kept.result.bytes)), "signature")).toBeDefined();
+
+      const dropped = await engine.run(analyzed.image, analyzed.sha256, "kernelsu", {
+        configuration: { [KERNELSU_KMI_SETTING]: KMI, [KEEP_SIGNATURE_SETTING]: "false" },
+      });
+      expect(dropped.result.metadata[KEEP_SIGNATURE_SETTING]).toBe("false");
+      expect(sectionOf(assertBootImage(parseImage(dropped.result.bytes)), "signature")).toBeUndefined();
     },
     TIMEOUT,
   );

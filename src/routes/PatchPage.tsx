@@ -422,6 +422,21 @@ export function PatchPage() {
             onCheckedChange={(checked) => applyOption({ preserveImageSize: String(checked) })}
           />
         </CardContent>
+        <CardContent className="flex items-start justify-between gap-4 border-t border-border/60 pt-4">
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-foreground">Keep the original AVB bytes</p>
+            <p className="text-[11px] leading-4 text-muted-foreground">
+              The official patchers keep the signature area of the source image. Those bytes are stale
+              after a patch either way, so verified boot fails with or without them; turn this off to
+              leave the area empty instead.
+            </p>
+          </div>
+          <Switch
+            aria-label="Keep the original AVB bytes"
+            checked={readOption("keepSignature", "true") === "true"}
+            onCheckedChange={(checked) => applyOption({ keepSignature: String(checked) })}
+          />
+        </CardContent>
       </Card>
 
       <div className="flex flex-wrap items-center justify-end gap-2">

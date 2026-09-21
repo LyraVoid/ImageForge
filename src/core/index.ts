@@ -43,6 +43,12 @@ export {
   ApatchPatchProvider,
 } from "./patch/providers/apatch-provider";
 export type { PatchAttachment } from "./patch/types";
+export {
+  KEEP_SIGNATURE_SETTING,
+  PRESERVE_IMAGE_SIZE_SETTING,
+  outputOptions,
+} from "./patch/providers/output-options";
+export type { OutputOptions } from "./patch/providers/output-options";
 export { describeKpm, readKpmInfo } from "./patch/providers/kpm-info";
 export type { KpmInfo } from "./patch/providers/kpm-info";
 export type { ApatchFlavor } from "./patch/providers/apatch-provider";
