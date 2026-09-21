@@ -31,7 +31,8 @@ describe("artifact registry", () => {
 
   it("fails closed for unknown providers, releases and architectures", () => {
     const registry = createArtifactRegistry();
-    expect(() => registry.resolve({ providerId: "magisk" })).toThrowError(ArtifactError);
+    // a provider that is not registered at all, and one that is registered but has no release
+    expect(() => registry.resolve({ providerId: "not-a-provider" })).toThrowError(ArtifactError);
     expect(() => registry.resolve({ providerId: "mock", release: "9.9.9" })).toThrowError(ArtifactError);
     expect(() => registry.resolve({ providerId: "mock", architecture: "riscv64" })).toThrowError(ArtifactError);
   });
