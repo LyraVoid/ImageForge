@@ -132,14 +132,58 @@ describe("KernelSU provider", () => {
   );
 
   it(
-    "requires a KMI when the image carries no kernel",
+    "plans without a KMI but refuses to patch until one is selected",
     async () => {
       const image = await buildBootImage({ kernel: null, ramdisk: stockRamdisk() });
       const analyzed = await engine.analyze(image);
+      const provider = engine.providers.get("kernelsu");
 
+      // planning is allowed so the patch page can offer the KMI selector
+      const plan = await provider?.resolve(analyzed.image, {}, analyzed.sha256);
+      expect(plan?.configuration.kmi).toBe("unset");
+      expect(plan?.notes.join(" ")).toMatch(/No device KMI is selected/);
+
+      // but a run without one must fail, before anything is written
       await expect(
-        engine.providers.get("kernelsu")?.resolve(analyzed.image, {}, analyzed.sha256),
-      ).rejects.toThrowError(/KMI/);
+        engine.run(
+          analyzed.image,
+          analyzed.sha256,
+          "kernelsu",
+          {},
+          { attachments: [{ id: "m.ko", name: "m.ko", bytes: buildModuleObject({ name: "kernelsu" }) }] },
+        ),
+      ).rejects.toThrowError(PatchError);
+    },
+    TIMEOUT,
+  );
+
+  it(
+    "prefers the kernel banner over a contradicting selection",
+    async () => {
+      const module = buildModuleObject({ name: "kernelsu" });
+      const kernel = new TextEncoder().encode(
+        "Linux version 6.6.118-android15-8-g2e6b9c3812c5-ab15114928-4k (kleaf@build-host)\n",
+      );
+      const image = await buildBootImage({ kernel, ramdisk: stockRamdisk() });
+      const analyzed = await engine.analyze(image);
+      const provider = engine.providers.get("kernelsu");
+
+      const plan = await provider?.resolve(
+        analyzed.image,
+        { configuration: { [KERNELSU_KMI_SETTING]: "android16-6.12" } },
+        analyzed.sha256,
+      );
+      expect(plan?.configuration.kmi).toBe("android15-6.6");
+      expect(plan?.configuration.kmiSource).toMatch(/was ignored/);
+
+      const outcome = await engine.run(
+        analyzed.image,
+        analyzed.sha256,
+        "kernelsu",
+        { configuration: { [KERNELSU_KMI_SETTING]: "android16-6.12" } },
+        { attachments: [{ id: "m.ko", name: "m.ko", bytes: module }] },
+      );
+      expect(outcome.result.metadata.kmi).toBe("android15-6.6");
     },
     TIMEOUT,
   );

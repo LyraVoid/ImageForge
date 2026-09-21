@@ -150,7 +150,7 @@ export class KernelsuPatchProvider implements PatchProvider {
   private async resolveKmi(
     image: ParsedImage,
     options: PatchOptions,
-  ): Promise<{ kmi: string; source: string; detected?: string }> {
+  ): Promise<{ kmi: string; source: string }> {
     const selected = (options.configuration?.[KERNELSU_KMI_SETTING] ?? "").trim();
     const kernel = sectionOf(image, "kernel");
     let detected: string | undefined;
@@ -163,20 +163,22 @@ export class KernelsuPatchProvider implements PatchProvider {
       }
     }
 
-    if (selected !== "" && detected !== undefined && selected !== detected) {
-      throw new IncompatibleProviderError(
-        "The kernel banner of this image says " + detected + " but " + selected + " was selected.",
-        "The KernelSU module has to match the KMI of the kernel in this image (" + detected + ").",
-      );
+    // A kernel in the image is authoritative: it is the kernel the module has to load into.
+    if (detected !== undefined) {
+      return {
+        kmi: detected,
+        source:
+          selected === "" || selected === detected
+            ? "detected from the kernel banner"
+            : "detected from the kernel banner; the selection " + selected + " was ignored",
+      };
     }
+    // init_boot.img carries no kernel, so there the selection is the only source. Leaving it
+    // unset is allowed here: the plan says so, and the patch refuses to run until it is chosen.
     if (selected !== "") {
-      return { kmi: selected, source: detected === selected ? "selected, matches the kernel banner" : "selected", ...(detected === undefined ? {} : { detected }) };
+      return { kmi: selected, source: "selected (this image carries no kernel to detect one from)" };
     }
-    if (detected !== undefined) return { kmi: detected, source: "detected from the kernel banner", detected };
-    throw new IncompatibleProviderError(
-      "No KMI was selected and this image carries no kernel to read one from.",
-      "Select the device KMI (init_boot.img carries no kernel, so it cannot be detected from the image).",
-    );
+    return { kmi: "unset", source: "not selected" };
   }
 
   async resolve(
@@ -226,7 +228,9 @@ export class KernelsuPatchProvider implements PatchProvider {
       notes: [
         "The kernel is left untouched: only the ramdisk changes.",
         "init is renamed to init.real and a KernelSU init wrapper takes its place, so the stock init still runs after the wrapper.",
-        "The KMI is " + kmi.kmi + " (" + kmi.source + ").",
+        kmi.kmi === "unset"
+          ? "No device KMI is selected yet. Pick it on the patch page before starting: init_boot.img carries no kernel, so it cannot be read from the image."
+          : "The KMI is " + kmi.kmi + " (" + kmi.source + ").",
         plannedModules.length === 0
           ? "No KernelSU module is attached yet: attach the {kmi}_kernelsu.ko file that matches this KMI before starting the patch."
           : "The attached module " +
@@ -305,6 +309,12 @@ export class KernelsuPatchProvider implements PatchProvider {
     // its vermagic. Comparing them catches a module picked for the wrong KMI, which would not
     // load and would leave the device unable to boot.
     const kmiValue = plan.configuration.kmi ?? "";
+    if (kmiValue === "" || kmiValue === "unset") {
+      throw new PatchError(
+        "This plan has no device KMI.",
+        "Select the device KMI (for example android15-6.6) before starting the patch.",
+      );
+    }
     const kmiVersion = kmiValue.includes("-") ? (kmiValue.split("-")[1] ?? "") : "";
     const moduleKernel = (moduleInfo.vermagic ?? "").split(" ")[0] ?? "";
     if (kmiVersion !== "" && moduleKernel !== "" && !moduleKernel.startsWith(kmiVersion + ".")) {

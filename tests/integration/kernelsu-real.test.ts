@@ -58,7 +58,7 @@ describe.skipIf(!hasInitBootImage || !hasKernelsuModule)("KernelSU provider agai
 
       expect(outcome.verification.verification.valid).toBe(true);
       expect(outcome.result.metadata.kmi).toBe(KMI);
-      expect(outcome.result.metadata.kmiSource).toBe("selected");
+      expect(outcome.result.metadata.kmiSource).toMatch(/^selected/);
       expect(outcome.result.metadata.moduleDeclaredName).toBe("kernelsu");
       expect(outcome.result.metadata.moduleLicense).toBe("GPL");
       expect(outcome.result.metadata.moduleVermagic).toContain("6.6.127");
