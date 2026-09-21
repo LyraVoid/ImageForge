@@ -89,6 +89,8 @@ export interface ParsedBootImage {
   sections: ImageSection[];
   totalSize: number;
   warnings: string[];
+  /** The bytes this image was parsed from, for providers that have to hash the source. */
+  source?: Uint8Array;
 }
 
 export interface ParsedVendorBootImage {
@@ -104,6 +106,8 @@ export interface ParsedVendorBootImage {
   sections: ImageSection[];
   totalSize: number;
   warnings: string[];
+  /** The bytes this image was parsed from, for providers that have to hash the source. */
+  source?: Uint8Array;
 }
 
 export type ParsedImage = ParsedBootImage | ParsedVendorBootImage;

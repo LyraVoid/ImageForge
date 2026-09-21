@@ -2,7 +2,9 @@ import type { ArtifactRegistry } from "../../artifacts/registry";
 import { KERNELSU_KSUINIT_ID, kernelsuLkmId } from "../../artifacts/catalog";
 import type { PatchArtifact } from "../../artifacts/types";
 import { KEEP_SIGNATURE_SETTING, outputOptions } from "./output-options";
-import { AbortedError, IncompatibleProviderError, PatchError } from "../../errors";
+import { findMagiskMarker, loadRamdiskSection } from "./ramdisk-support";
+import type { RamdiskSection } from "./ramdisk-support";
+import { AbortedError, PatchError } from "../../errors";
 import { sha256Hex } from "../../hash";
 import {
   COMPRESSION_LABEL,
@@ -23,7 +25,7 @@ import {
   upsertEntry,
   verifyImage,
 } from "../../image";
-import type { CompressionDescriptor, CpioArchive, ParsedImage, VerifyExpectations } from "../../image";
+import type { ParsedImage, VerifyExpectations } from "../../image";
 import type {
   PatchAnalysis,
   PatchOptions,
@@ -60,20 +62,6 @@ export function plannedKmi(configuration: Record<string, string> | undefined): s
   return value === "unset" || value === "none" ? "" : value;
 }
 export const KERNELSU_MODULE_NAME = "kernelsu";
-
-/**
- * Magisk's ramdisk layout, from its own scripts/boot_patch.sh: it puts its payload under
- * overlay.d/ and keeps its configuration in .backup/.magisk. ksud refuses to patch such an
- * image and so does this provider.
- */
-function findMagiskMarker(archive: CpioArchive): string | undefined {
-  for (const entry of archive.entries) {
-    if (entry.name === ".backup/.magisk" || entry.name === "overlay.d" || entry.name.startsWith("overlay.d/")) {
-      return entry.name;
-    }
-  }
-  return undefined;
-}
 
 const PLAN_STEPS: PatchPlanStep[] = [
   { id: "analyze", label: "Read the boot image", progress: 5 },
@@ -143,28 +131,8 @@ export class KernelsuPatchProvider implements PatchProvider {
     }
   }
 
-  private loadRamdisk(image: ParsedImage): { bytes: Uint8Array; descriptor: CompressionDescriptor } {
-    if (image.format === "vendor_boot") {
-      throw new IncompatibleProviderError(
-        "This provider cannot write vendor boot ramdisks yet.",
-        "Vendor boot images with a ramdisk table are not supported by the KernelSU provider yet.",
-      );
-    }
-    const ramdisk = sectionOf(image, "ramdisk");
-    if (!ramdisk || ramdisk.size === 0) {
-      throw new IncompatibleProviderError(
-        "The image has no ramdisk section, so KernelSU has nothing to replace.",
-        "This image carries no ramdisk, so KernelSU cannot be installed into it.",
-      );
-    }
-    const descriptor = describeCompression(ramdisk.data);
-    if (!isPayloadUsable(descriptor.format)) {
-      throw new IncompatibleProviderError(
-        "Ramdisk compression is " + COMPRESSION_LABEL[descriptor.format] + ".",
-        "This build cannot expand that ramdisk compression, so the ramdisk cannot be rewritten safely.",
-      );
-    }
-    return { bytes: ramdisk.data, descriptor };
+  private loadRamdisk(image: ParsedImage): RamdiskSection {
+    return loadRamdiskSection(image);
   }
 
   /**

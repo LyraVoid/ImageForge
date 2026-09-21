@@ -196,6 +196,7 @@ function assembleBootImage(
     sections,
     totalSize: bytes.length,
     warnings,
+    source: bytes,
   };
 }
 
@@ -254,6 +255,7 @@ function parseVendorBootImage(
     sections,
     totalSize: bytes.length,
     warnings,
+    source: bytes,
   };
 }
 

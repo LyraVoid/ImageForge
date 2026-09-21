@@ -65,22 +65,29 @@ export const KERNELSU_PROVIDER_DESCRIPTOR: PatchProviderDescriptor = {
   requiresRamdisk: true,
 };
 
+export const MAGISK_PROVIDER_DESCRIPTOR: PatchProviderDescriptor = {
+  id: "magisk",
+  name: "Magisk",
+  description:
+    "Systemless root: magiskinit replaces the ramdisk init, and Magisk's payloads are written under overlay.d/sbin.",
+  status: "available",
+  website: "https://github.com/topjohnwu/Magisk",
+  notes: [
+    "Rewrites the ramdisk the way Magisk's own patcher does: init becomes magiskinit (0750), overlay.d/ and overlay.d/sbin are created (0750), magisk.xz, stub.xz and init-ld.xz are added (0644), and .backup/.magisk holds the configuration (000).",
+    "The stock init is replaced rather than renamed.",
+    "fstab entries are patched exactly like magiskboot does when verity or forced encryption are not kept: the matching flag strings are removed and verity_key is dropped.",
+    "SHA1 in the configuration is the digest of the whole source image, like Magisk's app records it.",
+    "Refuses a ramdisk that Magisk or KernelSU already patched.",
+    "The uninstall backup Magisk's own patcher keeps inside the ramdisk is not written, so restoring needs a stock image.",
+    "The payloads are bundled from the pinned Magisk release, which is GPL-3.0.",
+    "The Magisk app (com.topjohnwu.magisk) has to be installed for the produced image to be usable.",
+  ],
+  supportedFormats: ["boot", "init_boot"],
+  supportedHeaderVersions: [0, 1, 2, 3, 4],
+  supportedArchitectures: ["arm64"],
+  requiresKernel: false,
+  requiresRamdisk: true,
+};
+
 export const PLANNED_PROVIDER_DESCRIPTORS: PatchProviderDescriptor[] = [
-  {
-    id: "magisk",
-    name: "Magisk",
-    description: "Systemless root patching performed on the ramdisk.",
-    status: "planned",
-    website: "https://github.com/topjohnwu/Magisk",
-    notes: [
-      "Not implemented in this build.",
-      "Targets boot.img, init_boot.img (GKI 13+), recovery.img, or vendor_boot.img depending on where the ramdisk lives.",
-      "Requires CPIO read/write and the full compression matrix before it can be implemented.",
-    ],
-    supportedFormats: ["boot", "init_boot"],
-    supportedHeaderVersions: [0, 1, 2, 3, 4],
-    supportedArchitectures: ["arm64", "arm", "x86_64"],
-    requiresKernel: false,
-    requiresRamdisk: true,
-  },
 ];

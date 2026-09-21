@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { createArtifactRegistry, createProviderRegistry, evaluateCompatibility, parseImage } from "@/core";
+import {
+  PLANNED_PROVIDER_DESCRIPTORS,
+  createArtifactRegistry,
+  createProviderRegistry,
+  evaluateCompatibility,
+  parseImage,
+} from "@/core";
 import { buildBootImage, makeRamdisk } from "../fixtures/bootimg";
 
 function setup() {
@@ -14,18 +20,14 @@ describe("compatibility engine", () => {
     const image = parseImage(await buildBootImage({}));
     const result = evaluateCompatibility({ image, providers, artifacts });
 
-    for (const id of ["mock", "apatch", "kernelsu"]) {
+    for (const id of ["mock", "apatch", "kernelsu", "magisk"]) {
       const candidate = result.candidates.find((entry) => entry.providerId === id);
       expect(candidate?.available).toBe(true);
       expect(candidate?.compatible).toBe(true);
     }
 
-    for (const id of ["magisk"]) {
-      const candidate = result.candidates.find((entry) => entry.providerId === id);
-      expect(candidate?.available).toBe(false);
-      expect(candidate?.compatible).toBe(false);
-      expect(candidate?.reasons.join(" ")).toMatch(/Not implemented in this build/);
-    }
+    // every provider that was announced is implemented now
+    expect(PLANNED_PROVIDER_DESCRIPTORS).toHaveLength(0);
     expect(result.compatible).toBe(true);
   });
 

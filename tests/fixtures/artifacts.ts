@@ -82,6 +82,20 @@ export function readKernelsuModule(): Uint8Array {
   return new Uint8Array(readFileSync(KERNELSU_MODULE_PATH));
 }
 
+/**
+ * An image produced by Magisk's own app for the same source image. It is the reference the
+ * Magisk provider is compared against, and it is never committed.
+ */
+export const MAGISK_REFERENCE_PATH =
+  process.env.IMAGEFORGE_MAGISK_REFERENCE ??
+  repoPath(".research", "magisk-release", "reference", "magisk_patched-30700_7T89w.img");
+
+export const hasMagiskReference = existsSync(MAGISK_REFERENCE_PATH);
+
+export function readMagiskReference(): Uint8Array {
+  return new Uint8Array(readFileSync(MAGISK_REFERENCE_PATH));
+}
+
 /** A small GPL demo module taken from the KernelPatch-Aster 0.13.8 release. */
 export const DEMO_KPM_PATH = repoPath("tests", "fixtures", "kernelpatch", "demo-hello.kpm");
 

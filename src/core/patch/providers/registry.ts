@@ -3,11 +3,13 @@ import type { PatchProvider, PatchProviderDescriptor } from "../types";
 import {
   APATCH_PROVIDER_DESCRIPTOR,
   KERNELSU_PROVIDER_DESCRIPTOR,
+  MAGISK_PROVIDER_DESCRIPTOR,
   MOCK_PROVIDER_DESCRIPTOR,
   PLANNED_PROVIDER_DESCRIPTORS,
 } from "./descriptors";
 import { ApatchPatchProvider } from "./apatch-provider";
 import { KernelsuPatchProvider } from "./kernelsu-provider";
+import { MagiskPatchProvider } from "./magisk-provider";
 import { MockPatchProvider } from "./mock-provider";
 
 export class ProviderRegistry {
@@ -44,6 +46,7 @@ export function createProviderRegistry(artifacts: ArtifactRegistry): ProviderReg
   const registry = new ProviderRegistry();
   registry.register(new ApatchPatchProvider(artifacts), APATCH_PROVIDER_DESCRIPTOR);
   registry.register(new KernelsuPatchProvider(artifacts), KERNELSU_PROVIDER_DESCRIPTOR);
+  registry.register(new MagiskPatchProvider(artifacts), MAGISK_PROVIDER_DESCRIPTOR);
   // Last on purpose: the mock provider is a pipeline smoke test, not a root solution.
   registry.register(new MockPatchProvider(artifacts), MOCK_PROVIDER_DESCRIPTOR);
   for (const descriptor of PLANNED_PROVIDER_DESCRIPTORS) registry.registerDescriptor(descriptor);

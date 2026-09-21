@@ -80,11 +80,16 @@ describe("patch pipeline", () => {
     expect(first.reproducible).toBe(true);
   });
 
-  it("rejects a planned provider with a structured error", async () => {
+  it("rejects a provider that is not registered at all", async () => {
     const bytes = await buildBootImage({});
     const analyzed = await engine.analyze(bytes);
     await expect(
-      engine.plan({ image: analyzed.image, sourceImageSha256: analyzed.sha256, providerId: "magisk", options: {} }),
+      engine.plan({
+        image: analyzed.image,
+        sourceImageSha256: analyzed.sha256,
+        providerId: "not-a-provider",
+        options: {},
+      }),
     ).rejects.toThrowError(/not implemented yet/i);
   });
 

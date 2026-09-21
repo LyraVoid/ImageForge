@@ -30,6 +30,7 @@ export { ProviderRegistry, createProviderRegistry } from "./patch/providers/regi
 export {
   APATCH_PROVIDER_DESCRIPTOR,
   KERNELSU_PROVIDER_DESCRIPTOR,
+  MAGISK_PROVIDER_DESCRIPTOR,
   MOCK_PROVIDER_DESCRIPTOR,
   PLANNED_PROVIDER_DESCRIPTORS,
   PROVIDER_DESCRIPTORS,
@@ -64,6 +65,32 @@ export {
   KernelsuPatchProvider,
   plannedKmi,
 } from "./patch/providers/kernelsu-provider";
-export { KERNELSU_KSUINIT_ID, KERNELSU_KSUINIT_SHA256, KERNELSU_RELEASE } from "./artifacts/catalog";
+export {
+  KERNELSU_KSUINIT_ID,
+  KERNELSU_KSUINIT_SHA256,
+  KERNELSU_RELEASE,
+  MAGISK_INIT_LD_XZ_ID,
+  MAGISK_MAGISKINIT_ID,
+  MAGISK_MAGISK_XZ_ID,
+  MAGISK_RELEASE,
+  MAGISK_STUB_XZ_ID,
+} from "./artifacts/catalog";
+export {
+  MAGISK_BACKUP_DIR,
+  MAGISK_CONFIG_ENTRY,
+  MAGISK_INIT_ENTRY,
+  MAGISK_INIT_LD_ENTRY,
+  MAGISK_KEEP_FORCE_ENCRYPT_SETTING,
+  MAGISK_KEEP_VERITY_SETTING,
+  MAGISK_MAGISK_ENTRY,
+  MAGISK_OVERLAY_DIR,
+  MAGISK_OVERLAY_SBIN_DIR,
+  MAGISK_PREINIT_DEVICE_SETTING,
+  MAGISK_REQUIRED_MANAGER,
+  MAGISK_STUB_ENTRY,
+  MAGISK_VERITY_KEY_ENTRY,
+  MagiskPatchProvider,
+  buildMagiskConfig,
+} from "./patch/providers/magisk-provider";
 export { PatchEngine, createPatchEngine } from "./patch/engine";
 export type { AnalyzedImage, PatchEngineOptions, PatchRunOutcome } from "./patch/engine";
