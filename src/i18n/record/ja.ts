@@ -100,7 +100,7 @@ export const ja: Record<string, string> = {
   "A custom flavour takes the core image from the run instead of the registry: the file has to start with the KernelPatch magic, and its digest and version are reported in the result.":
     "カスタムフレーバーでは登録簿ではなく今回の実行からコアイメージを受け取ります。ファイルは KernelPatch のマジックで始まる必要があり、ダイジェストとバージョンは結果に記録されます。",
   "KernelPatch modules (KPM) can be attached, and are embedded by kptools with the same command shape FolkTool uses.":
-    "KernelPatch モジュール（KPM）を添付でき、kptools が FolkTool と同じコマンド形式で埋め込みます。",
+    "KP モジュール（.kpm ファイル）を添付でき、kptools が FolkTool と同じコマンド形式で埋め込みます。",
   "Runs the upstream KernelPatch kptools, compiled to WebAssembly, inside the patch worker.":
     "WebAssembly にコンパイルした上流の KernelPatch kptools を、パッチ worker の中で実行します。",
   "Injects the module into the ramdisk of init_boot.img (GKI 13+) or of a boot.img that carries one, exactly as ksud does: init becomes init.real, a new init (ksuinit) is added, and kernelsu.ko is added next to it.":
@@ -251,8 +251,8 @@ export const ja: Record<string, string> = {
   kpimgSha256: "kpimg SHA-256",
   kpimgSource: "kpimg の取得元",
   kpimgVersion: "kpimg のバージョン",
-  kpmCount: "KPM の数",
-  kpmModules: "KPM モジュール",
+  kpmCount: "KP モジュール数",
+  kpmModules: "KP モジュール",
   kptoolsArtifact: "kptools アーティファクト",
   kptoolsConfirmation: "kptools の確認結果",
   kptoolsSha256: "kptools SHA-256",

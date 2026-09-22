@@ -106,9 +106,9 @@ export const zhHant: Messages = {
   "patch.kpimg.unknownManager": "未知",
   "patch.kpimg.hint":
     "它必須是 KernelPatch 核心映像（以 KP1158 開頭）。這些位元組只在本次執行中傳遞；計畫只記錄檔名，結果裡會報告摘要以及 kptools 從中讀出的版本。它被建置為信任哪個管理器，裝置上就得安裝哪一個。",
-  "patch.kpm.title": "KernelPatch 模組（KPM）",
+  "patch.kpm.title": "KP 模組",
   "patch.kpm.description":
-    "選用。每個模組都會被嵌入修補後的核心映像。位元組留在你的瀏覽器裡，只在本次執行中交給修補 worker；計畫只記錄檔名。",
+    "選用。KP 即 KernelPatch，每個模組都會被嵌入修補後的核心映像。位元組留在你的瀏覽器裡，只在本次執行中交給修補 worker；計畫只記錄檔名。",
   "patch.kpm.attach": "附加 .kpm 檔案",
   "patch.kpm.none": "計畫：沒有模組",
   "patch.kpm.hint":

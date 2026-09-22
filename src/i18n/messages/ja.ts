@@ -107,9 +107,9 @@ export const ja: Messages = {
   "patch.kpimg.unknownManager": "不明",
   "patch.kpimg.hint":
     "KernelPatch のコアイメージである必要があります（KP1158 で始まるもの）。このバイト列は今回の実行だけに渡されます。計画にはファイル名だけを記録し、結果にはダイジェストと kptools が読み取ったバージョンが報告されます。どのマネージャーを信頼するよう作られたかで、端末に入れるべきマネージャーが決まります。",
-  "patch.kpm.title": "KernelPatch モジュール（KPM）",
+  "patch.kpm.title": "KP モジュール",
   "patch.kpm.description":
-    "任意です。各モジュールはパッチ後のカーネルイメージに埋め込まれます。バイト列はブラウザー内に留まり、今回の実行でパッチ worker に渡されるだけです。計画にはファイル名だけを記録します。",
+    "任意です。KP は KernelPatch のことです。各モジュールはパッチ後のカーネルイメージに埋め込まれます。バイト列はブラウザー内に留まり、今回の実行でパッチ worker に渡されるだけです。計画にはファイル名だけを記録します。",
   "patch.kpm.attach": ".kpm ファイルを添付",
   "patch.kpm.none": "計画: モジュールなし",
   "patch.kpm.hint":

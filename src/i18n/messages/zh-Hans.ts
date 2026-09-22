@@ -106,9 +106,9 @@ export const zhHans: Messages = {
   "patch.kpimg.unknownManager": "未知",
   "patch.kpimg.hint":
     "它必须是 KernelPatch 核心镜像（以 KP1158 开头）。这些字节只在本次运行中传递；计划只记录文件名，结果里会报告摘要以及 kptools 从中读出的版本。它被构建为信任哪个管理器，设备上就得装哪个。",
-  "patch.kpm.title": "KernelPatch 模块（KPM）",
+  "patch.kpm.title": "KP 模块",
   "patch.kpm.description":
-    "可选。每个模块都会被嵌入修补后的内核镜像。字节留在你的浏览器里，只在本次运行中交给修补 worker；计划只记录文件名。",
+    "可选。KP 即 KernelPatch，每个模块都会被嵌入修补后的内核镜像。字节留在你的浏览器里，只在本次运行中交给修补 worker；计划只记录文件名。",
   "patch.kpm.attach": "附加 .kpm 文件",
   "patch.kpm.none": "计划：没有模块",
   "patch.kpm.hint":

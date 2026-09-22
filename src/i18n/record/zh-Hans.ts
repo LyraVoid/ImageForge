@@ -100,7 +100,7 @@ export const zhHans: Record<string, string> = {
   "A custom flavour takes the core image from the run instead of the registry: the file has to start with the KernelPatch magic, and its digest and version are reported in the result.":
     "自定义口味改为从本次运行取核心镜像，而不是从注册表取：文件必须以 KernelPatch 魔数开头，其结果里会报告摘要与版本。",
   "KernelPatch modules (KPM) can be attached, and are embedded by kptools with the same command shape FolkTool uses.":
-    "可以附加 KernelPatch 模块（KPM），kptools 会用与 FolkTool 相同的命令形式把它们嵌入。",
+    "可以附加 KP 模块（.kpm 文件），kptools 会用与 FolkTool 相同的命令形式把它们嵌入。",
   "Runs the upstream KernelPatch kptools, compiled to WebAssembly, inside the patch worker.":
     "在修补 worker 内运行编译为 WebAssembly 的上游 KernelPatch kptools。",
   "Injects the module into the ramdisk of init_boot.img (GKI 13+) or of a boot.img that carries one, exactly as ksud does: init becomes init.real, a new init (ksuinit) is added, and kernelsu.ko is added next to it.":
@@ -249,8 +249,8 @@ export const zhHans: Record<string, string> = {
   kpimgSha256: "kpimg SHA-256",
   kpimgSource: "kpimg 来源",
   kpimgVersion: "kpimg 版本",
-  kpmCount: "KPM 数量",
-  kpmModules: "KPM 模块",
+  kpmCount: "KP 模块数",
+  kpmModules: "KP 模块",
   kptoolsArtifact: "kptools 制品",
   kptoolsConfirmation: "kptools 回读确认",
   kptoolsSha256: "kptools SHA-256",
