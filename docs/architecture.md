@@ -182,6 +182,15 @@ byte the input. And the header's width and height are **not** a bound on the fra
 was read from declares 1080x1920 while its frames are up to 1440x3168, so resizing to the header
 would shrink the images the panel really shows.
 
+The frames are 24 bit BMPs, and the codec that reads and writes them matches the vendor's own
+output down to the quirks: the resolution fields are copied from the frame being replaced (real
+frames use 2834, 2835 or 0), some frames carry a couple of trailing bytes that their size fields
+count, and a frame that is decoded and encoded again comes back byte for byte. Resizing is a
+bilinear resampler in this repository rather than a canvas, so the result is deterministic and can
+be tested without a browser, and the four adaptation modes (direct, follow the original frame,
+auto adapt, custom) size against **the frame being replaced** — never against the header, whose
+1080x1920 on a real device is smaller than the 1440x3168 frames it actually shows.
+
 Repacking follows the rule the rest of the project uses: the packer starts from the image's own bytes
 and writes only the metadata entries and the frame streams, so a repack of an unmodified image is
 byte for byte the input (verified against a real 15 MB partition, frames included), a replaced frame

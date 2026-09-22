@@ -56,16 +56,6 @@ export interface ParsedSplash {
   frames: SplashFrame[];
 }
 
-export interface BmpInfo {
-  sizeBytes: number;
-  pixelOffset: number;
-  headerSize: number;
-  width: number;
-  height: number;
-  bitsPerPixel: number;
-  compression: number;
-}
-
 function readU32(bytes: Uint8Array, offset: number): number {
   return (
     (bytes[offset] | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16) | (bytes[offset + 3] << 24)) >>> 0
@@ -261,25 +251,4 @@ export async function readSplashFrameBmp(source: ByteSource, frame: SplashFrame)
     );
   }
   return bmp;
-}
-
-/** The fields of a BMP frame, which is where its real resolution comes from. */
-export function readBmpInfo(bmp: Uint8Array): BmpInfo {
-  if (bmp.length < 54 || bmp[0] !== 0x42 || bmp[1] !== 0x4d) {
-    throw new PackageError(
-      "A frame does not start with the BMP signature (got " +
-        [...bmp.subarray(0, 2)].map((byte) => byte.toString(16)).join(" ") +
-        ").",
-      "A frame of this splash image is not a BMP.",
-    );
-  }
-  return {
-    sizeBytes: readU32(bmp, 2),
-    pixelOffset: readU32(bmp, 10),
-    headerSize: readU32(bmp, 14),
-    width: readU32(bmp, 18),
-    height: readU32(bmp, 22),
-    bitsPerPixel: bmp[28] | (bmp[29] << 8),
-    compression: readU32(bmp, 30),
-  };
 }
