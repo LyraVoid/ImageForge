@@ -1,6 +1,7 @@
 import { CircleCheck, LoaderCircle, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Link, Navigate, useNavigate } from "react-router";
+import { PATCH_ROUTES } from "@/app/tools";
 import { DiagnosticsButton } from "@/components/app/diagnostics-button";
 import { ErrorPanel } from "@/components/app/error-panel";
 import { Button } from "@/components/ui/button";
@@ -44,7 +45,7 @@ export function ProcessingPage() {
     void runPatch();
   }, [runPatch, stage]);
 
-  if (stage === "patched") return <Navigate to="/result" replace />;
+  if (stage === "patched") return <Navigate to={PATCH_ROUTES.result} replace />;
 
   if (error) {
     return (
@@ -55,10 +56,10 @@ export function ProcessingPage() {
             <CardDescription>{t("process.failed.body")}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap items-center gap-2">
-            <Button variant="primary" onClick={() => navigate("/patch")}>
+            <Button variant="primary" onClick={() => navigate(PATCH_ROUTES.plan)}>
               {t("process.failed.back")}
             </Button>
-            <Button variant="ghost" onClick={() => navigate("/")}>
+            <Button variant="ghost" onClick={() => navigate(PATCH_ROUTES.image)}>
               {t("process.failed.restart")}
             </Button>
             <DiagnosticsButton />
@@ -78,10 +79,10 @@ export function ProcessingPage() {
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-2">
           <Button asChild variant="secondary">
-            <Link to="/">{t("process.idle.select")}</Link>
+            <Link to={PATCH_ROUTES.image}>{t("process.idle.select")}</Link>
           </Button>
           <Button asChild variant="ghost">
-            <Link to="/patch">{t("process.failed.back")}</Link>
+            <Link to={PATCH_ROUTES.plan}>{t("process.failed.back")}</Link>
           </Button>
         </CardContent>
       </Card>
@@ -164,7 +165,7 @@ export function ProcessingPage() {
           disabled={stage !== "patching"}
           onClick={async () => {
             await cancelPatch();
-            navigate("/patch");
+            navigate(PATCH_ROUTES.plan);
           }}
         >
           <X />

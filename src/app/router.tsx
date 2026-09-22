@@ -1,13 +1,15 @@
 import { Suspense, lazy } from "react";
 import type { ReactNode } from "react";
-import { createBrowserRouter } from "react-router";
+import { Navigate, createBrowserRouter } from "react-router";
 import { AppShell } from "./AppShell";
 import { RouteFallback } from "./route-fallback";
+import { PATCH_ROUTES } from "./tools";
 
-const HomePage = lazy(() => import("@/routes/HomePage").then((module) => ({ default: module.HomePage })));
-const AnalyzePage = lazy(() =>
-  import("@/routes/AnalyzePage").then((module) => ({ default: module.AnalyzePage })),
+const ToolsPage = lazy(() => import("@/routes/ToolsPage").then((module) => ({ default: module.ToolsPage })));
+const PatchImagePage = lazy(() =>
+  import("@/routes/PatchImagePage").then((module) => ({ default: module.PatchImagePage })),
 );
+const AnalyzePage = lazy(() => import("@/routes/AnalyzePage").then((module) => ({ default: module.AnalyzePage })));
 const PatchPage = lazy(() => import("@/routes/PatchPage").then((module) => ({ default: module.PatchPage })));
 const ProcessingPage = lazy(() =>
   import("@/routes/ProcessingPage").then((module) => ({ default: module.ProcessingPage })),
@@ -24,17 +26,27 @@ function lazyRoute(node: ReactNode): ReactNode {
   return <Suspense fallback={<RouteFallback />}>{node}</Suspense>;
 }
 
+/**
+ * The site is a set of tools; the patcher is one of them, and it is the only one with steps. The
+ * paths it used before the tools page existed stay valid as redirects: they used to be the address
+ * of a working flow.
+ */
 export const router = createBrowserRouter([
   {
     path: "/",
     element: <AppShell />,
     children: [
-      { index: true, element: lazyRoute(<HomePage />) },
-      { path: "analyze", element: lazyRoute(<AnalyzePage />) },
-      { path: "patch", element: lazyRoute(<PatchPage />) },
-      { path: "processing", element: lazyRoute(<ProcessingPage />) },
-      { path: "result", element: lazyRoute(<ResultPage />) },
+      { index: true, element: lazyRoute(<ToolsPage />) },
+      { path: "tools/patch/image", element: lazyRoute(<PatchImagePage />) },
+      { path: "tools/patch/analyze", element: lazyRoute(<AnalyzePage />) },
+      { path: "tools/patch/plan", element: lazyRoute(<PatchPage />) },
+      { path: "tools/patch/run", element: lazyRoute(<ProcessingPage />) },
+      { path: "tools/patch/result", element: lazyRoute(<ResultPage />) },
       { path: "settings", element: lazyRoute(<SettingsPage />) },
+      { path: "analyze", element: <Navigate to={PATCH_ROUTES.analyze} replace /> },
+      { path: "patch", element: <Navigate to={PATCH_ROUTES.plan} replace /> },
+      { path: "processing", element: <Navigate to={PATCH_ROUTES.run} replace /> },
+      { path: "result", element: <Navigate to={PATCH_ROUTES.result} replace /> },
       { path: "*", element: lazyRoute(<NotFoundPage />) },
     ],
   },

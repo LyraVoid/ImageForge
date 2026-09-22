@@ -18,6 +18,7 @@ import { useT } from "@/i18n/use-translation";
 import { APP_VERSION } from "@/lib/app-meta";
 import { useThemeStore } from "@/stores/theme-store";
 import type { ThemeMode } from "@/stores/theme-store";
+import { isPatchFlow } from "./tools";
 import { useWorkflowSteps, stepIndexForPath } from "./workflow";
 
 const THEME_KEYS: Array<{ value: ThemeMode; labelKey: "shell.theme.light" | "shell.theme.dark" | "shell.theme.system" }> = [
@@ -33,6 +34,8 @@ export function Header() {
   const setMode = useThemeStore((state) => state.setMode);
   const steps = useWorkflowSteps();
   const stepIndex = stepIndexForPath(location.pathname);
+  // Only the patcher has steps; on the tools page the freed space belongs to the site name.
+  const inPatchFlow = isPatchFlow(location.pathname);
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
@@ -47,9 +50,20 @@ export function Header() {
           </Badge>
         </Link>
 
-        <div className="hidden flex-1 justify-center md:flex">
-          <StepIndicator steps={steps} currentIndex={stepIndex} />
-        </div>
+        <Link
+          to="/"
+          className="hidden text-xs text-muted-foreground transition-colors hover:text-foreground sm:block"
+        >
+          {t("shell.tools")}
+        </Link>
+
+        {inPatchFlow ? (
+          <div className="hidden flex-1 justify-center md:flex">
+            <StepIndicator steps={steps} currentIndex={stepIndex} />
+          </div>
+        ) : (
+          <div className="hidden flex-1 md:block" />
+        )}
 
         <div className="ml-auto flex items-center gap-1">
           <LanguageMenu />

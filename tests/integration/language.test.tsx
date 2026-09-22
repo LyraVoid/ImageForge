@@ -2,7 +2,8 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { HomePage } from "@/routes/HomePage";
+import { PatchImagePage } from "@/routes/PatchImagePage";
+import { ToolsPage } from "@/routes/ToolsPage";
 import { LanguageOptions } from "@/components/ui/language-menu";
 import { useLocaleStore } from "@/stores/locale-store";
 
@@ -47,27 +48,29 @@ describe("language selection", () => {
     expect(store().catalog["step.patch"]).toBe("修补");
   });
 
-  it("renders the home page in the chosen language", async () => {
+  it("renders the tools page in the chosen language", async () => {
     store().setLocale("zh-Hans");
     render(
       <MemoryRouter>
-        <HomePage />
+        <ToolsPage />
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("heading", { name: "Android 镜像修补工具" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Android 镜像工具" })).toBeInTheDocument();
+    expect(screen.getByText("分区解包")).toBeInTheDocument();
     expect(screen.getByText("把 Android 镜像拖到这里")).toBeInTheDocument();
     expect(screen.queryByText("Drop an Android image here")).toBeNull();
   });
 
-  it("renders the home page in Japanese after the catalogue loads", async () => {
+  it("renders the patcher's first step in Japanese after the catalogue loads", async () => {
     store().setLocale("ja");
     render(
       <MemoryRouter>
-        <HomePage />
+        <PatchImagePage />
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("heading", { name: "Android イメージパッチツール" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "イメージをパッチ" })).toBeInTheDocument();
+    expect(screen.getByText("Android イメージをここにドロップ")).toBeInTheDocument();
   });
 });

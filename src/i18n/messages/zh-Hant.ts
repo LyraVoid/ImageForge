@@ -34,8 +34,26 @@ export const zhHant: Messages = {
   "home.highlight.private.detail": "映像不會被上傳",
   "home.highlight.open": "開放原始碼",
   "home.highlight.open.detail": "AGPL-3.0-or-later",
-  "home.limit":
+  "picker.limit":
     "映像透過 Web Worker + WASM 流程處理，大小上限為 {size}。ImageForge 從不刷入裝置。",
+
+  "shell.tools": "工具",
+  "tools.title": "Android 映像工具",
+  "tools.subtitle": "全部在瀏覽器裡完成：映像與安裝包都不離開這台裝置。",
+  "tools.more": "更多工具",
+  "tools.badge.available": "可用",
+  "tools.badge.planned": "規劃中",
+  "tool.patch.title": "修補映像",
+  "tool.patch.description": "分析 boot 映像、產生修補計畫、驗證結果並下載。",
+  "tool.extract.title": "從安裝包取出",
+  "tool.extract.description": "開啟 OTA 的 payload.bin 或廠商映像包，取出 boot / init_boot / vendor_boot。",
+  "tool.unpack.title": "分割區解包",
+  "tool.unpack.description": "開啟 super 映像或 sparse 映像，檢視其中的邏輯分割區並匯出。",
+  "tool.logo.title": "開機 logo（第一屏）",
+  "tool.logo.description": "讀取裝置開機顯示的第一屏圖片，檢視並替換其中一張。",
+  "tool.inspect.title": "檢視映像",
+  "tool.inspect.description": "不改動任何東西，只看映像：區段、ramdisk 項目、既有的修補痕跡。",
+  "notfound.body": "請在首頁選擇一個工具；修補工具從拖入映像開始。",
 
   "dropzone.title": "把 Android 映像拖到這裡",
   "dropzone.hint": "或點擊選擇檔案",
@@ -280,7 +298,6 @@ export const zhHant: Messages = {
     "請保留同版本的原始映像。Magisk 自帶修補工具也能用 .backup/init.xz 自行還原，但原始映像才是最可靠的退路。",
 
   "notfound.title": "這個頁面不存在",
-  "notfound.body": "流程從選擇一個 Android 映像開始。",
   "notfound.back": "回到開始",
 
   "error.showTechnical": "顯示技術細節",

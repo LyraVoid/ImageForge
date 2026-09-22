@@ -34,8 +34,26 @@ export const zhHans: Messages = {
   "home.highlight.private.detail": "镜像不会被上传",
   "home.highlight.open": "开源",
   "home.highlight.open.detail": "AGPL-3.0-or-later",
-  "home.limit":
+  "picker.limit":
     "镜像通过 Web Worker + WASM 流水线处理，大小上限为 {size}。ImageForge 从不刷入设备。",
+
+  "shell.tools": "工具",
+  "tools.title": "Android 镜像工具",
+  "tools.subtitle": "全部在浏览器里完成：镜像与安装包都不离开这台设备。",
+  "tools.more": "更多工具",
+  "tools.badge.available": "可用",
+  "tools.badge.planned": "计划中",
+  "tool.patch.title": "修补镜像",
+  "tool.patch.description": "分析 boot 镜像、制定修补计划、校验结果并下载。",
+  "tool.extract.title": "从安装包提取",
+  "tool.extract.description": "打开 OTA 的 payload.bin 或厂商镜像包，取出 boot / init_boot / vendor_boot。",
+  "tool.unpack.title": "分区解包",
+  "tool.unpack.description": "打开 super 镜像或 sparse 镜像，查看其中的逻辑分区并导出。",
+  "tool.logo.title": "开机 logo（第一屏）",
+  "tool.logo.description": "读取设备开机显示的第一屏图片，查看并替换其中的一张。",
+  "tool.inspect.title": "查看镜像",
+  "tool.inspect.description": "不改动任何东西，只看镜像：分区、ramdisk 条目、已有的修补痕迹。",
+  "notfound.body": "请在首页选择一个工具；修补工具从拖入镜像开始。",
 
   "dropzone.title": "把 Android 镜像拖到这里",
   "dropzone.hint": "或点击选择文件",
@@ -280,7 +298,6 @@ export const zhHans: Messages = {
     "请保留同版本的原厂镜像。Magisk 自带修补工具也能用 .backup/init.xz 自行还原，但原厂镜像才是最可靠的退路。",
 
   "notfound.title": "这个页面不存在",
-  "notfound.body": "流程从选择一个 Android 镜像开始。",
   "notfound.back": "回到开始",
 
   "error.showTechnical": "显示技术细节",

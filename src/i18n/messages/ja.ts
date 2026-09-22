@@ -34,8 +34,26 @@ export const ja: Messages = {
   "home.highlight.private.detail": "イメージがアップロードされることはありません",
   "home.highlight.open": "オープンソース",
   "home.highlight.open.detail": "AGPL-3.0-or-later",
-  "home.limit":
+  "picker.limit":
     "イメージは Web Worker + WASM のパイプラインで処理され、上限は {size} です。ImageForge はデバイスへの書き込みを一切行いません。",
+
+  "shell.tools": "ツール",
+  "tools.title": "Android イメージツール",
+  "tools.subtitle": "すべてブラウザー内で完結します。イメージもパッケージもこの端末から出ません。",
+  "tools.more": "その他のツール",
+  "tools.badge.available": "利用可能",
+  "tools.badge.planned": "予定",
+  "tool.patch.title": "イメージをパッチ",
+  "tool.patch.description": "boot イメージを分析し、パッチ計画を立て、結果を検証してダウンロードします。",
+  "tool.extract.title": "パッケージから取り出す",
+  "tool.extract.description": "OTA の payload.bin やベンダーのイメージアーカイブを開き、boot / init_boot / vendor_boot を取り出します。",
+  "tool.unpack.title": "パーティションを展開",
+  "tool.unpack.description": "super イメージや sparse イメージを開き、中の論理パーティションを一覧して書き出します。",
+  "tool.logo.title": "起動ロゴ（最初の画面）",
+  "tool.logo.description": "起動時に表示される最初の画面の画像を読み、中の絵を確認して差し替えます。",
+  "tool.inspect.title": "イメージを調べる",
+  "tool.inspect.description": "何も変更せずにイメージを見ます。セクション、ラムディスクのエントリ、既存のパッチ痕跡。",
+  "notfound.body": "開始ページでツールを選んでください。パッチツールはイメージをドロップするところから始まります。",
 
   "dropzone.title": "Android イメージをここにドロップ",
   "dropzone.hint": "またはクリックしてファイルを選択",
@@ -288,7 +306,6 @@ export const ja: Messages = {
     "同じビルドの純正イメージを保管してください。Magisk 自身のパッチツールは .backup/init.xz からも復元できますが、純正イメージが確実な戻り道です。",
 
   "notfound.title": "このページは存在しません",
-  "notfound.body": "ワークフローは Android イメージの選択から始まります。",
   "notfound.back": "最初に戻る",
 
   "error.showTechnical": "技術的な詳細を表示",

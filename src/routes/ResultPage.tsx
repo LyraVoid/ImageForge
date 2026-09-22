@@ -1,6 +1,7 @@
 import { Download, RotateCcw, ShieldCheck } from "lucide-react";
 import { useCallback } from "react";
 import { Link, Navigate, useNavigate } from "react-router";
+import { PATCH_ROUTES } from "@/app/tools";
 import { DiagnosticsButton } from "@/components/app/diagnostics-button";
 import { ErrorPanel } from "@/components/app/error-panel";
 import { KeyValueList } from "@/components/app/key-value-list";
@@ -53,7 +54,7 @@ export function ResultPage() {
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }, [output]);
 
-  if (!output) return <Navigate to="/" replace />;
+  if (!output) return <Navigate to={PATCH_ROUTES.image} replace />;
 
   const checks = output.verification.checks;
   const metadataEntries = Object.entries(output.metadata).map(([key, value]) => ({
@@ -133,7 +134,7 @@ export function ResultPage() {
               variant="ghost"
               onClick={async () => {
                 await reset();
-                navigate("/");
+                navigate(PATCH_ROUTES.image);
               }}
             >
               <RotateCcw />

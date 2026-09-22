@@ -2,6 +2,7 @@ import { Outlet, useLocation } from "react-router";
 import { StepIndicator } from "@/components/ui/step-indicator";
 import { useT } from "@/i18n/use-translation";
 import { Header } from "./Header";
+import { isPatchFlow } from "./tools";
 import { useWorkflowSteps, stepIndexForPath } from "./workflow";
 
 export function AppShell() {
@@ -13,9 +14,11 @@ export function AppShell() {
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       <Header />
-      <div className="flex justify-center border-b border-border px-4 py-2 md:hidden">
-        <StepIndicator steps={steps} currentIndex={stepIndex} />
-      </div>
+      {isPatchFlow(location.pathname) ? (
+        <div className="flex justify-center border-b border-border px-4 py-2 md:hidden">
+          <StepIndicator steps={steps} currentIndex={stepIndex} />
+        </div>
+      ) : null}
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
         <Outlet />
       </main>

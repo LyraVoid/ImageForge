@@ -11,6 +11,21 @@ repacking and hashing all run inside a Web Worker with WebAssembly assist.
 User guide: [docs/usage.md](docs/usage.md) — which image a method needs, what the checklist means,
 and what to do when it goes wrong.
 
+## Tools
+
+The start page is a set of tools; the patcher is the first one, and the only one with steps.
+
+| Tool | State |
+| --- | --- |
+| **Patch an image** — analyze, plan, patch, verify, download (`/tools/patch/*`) | available |
+| **Extract from a package** — OTA `payload.bin` and vendor archives (`/tools/extract`) | planned |
+| **Unpack partitions** — `super.img` and sparse images, logical partitions, export (`/tools/unpack`) | planned |
+| **Boot logo (first screen)** — read, view and replace the splash images (`/tools/logo`) | planned |
+| **Inspect an image** — read-only look at a boot image (`/tools/inspect`) | planned |
+
+Adding one is a data change (`src/app/tools.ts`) plus its own route; the tools page, the header and
+the routing table all render from that list.
+
 ImageForge does **not** flash devices, does not talk to fastboot or ADB, and never uploads
 an image to a server.
 

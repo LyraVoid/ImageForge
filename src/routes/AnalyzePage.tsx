@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { PATCH_ROUTES } from "@/app/tools";
 import { reasonMessages, warningMessage } from "@/i18n/engine-keys";
 import { useRecordText, useT } from "@/i18n/use-translation";
 import { formatBytes } from "@/lib/format";
@@ -103,7 +104,7 @@ export function AnalyzePage() {
   const reset = useForgeStore((state) => state.reset);
   const [technicalOpen, setTechnicalOpen] = useState(false);
 
-  if (!analysis) return <Navigate to="/" replace />;
+  if (!analysis) return <Navigate to={PATCH_ROUTES.image} replace />;
 
   const warnings = Array.from(new Set([...analysis.summary.warnings, ...analysis.compatibility.warnings]));
 
@@ -126,7 +127,7 @@ export function AnalyzePage() {
             size="sm"
             onClick={async () => {
               await reset();
-              navigate("/");
+              navigate(PATCH_ROUTES.image);
             }}
           >
             <RotateCcw />
@@ -188,7 +189,7 @@ export function AnalyzePage() {
               busy={isBusy}
               onSelect={async (providerId) => {
                 const plan = await selectProvider(providerId);
-                if (plan) navigate("/patch");
+                if (plan) navigate(PATCH_ROUTES.plan);
               }}
             />
           ))}

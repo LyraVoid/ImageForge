@@ -19,6 +19,7 @@ import {
   MAGISK_PREINIT_DEVICE_SETTING,
   plannedKmi,
 } from "@/core";
+import { PATCH_ROUTES } from "@/app/tools";
 import { useRecordText, useT } from "@/i18n/use-translation";
 import type { MessageKey } from "@/i18n";
 import { mergePlanOptions } from "@/stores/plan-options";
@@ -88,10 +89,10 @@ export function PatchPage() {
     await setAttachments(merged);
   };
 
-  if (!analysis) return <Navigate to="/" replace />;
-  if (!selectedProviderId) return <Navigate to="/analyze" replace />;
+  if (!analysis) return <Navigate to={PATCH_ROUTES.image} replace />;
+  if (!selectedProviderId) return <Navigate to={PATCH_ROUTES.analyze} replace />;
   if (!planResponse) {
-    if (!isBusy) return <Navigate to="/analyze" replace />;
+    if (!isBusy) return <Navigate to={PATCH_ROUTES.analyze} replace />;
     return (
       <Card>
         <CardContent className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
@@ -537,11 +538,11 @@ export function PatchPage() {
       </Card>
 
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <Button variant="ghost" onClick={() => navigate("/analyze")}>
+        <Button variant="ghost" onClick={() => navigate(PATCH_ROUTES.analyze)}>
           <ArrowLeft />
           {t("patch.back")}
         </Button>
-        <Button variant="primary" disabled={isBusy} onClick={() => navigate("/processing")}>
+        <Button variant="primary" disabled={isBusy} onClick={() => navigate(PATCH_ROUTES.run)}>
           {isBusy ? <LoaderCircle className="animate-spin" /> : <Play />}
           {t("patch.start")}
         </Button>

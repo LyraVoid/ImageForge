@@ -37,8 +37,26 @@ export const en = {
   "home.highlight.private.detail": "Images are never uploaded",
   "home.highlight.open": "Open Source",
   "home.highlight.open.detail": "AGPL-3.0-or-later",
-  "home.limit":
+  "picker.limit":
     "Images are processed with the Web Worker + WASM pipeline and are limited to {size}. ImageForge never flashes a device.",
+
+  "shell.tools": "Tools",
+  "tools.title": "Android image tools",
+  "tools.subtitle": "Everything runs in your browser: images and packages never leave this device.",
+  "tools.more": "More tools",
+  "tools.badge.available": "Available",
+  "tools.badge.planned": "Planned",
+  "tool.patch.title": "Patch an image",
+  "tool.patch.description": "Analyze a boot image, plan a patch, verify the result and download it.",
+  "tool.extract.title": "Extract from a package",
+  "tool.extract.description": "Open an OTA payload.bin or a vendor image archive and pull out boot, init_boot or vendor_boot.",
+  "tool.unpack.title": "Unpack partitions",
+  "tool.unpack.description": "Open a super image or a sparse image, see the logical partitions inside it and export one.",
+  "tool.logo.title": "Boot logo (first screen)",
+  "tool.logo.description": "Read the splash image a device shows at boot, view the pictures in it and replace one.",
+  "tool.inspect.title": "Inspect an image",
+  "tool.inspect.description": "Look at a boot image without changing anything: sections, ramdisk entries, existing patch marks.",
+  "notfound.body": "Pick a tool on the start page — the patcher starts with an image you drop in.",
 
   "dropzone.title": "Drop an Android image here",
   "dropzone.hint": "or click to browse files",
@@ -297,7 +315,6 @@ export const en = {
     "Keep a stock image of the same build. Magisk's own patcher can also restore itself from .backup/init.xz, but a stock image is the reliable way back.",
 
   "notfound.title": "This page does not exist",
-  "notfound.body": "The workflow starts with selecting an Android image.",
   "notfound.back": "Back to the start",
 
   "error.showTechnical": "Show technical details",

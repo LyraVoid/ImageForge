@@ -4,8 +4,8 @@ import { useT } from "@/i18n/use-translation";
 import type { MessageKey } from "@/i18n";
 
 /**
- * The workflow order and the path mapping are structure; only the labels are language. Keeping
- * the keys here means the step names live in the catalogues like every other message.
+ * The patcher's workflow order and the path mapping are structure; only the labels are language.
+ * Keeping the keys here means the step names live in the catalogues like every other message.
  */
 export const WORKFLOW_STEP_KEYS: Array<{ id: string; labelKey: MessageKey }> = [
   { id: "image", labelKey: "step.image" },
@@ -24,9 +24,9 @@ export function useWorkflowSteps(): StepDefinition[] {
 }
 
 export function stepIndexForPath(pathname: string): number {
-  if (pathname.startsWith("/analyze")) return 1;
-  if (pathname.startsWith("/patch")) return 2;
-  if (pathname.startsWith("/processing")) return 3;
-  if (pathname.startsWith("/result")) return 4;
+  if (pathname.startsWith("/tools/patch/analyze")) return 1;
+  if (pathname.startsWith("/tools/patch/plan")) return 2;
+  if (pathname.startsWith("/tools/patch/run")) return 3;
+  if (pathname.startsWith("/tools/patch/result")) return 4;
   return 0;
 }

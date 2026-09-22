@@ -10,10 +10,10 @@ const store = () => useForgeStore.getState();
 
 function renderPatchPage() {
   return render(
-    <MemoryRouter initialEntries={["/patch"]}>
+    <MemoryRouter initialEntries={["/tools/patch/plan"]}>
       <Routes>
-        <Route path="/patch" element={<PatchPage />} />
-        <Route path="/analyze" element={<p>analyze page</p>} />
+        <Route path="/tools/patch/plan" element={<PatchPage />} />
+        <Route path="/tools/patch/analyze" element={<p>analyze page</p>} />
         <Route path="/" element={<p>home page</p>} />
       </Routes>
     </MemoryRouter>,

@@ -23,6 +23,24 @@ never parses a raw `boot.img` itself.
             |
     WASM                     binary helpers and bundled upstream tools
 
+## Tools
+
+The site is a set of tools, and the patcher is one of them (`src/app/tools.ts` holds the list as
+data: id, path, title and description keys, status, and whether the tool is a flow). Consequences:
+
+* **The workflow steps belong to the patcher.** `isPatchFlow` decides whether the header and the
+  mobile bar show the step indicator, so a single-page tool is not squeezed into a five step shape.
+* **The tools page is the landing page, and the patcher is its primary card**, with the dropzone
+  already on it: the most common task must not need a click to start. Single tools (extract,
+  unpack, logo, inspect) are cards with a status badge; a planned tool is rendered but disabled.
+* **The patcher's routes are namespaced** (`/tools/patch/image|analyze|plan|run|result`). The paths
+  it used before the tools page existed (`/analyze`, `/patch`, `/processing`, `/result`) stay
+  valid as redirects, because they were the address of a working flow.
+* **A tool is not a route convention, it is a declaration.** When a new tool needs to consume what
+  another produced (an extracted partition image, for example) it will declare the artifact kinds it
+  accepts and produces, and the UI will offer the tools that match the current selection — the way
+  the compatibility engine already lists the providers that match an image.
+
 ## Hard rules
 
 1. **Providers never parse boot images.** A provider receives the normalized object
