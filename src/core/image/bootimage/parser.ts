@@ -298,3 +298,11 @@ export function assertBootImage(image: ParsedImage): ParsedBootImage {
   }
   return image;
 }
+
+/** The vendor boot counterpart of assertBootImage. */
+export function assertVendorBootImage(image: ParsedImage): ParsedVendorBootImage {
+  if (image.format !== "vendor_boot") {
+    throw new ImageParseError("This image is a " + image.format + " image, not a vendor boot image.");
+  }
+  return image;
+}

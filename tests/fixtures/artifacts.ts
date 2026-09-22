@@ -96,6 +96,16 @@ export function readMagiskReference(): Uint8Array {
   return new Uint8Array(readFileSync(MAGISK_REFERENCE_PATH));
 }
 
+/** A real vendor_boot image, whose ramdisk lives in a platform fragment of a v4 table. */
+export const VENDOR_BOOT_PATH =
+  process.env.IMAGEFORGE_VENDOR_BOOT ?? repoPath(".research", "aster-validation", "vendor_boot.img");
+
+export const hasVendorBootImage = existsSync(VENDOR_BOOT_PATH);
+
+export function readVendorBootImage(): Uint8Array {
+  return new Uint8Array(readFileSync(VENDOR_BOOT_PATH));
+}
+
 /** A small GPL demo module taken from the KernelPatch-Aster 0.13.8 release. */
 export const DEMO_KPM_PATH = repoPath("tests", "fixtures", "kernelpatch", "demo-hello.kpm");
 

@@ -15,14 +15,18 @@ import {
   findEntry,
   parseImage,
   removeEntry,
-  repackBootImage,
-  sectionOf,
   upsertEntry,
   verifyImage,
 } from "../../image";
 import type { CpioArchive, CpioEntry, ParsedImage, VerifyExpectations } from "../../image";
 import { KEEP_SIGNATURE_SETTING, PRESERVE_IMAGE_SIZE_SETTING, outputOptions } from "./output-options";
-import { findKernelsuMarker, findMagiskMarker, loadRamdiskSection } from "./ramdisk-support";
+import {
+  findKernelsuMarker,
+  findMagiskMarker,
+  loadRamdiskSection,
+  ramdiskBytesForVerification,
+  repackWithRamdisk,
+} from "./ramdisk-support";
 import type {
   PatchAnalysis,
   PatchOptions,
@@ -236,7 +240,7 @@ export class MagiskPatchProvider implements PatchProvider {
       release: magiskinit.version,
       artifact: magiskinit,
       architecture: image.architecture ?? "unknown",
-      target: image.format === "boot" ? "boot" : "init_boot",
+      target: image.format,
       headerVersion: image.headerVersion,
       pageSize: image.pageSize,
       sourceImageSha256,
@@ -369,11 +373,9 @@ export class MagiskPatchProvider implements PatchProvider {
     emit("repack", 80, "Repacking the boot image");
     const encoded = await encodeRamdisk(archive, decoded.descriptor);
     const output = outputOptions(plan.configuration, context.options?.configuration);
-    const outcome = repackBootImage({
-      image,
-      ramdisk: encoded,
+    const outcome = repackWithRamdisk(image, ramdisk, encoded, {
+      preserveImageSize: output.preserveImageSize,
       keepSignature: output.keepSignature,
-      ...(output.preserveImageSize ? { padTo: image.totalSize } : {}),
     });
     const sha256 = await sha256Hex(outcome.bytes);
     const ramdiskSectionSha256 = await sha256Hex(encoded);
@@ -425,6 +427,9 @@ export class MagiskPatchProvider implements PatchProvider {
         preserveImageSize: output.preserveImageSize ? "true" : "false",
         keepSignature: output.keepSignature ? "true" : "false",
         target: plan.target,
+        targetRamdisk: ramdisk.vendor === undefined
+          ? "the ramdisk section"
+          : "vendor fragment " + ramdisk.vendor.index + " (" + (ramdisk.vendor.typeName || ramdisk.vendor.type) + ")",
         headerVersion: "v" + plan.headerVersion,
         sourceImageSha256: plan.sourceImageSha256,
         planId: plan.id,
@@ -451,12 +456,12 @@ export class MagiskPatchProvider implements PatchProvider {
       MAGISK_BACKUP_RMLIST_ENTRY,
     ];
     try {
-      const ramdiskSection = sectionOf(parseImage(result.bytes), "ramdisk");
-      if (!ramdiskSection) {
+      const ramdiskBytes = ramdiskBytesForVerification(parseImage(result.bytes));
+      if (!ramdiskBytes) {
         verification.valid = false;
-        verification.warnings.push("The produced image has no ramdisk section.");
+        verification.warnings.push("The produced image has no ramdisk to read back.");
       } else {
-        const decoded = await decodeRamdisk(ramdiskSection.data);
+        const decoded = await decodeRamdisk(ramdiskBytes);
         for (const name of required) {
           if (!findEntry(decoded.archive, name)) {
             verification.valid = false;

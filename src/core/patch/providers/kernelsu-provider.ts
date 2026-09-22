@@ -2,7 +2,7 @@ import type { ArtifactRegistry } from "../../artifacts/registry";
 import { KERNELSU_KSUINIT_ID, kernelsuLkmId } from "../../artifacts/catalog";
 import type { PatchArtifact } from "../../artifacts/types";
 import { KEEP_SIGNATURE_SETTING, outputOptions } from "./output-options";
-import { findMagiskMarker, loadRamdiskSection } from "./ramdisk-support";
+import { findMagiskMarker, loadRamdiskSection, ramdiskBytesForVerification, repackWithRamdisk } from "./ramdisk-support";
 import type { RamdiskSection } from "./ramdisk-support";
 import { AbortedError, PatchError } from "../../errors";
 import { sha256Hex } from "../../hash";
@@ -20,7 +20,6 @@ import {
   readModuleInfo,
   removeEntry,
   renameEntry,
-  repackBootImage,
   sectionOf,
   upsertEntry,
   verifyImage,
@@ -197,7 +196,7 @@ export class KernelsuPatchProvider implements PatchProvider {
       release: ksuinit.release.release,
       artifact: ksuinit.artifact,
       architecture: image.architecture ?? "unknown",
-      target: image.format === "boot" ? "boot" : "init_boot",
+      target: image.format,
       headerVersion: image.headerVersion,
       pageSize: image.pageSize,
       sourceImageSha256,
@@ -390,11 +389,9 @@ export class KernelsuPatchProvider implements PatchProvider {
     emit("repack", 80, "Repacking the boot image");
     const encoded = await encodeRamdisk(archive, decoded.descriptor);
     const output = outputOptions(plan.configuration, context.options?.configuration);
-    const outcome = repackBootImage({
-      image,
-      ramdisk: encoded,
+    const outcome = repackWithRamdisk(image, ramdisk, encoded, {
+      preserveImageSize: output.preserveImageSize,
       keepSignature: output.keepSignature,
-      ...(output.preserveImageSize ? { padTo: image.totalSize } : {}),
     });
     const sha256 = await sha256Hex(outcome.bytes);
     const moduleSha256 = await sha256Hex(moduleBytes);
@@ -445,6 +442,9 @@ export class KernelsuPatchProvider implements PatchProvider {
         preserveImageSize: output.preserveImageSize ? "true" : "false",
         [KEEP_SIGNATURE_SETTING]: output.keepSignature ? "true" : "false",
         target: plan.target,
+        targetRamdisk: ramdisk.vendor === undefined
+          ? "the ramdisk section"
+          : "vendor fragment " + ramdisk.vendor.index + " (" + (ramdisk.vendor.typeName || ramdisk.vendor.type) + ")",
         headerVersion: "v" + plan.headerVersion,
         sourceImageSha256: plan.sourceImageSha256,
         planId: plan.id,
@@ -465,13 +465,12 @@ export class KernelsuPatchProvider implements PatchProvider {
     // Content check: the produced ramdisk really has to carry the wrapper and the module.
     const moduleEntry = result.metadata.moduleEntry ?? KERNELSU_MODULE_ENTRY;
     try {
-      const image = parseImage(result.bytes);
-      const ramdisk = sectionOf(image, "ramdisk");
-      if (!ramdisk) {
+      const ramdiskBytes = ramdiskBytesForVerification(parseImage(result.bytes));
+      if (!ramdiskBytes) {
         verification.valid = false;
-        verification.warnings.push("The produced image has no ramdisk section.");
+        verification.warnings.push("The produced image has no ramdisk to read back.");
       } else {
-        const decoded = await decodeRamdisk(ramdisk.data);
+        const decoded = await decodeRamdisk(ramdiskBytes);
         for (const name of [result.metadata.initEntry ?? KERNELSU_INIT_ENTRY, moduleEntry]) {
           if (!findEntry(decoded.archive, name)) {
             verification.valid = false;

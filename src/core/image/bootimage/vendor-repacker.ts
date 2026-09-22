@@ -73,7 +73,6 @@ export function repackVendorBootImage(request: RepackVendorBootRequest): RepackV
   const headerSize = image.headerSize;
   const regionSection = sectionOf(image, "vendor_ramdisk");
   const oldRegion = regionSection?.data ?? new Uint8Array(0);
-  const oldRegionOffset = regionSection?.offset ?? align(headerSize, page);
 
   // Fragments: the table when there is one, otherwise the region is a single ramdisk.
   const entries: VendorRamdiskEntry[] =
@@ -115,18 +114,27 @@ export function repackVendorBootImage(request: RepackVendorBootRequest): RepackV
   }
   const delta = newRegion.length - oldRegion.length;
 
-  const tableSection = sectionOf(image, "vendor_ramdisk_table");
   const newTable =
     image.header.headerVersion >= 4 && image.header.ramdiskTableEntryNum > 0
       ? encodeVendorRamdiskTable(entries, image.header.ramdiskTableEntrySize)
       : new Uint8Array(0);
 
-  // Total size: whatever fits the sources, the new content, and the requested pad.
+  // The layout is recomputed with the rule the parser reads images by (and that AOSP documents):
+  // vendor ramdisk at the page aligned end of the header, then a page aligned dtb, then the table,
+  // then a four byte aligned bootconfig. Recomputing keeps the produced image self consistent even
+  // when the source image carried extra padding of its own, which cannot be preserved once a
+  // section changes size anyway.
+  const dtbSection = sectionOf(image, "dtb");
   const bootconfigSection = sectionOf(image, "bootconfig");
-  const lastOriginalEnd = bootconfigSection
-    ? bootconfigSection.offset + bootconfigSection.size
-    : (tableSection?.offset ?? oldRegionOffset + oldRegion.length) + (tableSection?.size ?? 0);
-  const contentEnd = Math.max(lastOriginalEnd + delta, oldRegionOffset + newRegion.length);
+  const regionOffset = align(headerSize, page);
+  const dtbOffset = dtbSection && dtbSection.size > 0 ? align(regionOffset + newRegion.length, page) : 0;
+  const tableOffset = newTable.length > 0 ? align(dtbOffset + (dtbSection?.size ?? 0), page) : 0;
+  const bootconfigOffset = bootconfigSection ? align(tableOffset + newTable.length, VENDOR_RAMDISK_ENTRY_SIZE) : 0;
+  const contentEnd = Math.max(
+    regionOffset + newRegion.length,
+    tableOffset + newTable.length,
+    bootconfigOffset + (bootconfigSection?.size ?? 0),
+  );
   const requestedPad = request.padTo !== undefined && Number.isFinite(request.padTo) ? Math.max(0, Math.trunc(request.padTo)) : 0;
   // Compact by default, exactly like the boot image repacker: padTo is what preserves a partition
   // sized file, and it can never shrink the result below its content.
@@ -143,30 +151,11 @@ export function repackVendorBootImage(request: RepackVendorBootRequest): RepackV
     writeUint32LE(out, FIELD.bootconfigSize, bootconfigSection?.size ?? 0);
   }
 
-  // Vendor ramdisk at its original offset.
-  out.set(newRegion, oldRegionOffset);
-
-  // Everything between the region and the table (the first gap, the dtb and the second gap) is
-  // copied verbatim, shifted by the size change.
-  const oldTableOffset = tableSection?.offset ?? oldRegionOffset + oldRegion.length;
-  const middleStart = oldRegionOffset + oldRegion.length;
-  const middleLength = Math.max(0, oldTableOffset - middleStart);
-  if (middleLength > 0) {
-    out.set(source.subarray(middleStart, middleStart + middleLength), middleStart + delta);
-  }
-
-  const newTableOffset = oldTableOffset + delta;
-  if (newTable.length > 0) out.set(newTable, newTableOffset);
-
-  // And everything from the end of the table to the end of the bootconfig (the third gap plus the
-  // bootconfig itself).
-  if (bootconfigSection) {
-    const oldTableEnd = oldTableOffset + (tableSection?.size ?? 0);
-    const tailLength = Math.max(0, bootconfigSection.offset + bootconfigSection.size - oldTableEnd);
-    if (tailLength > 0) {
-      out.set(source.subarray(oldTableEnd, oldTableEnd + tailLength), oldTableEnd + delta);
-    }
-  }
+  out.set(newRegion, regionOffset);
+  if (dtbSection && dtbSection.size > 0) out.set(dtbSection.data, dtbOffset);
+  if (newTable.length > 0) out.set(newTable, tableOffset);
+  if (bootconfigSection && bootconfigSection.size > 0) out.set(bootconfigSection.data, bootconfigOffset);
+  void delta;
 
   if (requestedPad > contentEnd) {
     warnings.push(
