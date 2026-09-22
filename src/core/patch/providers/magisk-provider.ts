@@ -11,6 +11,7 @@ import {
   COMPRESSION_LABEL,
   decodeRamdisk,
   encodeRamdisk,
+  encodeXz,
   findEntry,
   parseImage,
   removeEntry,
@@ -49,6 +50,8 @@ export const MAGISK_INIT_LD_ENTRY = "overlay.d/sbin/init-ld.xz";
 export const MAGISK_BACKUP_DIR = ".backup";
 export const MAGISK_CONFIG_ENTRY = ".backup/.magisk";
 export const MAGISK_VERITY_KEY_ENTRY = "verity_key";
+export const MAGISK_BACKUP_INIT_ENTRY = ".backup/init.xz";
+export const MAGISK_BACKUP_RMLIST_ENTRY = ".backup/.rmlist";
 
 export const MAGISK_REQUIRED_MANAGER = "com.topjohnwu.magisk";
 
@@ -266,7 +269,7 @@ export class MagiskPatchProvider implements PatchProvider {
           ? "PREINITDEVICE is not set: Magisk falls back to detecting it on the device. Set it (magisk --preinit-device, for example sda10) to pin it."
           : "PREINITDEVICE is pinned to " + preinitDevice + ".",
         "SHA1 in the configuration is the digest of the whole source image, which is what Magisk's app records for its uninstall path.",
-        "The uninstall backup Magisk's own patcher keeps inside the ramdisk (.backup/init.xz and .backup/.rmlist) is not written, because that needs an xz encoder; keep a stock image to restore.",
+        "The uninstall backup Magisk's own patcher keeps inside the ramdisk is written too: the stock init as .backup/init.xz and the list of added paths as .backup/.rmlist.",
         "A ramdisk that Magisk or KernelSU already patched is refused.",
       ],
     };
@@ -322,10 +325,29 @@ export class MagiskPatchProvider implements PatchProvider {
     const keepForceEncrypt = readFlag(plan.configuration, MAGISK_KEEP_FORCE_ENCRYPT_SETTING, true);
     const fstab = patchFstab(archive, { keepVerity, keepForceEncrypt });
 
+    // Magisk keeps the stock init inside the ramdisk, xz compressed, so its app can restore the
+    // image without a stock file; the same trick is possible here now that the codec is available.
+    const stockInitEntry = findEntry(archive, MAGISK_INIT_ENTRY);
+    // Snapshot it: replacing the entry mutates the same object, so reading it afterwards would
+    // hand back magiskinit instead of the stock init.
+    const stockInit = stockInitEntry === undefined ? undefined : new Uint8Array(stockInitEntry.data);
     upsertEntry(archive, MAGISK_INIT_ENTRY, magiskinitBytes, 0o100750);
     ensureDirectory(archive, MAGISK_OVERLAY_DIR, 0o040750);
     ensureDirectory(archive, MAGISK_OVERLAY_SBIN_DIR, 0o040750);
     for (const payload of payloads) upsertEntry(archive, payload.entry, payload.bytes, 0o100644);
+
+    // .backup/.rmlist lists the paths the patch added, NUL separated and sorted, which is exactly
+    // what a restore deletes again.
+    const addedPaths = [MAGISK_OVERLAY_DIR, MAGISK_OVERLAY_SBIN_DIR, MAGISK_INIT_LD_ENTRY, MAGISK_MAGISK_ENTRY, MAGISK_STUB_ENTRY].sort();
+    let rmlistSize = 0;
+    for (const name of addedPaths) rmlistSize += name.length + 1;
+    const rmlist = new Uint8Array(rmlistSize);
+    let rmlistOffset = 0;
+    for (const name of addedPaths) {
+      const encoded = new TextEncoder().encode(name);
+      rmlist.set(encoded, rmlistOffset);
+      rmlistOffset += encoded.length + 1;
+    }
 
     const preinit = plan.configuration[MAGISK_PREINIT_DEVICE_SETTING] ?? "";
     const configBytes = buildMagiskConfig({
@@ -336,6 +358,13 @@ export class MagiskPatchProvider implements PatchProvider {
     });
     ensureDirectory(archive, MAGISK_BACKUP_DIR, 0o040000);
     upsertEntry(archive, MAGISK_CONFIG_ENTRY, configBytes, 0o100000);
+    upsertEntry(archive, MAGISK_BACKUP_RMLIST_ENTRY, rmlist, 0o100000);
+    let backupSha256 = "none";
+    if (stockInit) {
+      const compressed = await encodeXz(stockInit);
+      upsertEntry(archive, MAGISK_BACKUP_INIT_ENTRY, compressed, 0o100750);
+      backupSha256 = await sha256Hex(compressed);
+    }
 
     emit("repack", 80, "Repacking the boot image");
     const encoded = await encodeRamdisk(archive, decoded.descriptor);
@@ -357,7 +386,7 @@ export class MagiskPatchProvider implements PatchProvider {
       warnings: [
         ...outcome.warnings,
         "Magisk patches the ramdisk only; flashing this image is the user's responsibility and ImageForge never flashes devices.",
-        "The uninstall backup Magisk's patcher keeps inside the ramdisk is not written; keep a stock image to restore.",
+        "Magisk's app can restore this image by itself: the stock init is kept inside the ramdisk as .backup/init.xz. Keep a stock image anyway.",
       ],
       metadata: {
         provider: plan.providerId,
@@ -381,6 +410,9 @@ export class MagiskPatchProvider implements PatchProvider {
         verityKeyRemoved: fstab.removedVerityKey ? "yes" : "no",
         config: new TextDecoder().decode(configBytes).trim().replace(/\n/g, " | "),
         configSha256: await sha256Hex(configBytes),
+        stockInitSaved: stockInit ? "yes (" + MAGISK_BACKUP_INIT_ENTRY + ")" : "no init in the source ramdisk",
+        backupInitSha256: backupSha256,
+        rmlist: addedPaths.join(" "),
         requiredManager: MAGISK_REQUIRED_MANAGER,
         archiveEntriesBefore: String(entriesBefore),
         archiveEntriesAfter: String(archive.entries.length),
@@ -410,7 +442,14 @@ export class MagiskPatchProvider implements PatchProvider {
     if (result.metadata.ramdiskSectionSha256) expectations.ramdiskSha256 = result.metadata.ramdiskSectionSha256;
     const verification = await verifyImage(result.bytes, expectations);
 
-    const required = [MAGISK_INIT_ENTRY, MAGISK_MAGISK_ENTRY, MAGISK_STUB_ENTRY, MAGISK_INIT_LD_ENTRY, MAGISK_CONFIG_ENTRY];
+    const required = [
+      MAGISK_INIT_ENTRY,
+      MAGISK_MAGISK_ENTRY,
+      MAGISK_STUB_ENTRY,
+      MAGISK_INIT_LD_ENTRY,
+      MAGISK_CONFIG_ENTRY,
+      MAGISK_BACKUP_RMLIST_ENTRY,
+    ];
     try {
       const ramdiskSection = sectionOf(parseImage(result.bytes), "ramdisk");
       if (!ramdiskSection) {

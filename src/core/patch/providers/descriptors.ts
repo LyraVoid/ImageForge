@@ -78,7 +78,7 @@ export const MAGISK_PROVIDER_DESCRIPTOR: PatchProviderDescriptor = {
     "fstab entries are patched exactly like magiskboot does when verity or forced encryption are not kept: the matching flag strings are removed and verity_key is dropped.",
     "SHA1 in the configuration is the digest of the whole source image, like Magisk's app records it.",
     "Refuses a ramdisk that Magisk or KernelSU already patched.",
-    "The uninstall backup Magisk's own patcher keeps inside the ramdisk is not written, so restoring needs a stock image.",
+    "Like Magisk's own patcher, the stock init is kept inside the ramdisk as .backup/init.xz, together with .backup/.rmlist, so Magisk's app can restore the image by itself.",
     "The payloads are bundled from the pinned Magisk release, which is GPL-3.0.",
     "The Magisk app (com.topjohnwu.magisk) has to be installed for the produced image to be usable.",
   ],

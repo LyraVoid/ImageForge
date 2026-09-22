@@ -1,6 +1,7 @@
 import { startsWith } from "../binary";
 import { decodeLz4, encodeLz4, parseLz4Settings } from "./lz4";
 import type { Lz4Settings } from "./lz4";
+import { decodeXz, encodeXz } from "./xz";
 
 export type CompressionFormat =
   | "none"
@@ -27,7 +28,7 @@ export const COMPRESSION_LABEL: Record<CompressionFormat, string> = {
   unknown: "Unknown",
 };
 
-const SUPPORTED: readonly CompressionFormat[] = ["none", "cpio", "gzip", "lz4-frame", "lz4-legacy"];
+const SUPPORTED: readonly CompressionFormat[] = ["none", "cpio", "gzip", "lz4-frame", "lz4-legacy", "xz"];
 
 /** Everything needed to reproduce the exact compression of a section. */
 export interface CompressionDescriptor {
@@ -96,6 +97,8 @@ export async function decompressSection(
     case "lz4-frame":
     case "lz4-legacy":
       return decodeLz4(bytes, descriptor.lz4);
+    case "xz":
+      return decodeXz(bytes);
     default:
       return bytes;
   }
@@ -112,6 +115,8 @@ export async function compressSection(
     case "lz4-legacy":
       if (!descriptor.lz4) throw new Error("LZ4 settings are missing, cannot recompress the section.");
       return encodeLz4(raw, descriptor.lz4);
+    case "xz":
+      return encodeXz(raw);
     default:
       return raw;
   }

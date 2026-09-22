@@ -374,3 +374,75 @@ mod tests {
         assert_eq!(&output[..8], b"abababab");
     }
 }
+// --- xz / LZMA2 ------------------------------------------------------------------------------
+//
+// Magisk's magiskboot compresses its ramdisk payloads with xz, and XZ is also one of the
+// containers Android kernels and ramdisks use, so the module has to be able to read and write it.
+// The codec comes from lzma-rust2, the crate magiskboot itself uses, with the same settings
+// (preset 6 and a CRC32 check). magiskboot also prepends a BCJ filter for the target architecture;
+// omitting it produces a slightly larger but equally standard stream that every decoder reads.
+
+use lzma_rust2::{CheckType, XzOptions, XzReader, XzWriter};
+use std::io::{Read, Write};
+
+/// Upper bound for the compressed size of `src_len` bytes, comfortably above LZMA2's worst case.
+#[no_mangle]
+pub extern "C" fn imageforge_xz_compress_bound(src_len: usize) -> usize {
+    src_len.saturating_add(src_len / 3).saturating_add(512)
+}
+
+/// Compresses one payload into an xz stream. Returns the bytes written, or -1 when the
+/// destination is too small or the encoder failed.
+#[no_mangle]
+pub unsafe extern "C" fn imageforge_xz_compress(
+    src: *const u8,
+    src_len: usize,
+    dst: *mut u8,
+    dst_cap: usize,
+) -> i64 {
+    let input = std::slice::from_raw_parts(src, src_len);
+    let output = std::slice::from_raw_parts_mut(dst, dst_cap);
+
+    let mut options = XzOptions::with_preset(6);
+    options.set_check_sum_type(CheckType::Crc32);
+    let mut writer = match XzWriter::new(Vec::<u8>::with_capacity(src_len / 3 + 256), options) {
+        Ok(writer) => writer,
+        Err(_) => return -1,
+    };
+    if writer.write_all(input).is_err() {
+        return -1;
+    }
+    let compressed = match writer.finish() {
+        Ok(bytes) => bytes,
+        Err(_) => return -1,
+    };
+    if compressed.len() > dst_cap {
+        return -1;
+    }
+    output[..compressed.len()].copy_from_slice(&compressed);
+    compressed.len() as i64
+}
+
+/// Expands one xz stream into `dst`. Returns the bytes written, -1 on a malformed stream, or -2
+/// when the destination is too small so the caller can retry with a larger buffer.
+#[no_mangle]
+pub unsafe extern "C" fn imageforge_xz_decompress(
+    src: *const u8,
+    src_len: usize,
+    dst: *mut u8,
+    dst_cap: usize,
+) -> i64 {
+    let input = std::slice::from_raw_parts(src, src_len);
+    let mut reader = XzReader::new(std::io::Cursor::new(input), true);
+    let mut expanded = Vec::<u8>::new();
+    if reader.read_to_end(&mut expanded).is_err() {
+        return -1;
+    }
+    if expanded.len() > dst_cap {
+        return -2;
+    }
+    if !expanded.is_empty() {
+        std::slice::from_raw_parts_mut(dst, expanded.len()).copy_from_slice(&expanded);
+    }
+    expanded.len() as i64
+}

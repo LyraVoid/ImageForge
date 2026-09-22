@@ -3,7 +3,7 @@ name = "imageforge-wasm"
 version = "0.1.0"
 edition = "2021"
 license = "AGPL-3.0-or-later"
-description = "Minimal binary helpers for ImageForge: CRC32 and LZ4 block decoding."
+description = "Binary helpers for ImageForge: CRC32, LZ4 block coding and xz/LZMA2."
 publish = false
 
 [lib]
@@ -15,3 +15,6 @@ opt-level = "z"
 lto = true
 panic = "abort"
 strip = true
+[dependencies]
+# The same crate and version Magisk's magiskboot uses, so the xz streams agree in settings.
+lzma-rust2 = { version = "0.21.0", default-features = false, features = ["std", "xz", "encoder"] }

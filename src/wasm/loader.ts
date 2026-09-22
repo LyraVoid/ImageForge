@@ -22,6 +22,19 @@ interface WasmExports {
     destination: number,
     destinationCapacity: number,
   ): number | bigint;
+  imageforge_xz_compress_bound(sourceLength: number): number;
+  imageforge_xz_compress(
+    source: number,
+    sourceLength: number,
+    destination: number,
+    destinationCapacity: number,
+  ): number | bigint;
+  imageforge_xz_decompress(
+    source: number,
+    sourceLength: number,
+    destination: number,
+    destinationCapacity: number,
+  ): number | bigint;
 }
 
 function versionString(raw: number): string {
@@ -121,6 +134,49 @@ function createWasmModule(exports: WasmExports): WasmImageModule {
           exports.imageforge_lz4_compress_block(source.pointer, source.size, destination, capacity),
         );
         if (written < 0) throw new Error("imageforge wasm: LZ4 compression failed.");
+        return new Uint8Array(exports.memory.buffer, destination, written).slice();
+      } finally {
+        exports.dealloc(source.pointer, Math.max(1, source.size));
+        exports.dealloc(destination, capacity);
+      }
+    },
+    xzDecompress(input: Uint8Array): Uint8Array {
+      const source = writeHeap(input);
+      let capacity = Math.max(64 * 1024, input.length * 4);
+      try {
+        for (let attempt = 0; attempt < 16; attempt += 1) {
+          const destination = exports.alloc(capacity);
+          if (destination === 0) throw new Error("imageforge wasm: allocation failed.");
+          try {
+            const written = Number(
+              exports.imageforge_xz_decompress(source.pointer, source.size, destination, capacity),
+            );
+            if (written === -2) {
+              capacity *= 2;
+              continue;
+            }
+            if (written < 0) throw new Error("imageforge wasm: XZ decompression failed.");
+            return new Uint8Array(exports.memory.buffer, destination, written).slice();
+          } finally {
+            exports.dealloc(destination, capacity);
+          }
+        }
+        throw new Error("imageforge wasm: the XZ payload needs more memory than this build can give it.");
+      } finally {
+        exports.dealloc(source.pointer, Math.max(1, source.size));
+      }
+    },
+    xzCompress(input: Uint8Array): Uint8Array {
+      const capacity = Math.max(64, Number(exports.imageforge_xz_compress_bound(input.length)));
+      const source = writeHeap(input);
+      const destination = exports.alloc(capacity);
+      if (destination === 0) {
+        exports.dealloc(source.pointer, Math.max(1, source.size));
+        throw new Error("imageforge wasm: allocation failed.");
+      }
+      try {
+        const written = Number(exports.imageforge_xz_compress(source.pointer, source.size, destination, capacity));
+        if (written < 0) throw new Error("imageforge wasm: XZ compression failed.");
         return new Uint8Array(exports.memory.buffer, destination, written).slice();
       } finally {
         exports.dealloc(source.pointer, Math.max(1, source.size));

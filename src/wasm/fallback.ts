@@ -119,6 +119,18 @@ function writeLength(output: Uint8Array, start: number, length: number): number 
  * Greedy LZ4 block compressor. It mirrors crates/imageforge-wasm exactly, so the
  * WebAssembly path and this fallback produce identical bytes.
  */
+function xzUnavailable(): never {
+  throw new Error("XZ support needs the WebAssembly module; hard refresh if this page predates it.");
+}
+
+export function xzDecompress(): never {
+  return xzUnavailable();
+}
+
+export function xzCompress(): never {
+  return xzUnavailable();
+}
+
 export function lz4CompressBlock(input: Uint8Array): Uint8Array {
   const n = input.length;
   if (n === 0) return new Uint8Array(0);
@@ -187,5 +199,9 @@ export function createTypeScriptModule(reason = "The WebAssembly module is not l
     lz4DecompressBlock,
     lz4CompressBlock,
     lz4BlockMaxSize,
+    // There is no TypeScript xz codec: the only implementation is the WebAssembly one, and saying
+    // so is better than pretending the fallback can do it.
+    xzDecompress,
+    xzCompress,
   };
 }

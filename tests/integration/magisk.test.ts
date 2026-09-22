@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   ARTIFACT_CATALOG,
+  MAGISK_BACKUP_INIT_ENTRY,
+  MAGISK_BACKUP_RMLIST_ENTRY,
   MAGISK_CONFIG_ENTRY,
   MAGISK_INIT_ENTRY,
   MAGISK_INIT_LD_ENTRY,
@@ -15,7 +17,7 @@ import {
 } from "@/core";
 import { PatchError } from "@/core/errors";
 import { sha1Hex, sha256Hex } from "@/core/hash";
-import { assertBootImage, decodeRamdisk, findEntry, parseImage, sectionOf } from "@/core/image";
+import { assertBootImage, decodeRamdisk, decodeXz, findEntry, parseImage, sectionOf } from "@/core/image";
 import { buildRamdisk } from "../fixtures/cpio";
 import { buildBootImage } from "../fixtures/bootimg";
 import {
@@ -78,6 +80,20 @@ describe.skipIf(!hasMagiskReference || !hasInitBootImage)("Magisk against the of
         expect(value(ourConfig, key)).toBe(value(refConfig, key));
       }
       expect(ours.result.metadata.fstabPatched).toBe("nothing to patch");
+
+      // the uninstall backup agrees with the official patcher's, entry for entry
+      const oursRmlist = findEntry(ourArchive, MAGISK_BACKUP_RMLIST_ENTRY);
+      const refRmlist = findEntry(refArchive, MAGISK_BACKUP_RMLIST_ENTRY);
+      if (!oursRmlist || !refRmlist) throw new Error("the rmlist is missing in one of the images");
+      expect(Array.from(oursRmlist.data)).toEqual(Array.from(refRmlist.data));
+      expect(oursRmlist.mode & 0o777).toBe(refRmlist.mode & 0o777);
+
+      const oursBackup = findEntry(ourArchive, MAGISK_BACKUP_INIT_ENTRY);
+      const refBackup = findEntry(refArchive, MAGISK_BACKUP_INIT_ENTRY);
+      if (!oursBackup || !refBackup) throw new Error("the init backup is missing in one of the images");
+      expect(oursBackup.mode & 0o777).toBe(refBackup.mode & 0o777);
+      // the streams come from different encoders, so compare what they expand to
+      expect(Array.from(await decodeXz(oursBackup.data))).toEqual(Array.from(await decodeXz(refBackup.data)));
     },
     TIMEOUT,
   );
@@ -135,6 +151,24 @@ describe("Magisk provider", () => {
       expect(new TextDecoder().decode(config.data)).toBe(expectedConfig);
       expect(config.mode & 0o777).toBe(0);
       expect(outcome.result.metadata.config).toContain("KEEPVERITY=false");
+
+      // the uninstall backup Magisk's patcher keeps inside the ramdisk
+      const backupInit = findEntry(archive, MAGISK_BACKUP_INIT_ENTRY);
+      const rmlist = findEntry(archive, MAGISK_BACKUP_RMLIST_ENTRY);
+      if (!backupInit || !rmlist) throw new Error("the uninstall backup is missing");
+      expect(backupInit.mode & 0o777).toBe(0o750);
+      expect(new TextDecoder().decode(await decodeXz(backupInit.data))).toBe(STOCK_INIT);
+      expect(rmlist.mode & 0o777).toBe(0);
+      expect(Array.from(rmlist.data)).toEqual(
+        Array.from(
+          new TextEncoder().encode(
+            ["overlay.d", "overlay.d/sbin", "overlay.d/sbin/init-ld.xz", "overlay.d/sbin/magisk.xz", "overlay.d/sbin/stub.xz"]
+              .map((name) => name + "\u0000")
+              .join(""),
+          ),
+        ),
+      );
+      expect(outcome.result.metadata.stockInitSaved).toBe("yes (.backup/init.xz)");
     },
     TIMEOUT,
   );
