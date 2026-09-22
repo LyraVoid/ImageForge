@@ -55,6 +55,14 @@ export const ja: Messages = {
   "tool.inspect.description": "何も変更せずにイメージを見ます。セクション、ラムディスクのエントリ、既存のパッチ痕跡。",
   "notfound.body": "開始ページでツールを選んでください。パッチツールはイメージをドロップするところから始まります。",
 
+  "detect.title": "開いたファイル",
+  "detect.container": "コンテナ",
+  "detect.content": "内容",
+  "detect.tools": "これに使えるツール",
+  "detect.none": "この種類のファイルを扱うツールはまだありません。ファイルはブラウザー内に留まります。",
+  "reason.tool.wrongKind": "このツールが扱うもの: {accepts}。",
+  "reason.tool.planned": "このビルドでは未実装です。",
+
   "dropzone.title": "Android イメージをここにドロップ",
   "dropzone.hint": "またはクリックしてファイルを選択",
   "dropzone.busy": "イメージを分析しています",

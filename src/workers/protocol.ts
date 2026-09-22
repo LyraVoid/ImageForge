@@ -1,3 +1,4 @@
+import type { ArtifactKind, DetectedArtifact, WorkspaceArtifact } from "../core/workspace";
 import type {
   BootImageHeaderFields,
   CompatibilityResult,
@@ -80,6 +81,29 @@ export interface PatchResponse {
 
 export type ProgressSink = (event: PatchProgressEvent) => void;
 
+/** A file the user opened, as the workspace sees it. The bytes stay in the session. */
+export interface WorkspaceSourceRecord {
+  id: string;
+  name: string;
+  sizeBytes: number;
+  kind: ArtifactKind;
+  detected: DetectedArtifact;
+}
+
+export interface WorkspaceSnapshot {
+  sources: WorkspaceSourceRecord[];
+  artifacts: WorkspaceArtifact[];
+}
+
+export interface RegisterArtifactRequest {
+  sourceId: string;
+  parentId: string;
+  tool: string;
+  name: string;
+  params?: Record<string, string>;
+  bytes: ArrayBuffer;
+}
+
 export interface PatchWorkerApi {
   version(): Promise<string>;
   analyze(file: ArrayBuffer, name?: string): Promise<AnalyzeResponse>;
@@ -87,4 +111,15 @@ export interface PatchWorkerApi {
   patch(request: PatchRequest, onProgress?: ProgressSink): Promise<PatchResponse>;
   cancel(): Promise<void>;
   reset(): Promise<void>;
+  /** Opens a file into the workspace and reports what it is. */
+  openSource(file: ArrayBuffer, name?: string): Promise<WorkspaceSourceRecord>;
+  /** Analyzes a source that is already open, which is how the patcher starts from the workspace. */
+  analyzeSource(sourceId: string): Promise<AnalyzeResponse>;
+  workspace(): Promise<WorkspaceSnapshot>;
+  /** Reads a range of a source or an artifact, so a caller can look inside something big. */
+  readArtifact(id: string, offset?: number, length?: number): Promise<ArrayBuffer>;
+  registerArtifact(request: RegisterArtifactRequest): Promise<WorkspaceArtifact>;
+  digestArtifact(id: string): Promise<string>;
+  /** Closes a source and everything that was derived from it. */
+  closeSource(sourceId: string): Promise<void>;
 }

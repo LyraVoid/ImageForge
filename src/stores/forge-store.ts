@@ -9,6 +9,7 @@ import type {
   PatchProgressEvent,
   PatchVerificationResult,
 } from "@/core";
+import type { WorkspaceSourceRecord } from "@/workers/protocol";
 import { mergePlanOptions } from "./plan-options";
 import { createPatchWorkerClient } from "@/workers/client";
 import type { PatchWorkerClient, WorkerMode } from "@/workers/client";
@@ -72,6 +73,8 @@ interface ForgeState {
   isBusy: boolean;
   cancelRequested: boolean;
   file: File | null;
+  /** What the worker found the opened file to be; the patcher only continues for a boot image. */
+  source: WorkspaceSourceRecord | null;
   analysis: AnalyzeResponse | null;
   selectedProviderId: string | null;
   planResponse: PlanResponse | null;
@@ -95,6 +98,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
   isBusy: false,
   cancelRequested: false,
   file: null,
+  source: null,
   analysis: null,
   selectedProviderId: null,
   planResponse: null,
@@ -104,6 +108,11 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
   output: null,
   error: null,
 
+  /**
+   * Opens a file into the worker's workspace and asks what it is. A boot image continues into the
+   * patcher; anything else stays in the workspace for the tool that accepts it, which the picker
+   * lists (see the tools registry).
+   */
   analyzeFile: async (file) => {
     const active = getClient();
     set({
@@ -112,6 +121,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       workerMode: active.mode,
       error: null,
       file,
+      source: null,
       analysis: null,
       selectedProviderId: null,
       planResponse: null,
@@ -120,8 +130,13 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       cancelRequested: false,
     });
     try {
-      const buffer = await file.arrayBuffer();
-      const analysis = await active.analyze(buffer, file.name);
+      const source = await active.openSource(await file.arrayBuffer(), file.name);
+      set({ source });
+      if (source.kind !== "boot-container") {
+        set({ stage: "empty", isBusy: false });
+        return null;
+      }
+      const analysis = await active.analyzeSource(source.id);
       set({ analysis, stage: "analyzed", isBusy: false });
       return analysis;
     } catch (error) {
@@ -242,6 +257,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       isBusy: false,
       cancelRequested: false,
       file: null,
+      source: null,
       analysis: null,
       selectedProviderId: null,
       planResponse: null,

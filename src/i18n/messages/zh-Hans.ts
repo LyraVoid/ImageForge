@@ -55,6 +55,14 @@ export const zhHans: Messages = {
   "tool.inspect.description": "不改动任何东西，只看镜像：分区、ramdisk 条目、已有的修补痕迹。",
   "notfound.body": "请在首页选择一个工具；修补工具从拖入镜像开始。",
 
+  "detect.title": "你打开的是什么",
+  "detect.container": "容器",
+  "detect.content": "内容",
+  "detect.tools": "适用于它的工具",
+  "detect.none": "目前还没有工具处理这类文件；它留在你的浏览器里。",
+  "reason.tool.wrongKind": "这个工具处理：{accepts}。",
+  "reason.tool.planned": "这个构建里尚未实现。",
+
   "dropzone.title": "把 Android 镜像拖到这里",
   "dropzone.hint": "或点击选择文件",
   "dropzone.busy": "正在分析镜像",

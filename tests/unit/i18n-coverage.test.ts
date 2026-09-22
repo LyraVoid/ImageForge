@@ -2,6 +2,9 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  ARTIFACT_KINDS,
+  CONTAINER_LABEL,
+  CONTENT_LABEL,
   PROVIDER_DESCRIPTORS,
   buildImageReport,
   createArtifactRegistry,
@@ -70,6 +73,11 @@ async function collectedProse(): Promise<Set<string>> {
       }
     }
   }
+
+  // what the workspace can name about the file a user opened
+  for (const kind of ARTIFACT_KINDS) used.add(kind.label);
+  for (const label of Object.values(CONTAINER_LABEL)) used.add(label);
+  for (const label of Object.values(CONTENT_LABEL)) used.add(label);
 
   for (const descriptor of PROVIDER_DESCRIPTORS) {
     used.add(descriptor.description);

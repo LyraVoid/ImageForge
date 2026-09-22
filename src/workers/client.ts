@@ -1,5 +1,6 @@
 import * as Comlink from "comlink";
 import type { PatchWorkerSession } from "./session";
+import type { WorkspaceArtifact } from "@/core/workspace";
 import type {
   AnalyzeResponse,
   PatchRequest,
@@ -8,6 +9,9 @@ import type {
   PlanRequest,
   PlanResponse,
   ProgressSink,
+  RegisterArtifactRequest,
+  WorkspaceSnapshot,
+  WorkspaceSourceRecord,
 } from "./protocol";
 
 export type WorkerMode = "worker" | "inline";
@@ -20,6 +24,14 @@ export interface PatchWorkerClient {
   patch(request: PatchRequest, onProgress?: ProgressSink): Promise<PatchResponse>;
   cancel(): Promise<void>;
   reset(): Promise<void>;
+  /** Opens a file into the workspace and reports what it is. */
+  openSource(file: ArrayBuffer, name?: string): Promise<WorkspaceSourceRecord>;
+  analyzeSource(sourceId: string): Promise<AnalyzeResponse>;
+  workspace(): Promise<WorkspaceSnapshot>;
+  readArtifact(id: string, offset?: number, length?: number): Promise<ArrayBuffer>;
+  registerArtifact(request: RegisterArtifactRequest): Promise<WorkspaceArtifact>;
+  digestArtifact(id: string): Promise<string>;
+  closeSource(sourceId: string): Promise<void>;
   terminate(): void;
 }
 
@@ -39,6 +51,14 @@ function createWorkerBackedClient(worker: Worker): PatchWorkerClient {
     },
     cancel: () => remote.cancel(),
     reset: () => remote.reset(),
+    openSource: (file, name) => remote.openSource(Comlink.transfer(file, [file]), name),
+    analyzeSource: (sourceId) => remote.analyzeSource(sourceId),
+    workspace: () => remote.workspace(),
+    readArtifact: (id, offset, length) => remote.readArtifact(id, offset, length),
+    registerArtifact: (request) =>
+      remote.registerArtifact(Comlink.transfer(request, [request.bytes])),
+    digestArtifact: (id) => remote.digestArtifact(id),
+    closeSource: (sourceId) => remote.closeSource(sourceId),
     terminate: () => worker.terminate(),
   };
 }
@@ -68,6 +88,15 @@ function createInlineClient(): PatchWorkerClient {
     },
     reset: async () => {
       if (session) await session.reset();
+    },
+    openSource: async (file, name) => (await load()).openSource(file, name),
+    analyzeSource: async (sourceId) => (await load()).analyzeSource(sourceId),
+    workspace: async () => (await load()).workspace(),
+    readArtifact: async (id, offset, length) => (await load()).readArtifact(id, offset, length),
+    registerArtifact: async (request) => (await load()).registerArtifact(request),
+    digestArtifact: async (id) => (await load()).digestArtifact(id),
+    closeSource: async (sourceId) => {
+      if (session) await session.closeSource(sourceId);
     },
     terminate: () => {
       if (session) void session.reset();

@@ -55,6 +55,14 @@ export const zhHant: Messages = {
   "tool.inspect.description": "不改動任何東西，只看映像：區段、ramdisk 項目、既有的修補痕跡。",
   "notfound.body": "請在首頁選擇一個工具；修補工具從拖入映像開始。",
 
+  "detect.title": "你開啟的是什麼",
+  "detect.container": "容器",
+  "detect.content": "內容",
+  "detect.tools": "適用於它的工具",
+  "detect.none": "目前還沒有工具處理這類檔案；它留在你的瀏覽器裡。",
+  "reason.tool.wrongKind": "這個工具處理：{accepts}。",
+  "reason.tool.planned": "這個建置尚未實作。",
+
   "dropzone.title": "把 Android 映像拖到這裡",
   "dropzone.hint": "或點擊選擇檔案",
   "dropzone.busy": "正在分析映像",

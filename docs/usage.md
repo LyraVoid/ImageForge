@@ -1,7 +1,9 @@
 # Using ImageForge
 
 The start page lists the tools this site has; **Patch an image** is the first one and the only one
-with steps, and you can start it by dropping an image straight onto that page.
+with steps, and you can start it by dropping an image straight onto that page. Anything else you drop
+there is still identified — OTA `payload.bin`, a vendor archive, a sparse image, a compressed stream
+— and the page names the tool that will handle it once it exists.
 
 ImageForge analyzes, patches, repacks and verifies Android boot images **in your browser**. It
 never uploads an image, it has no backend and no account, and it **never writes to a device**: the

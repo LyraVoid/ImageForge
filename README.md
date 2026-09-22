@@ -24,7 +24,13 @@ The start page is a set of tools; the patcher is the first one, and the only one
 | **Inspect an image** — read-only look at a boot image (`/tools/inspect`) | planned |
 
 Adding one is a data change (`src/app/tools.ts`) plus its own route; the tools page, the header and
-the routing table all render from that list.
+the routing table all render from that list. A tool also declares the artifact kinds it accepts and
+produces, and the page offers the tools that match whatever the user opened.
+
+**The workspace knows what you dropped.** Every file is classified by its magic into a container
+(zip, OTA payload, sparse image, a compressed stream …) and a content (boot image, ext4, erofs, device
+tree, ELF …), and the page then says what it is and which tool takes it. Bytes stay in the worker:
+the interface only ever holds metadata.
 
 ImageForge does **not** flash devices, does not talk to fastboot or ADB, and never uploads
 an image to a server.

@@ -1,3 +1,4 @@
+import type { ArtifactKind } from "@/core/workspace";
 import type { MessageKey } from "@/i18n";
 
 export type ToolStatus = "available" | "planned";
@@ -18,6 +19,9 @@ export interface ToolDefinition {
   descriptionKey: MessageKey;
   status: ToolStatus;
   flow: ToolFlow;
+  /** The artifact kinds this tool can start from, and the kinds it hands back. */
+  accepts: ArtifactKind[];
+  produces: ArtifactKind[];
 }
 
 export const PATCH_TOOL_PREFIX = "/tools/patch";
@@ -41,6 +45,8 @@ export const TOOLS: ToolDefinition[] = [
     descriptionKey: "tool.patch.description",
     status: "available",
     flow: "sequential",
+    accepts: ["boot-container"],
+    produces: ["boot-container"],
   },
   {
     id: "extract",
@@ -49,6 +55,8 @@ export const TOOLS: ToolDefinition[] = [
     descriptionKey: "tool.extract.description",
     status: "planned",
     flow: "single",
+    accepts: ["package"],
+    produces: ["partition-image"],
   },
   {
     id: "unpack",
@@ -57,6 +65,8 @@ export const TOOLS: ToolDefinition[] = [
     descriptionKey: "tool.unpack.description",
     status: "planned",
     flow: "single",
+    accepts: ["partition-image", "package"],
+    produces: ["boot-container", "filesystem", "blob"],
   },
   {
     id: "logo",
@@ -65,6 +75,8 @@ export const TOOLS: ToolDefinition[] = [
     descriptionKey: "tool.logo.description",
     status: "planned",
     flow: "single",
+    accepts: ["logo-container", "partition-image", "blob"],
+    produces: ["logo-container"],
   },
   {
     id: "inspect",
@@ -73,6 +85,8 @@ export const TOOLS: ToolDefinition[] = [
     descriptionKey: "tool.inspect.description",
     status: "planned",
     flow: "single",
+    accepts: ["boot-container", "package", "partition-image", "filesystem", "ramdisk", "logo-container", "blob"],
+    produces: ["report"],
   },
 ];
 

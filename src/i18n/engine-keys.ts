@@ -1,4 +1,4 @@
-import type { CompatibilityWarning, PatchCandidate } from "@/core";
+import type { CompatibilityWarning, PatchCandidate, ToolReason } from "@/core";
 import type { MessageKey } from "./messages/en";
 import type { MessageParams, Translator } from "./translate";
 
@@ -21,6 +21,12 @@ export const WARNING_KEYS: Record<string, MessageKey> = {
   "unknown-architecture": "warning.unknown-architecture",
   "unsupported-kernel-compression": "warning.unsupported-kernel-compression",
   "unsupported-compression": "warning.unsupported-compression",
+};
+
+/** What the workspace matcher reports about a tool and the artifact in hand. */
+export const TOOL_REASON_KEYS: Record<string, MessageKey> = {
+  "wrong-kind": "reason.tool.wrongKind",
+  planned: "reason.tool.planned",
 };
 
 export const CHECK_KEYS: Record<string, MessageKey> = {
@@ -53,6 +59,12 @@ export function reasonMessage(
   const key = REASON_KEYS[detail.code];
   if (!key) return fallback;
   return t(key, detail.params);
+}
+
+export function toolReasonMessage(t: Translator, reason: ToolReason): string {
+  const key = TOOL_REASON_KEYS[reason.code];
+  if (!key) return reason.code;
+  return t(key, reason.params);
 }
 
 export function warningMessage(t: Translator, warning: CompatibilityWarning): string {

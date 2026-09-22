@@ -21,6 +21,7 @@ export type { ArtifactIntegrity, PayloadLoader, ResolveArtifactRequest, Resolved
 export * from "./image";
 export { buildImageReport } from "./image/report";
 export type { ImageReport, ReportField, ReportGroup } from "./image/report";
+export * from "./workspace";
 export * from "./compat/types";
 export { evaluateCompatibility } from "./compat/engine";
 export type { CompatibilityInput } from "./compat/engine";

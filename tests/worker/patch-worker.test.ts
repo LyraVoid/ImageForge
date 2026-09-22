@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { WorkerError } from "@/core/errors";
+import { sha256Hex } from "@/core/hash";
 import { createPatchWorkerClient } from "@/workers/client";
 import { PatchWorkerSession } from "@/workers/session";
 import { buildBootImage } from "../fixtures/bootimg";
@@ -8,6 +9,12 @@ function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   const copy = new Uint8Array(bytes.length);
   copy.set(bytes);
   return copy.buffer;
+}
+
+function zipBytes(): Uint8Array {
+  const bytes = new Uint8Array(128);
+  bytes.set([0x50, 0x4b, 0x03, 0x04], 0);
+  return bytes;
 }
 
 describe("PatchWorkerSession", () => {
@@ -58,28 +65,88 @@ describe("PatchWorkerSession", () => {
     expect(progress.at(-1)).toBe(100);
   });
 
-  it("clears its state on reset", async () => {
+  it("opens a file into the workspace and says what it is", async () => {
     const session = new PatchWorkerSession();
-    await session.analyze(toArrayBuffer(await buildBootImage({})), "boot.img");
-    await session.reset();
-    await expect(session.plan({ providerId: "mock" })).rejects.toThrowError(WorkerError);
+    const source = await session.openSource(toArrayBuffer(zipBytes()), "ota.zip");
+
+    expect(source).toMatchObject({ id: "source-1", name: "ota.zip", kind: "package", sizeBytes: 128 });
+    expect(source.detected.container).toBe("zip");
+    expect((await session.workspace()).sources).toEqual([source]);
   });
 
-  it("cancels a running patch", async () => {
+  it("analyzes a source that is already open", async () => {
     const session = new PatchWorkerSession();
-    await session.analyze(toArrayBuffer(await buildBootImage({})), "boot.img");
-    const pending = session.patch({ providerId: "mock" });
-    await session.cancel();
-    await expect(pending).rejects.toThrowError();
-  });
-});
+    const source = await session.openSource(toArrayBuffer(await buildBootImage({})), "boot.img");
 
-describe("createPatchWorkerClient", () => {
-  it("falls back to an inline session without a Worker implementation", async () => {
-    const client = createPatchWorkerClient();
-    expect(client.mode).toBe("inline");
-    const response = await client.analyze(toArrayBuffer(await buildBootImage({})), "boot.img");
+    expect(source.kind).toBe("boot-container");
+    const response = await session.analyzeSource(source.id);
     expect(response.summary.format).toBe("boot");
+  });
+
+  it("keeps what a tool produced, with its lineage and a ranged read", async () => {
+    const session = new PatchWorkerSession();
+    const source = await session.openSource(toArrayBuffer(zipBytes()), "ota.zip");
+    const image = await buildBootImage({});
+    const artifact = await session.registerArtifact({
+      sourceId: source.id,
+      parentId: source.id,
+      tool: "extract",
+      name: "init_boot.img",
+      params: { partition: "init_boot" },
+      bytes: toArrayBuffer(image),
+    });
+
+    expect(artifact).toMatchObject({
+      id: "source-1:extract:init_boot.img",
+      sourceId: "source-1",
+      parentId: "source-1",
+      tool: "extract",
+      kind: "boot-container",
+      sizeBytes: image.length,
+    });
+    const head = new Uint8Array(await session.readArtifact(artifact.id, 0, 8));
+    expect(new TextDecoder().decode(head)).toBe("ANDROID!");
+    // reading past the end is clamped instead of throwing
+    expect((await session.readArtifact(artifact.id, image.length - 4, 64)).byteLength).toBe(4);
+    expect(await session.digestArtifact(artifact.id)).toBe(await sha256Hex(image));
+    expect((await session.workspace()).artifacts).toHaveLength(1);
+  });
+
+  it("closes a source together with everything derived from it", async () => {
+    const session = new PatchWorkerSession();
+    const source = await session.openSource(toArrayBuffer(zipBytes()), "ota.zip");
+    const artifact = await session.registerArtifact({
+      sourceId: source.id,
+      parentId: source.id,
+      tool: "extract",
+      name: "boot.img",
+      bytes: toArrayBuffer(await buildBootImage({})),
+    });
+
+    await session.closeSource(source.id);
+
+    expect((await session.workspace()).sources).toHaveLength(0);
+    expect((await session.workspace()).artifacts).toHaveLength(0);
+    await expect(session.readArtifact(artifact.id)).rejects.toThrowError(WorkerError);
+  });
+
+  it("refuses a file it cannot hold and an unknown id", async () => {
+    const session = new PatchWorkerSession();
+    await expect(session.openSource(new ArrayBuffer(0), "empty")).rejects.toThrowError(WorkerError);
+    await expect(session.readArtifact("source-404")).rejects.toThrowError(WorkerError);
+    await expect(session.closeSource("source-404")).rejects.toThrowError(WorkerError);
+  });
+
+  it("goes through the same workspace when the client falls back to the inline session", async () => {
+    const client = createPatchWorkerClient();
+    const source = await client.openSource(toArrayBuffer(await buildBootImage({})), "init_boot.img");
+
+    expect(client.mode).toBe("inline");
+    expect(source.kind).toBe("boot-container");
+    const response = await client.analyzeSource(source.id);
+    expect(response.summary.headerVersion).toBe(4);
+    await client.reset();
+    expect((await client.workspace()).sources).toHaveLength(0);
     client.terminate();
   });
 });

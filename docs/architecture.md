@@ -41,6 +41,33 @@ data: id, path, title and description keys, status, and whether the tool is a fl
   accepts and produces, and the UI will offer the tools that match the current selection — the way
   the compatibility engine already lists the providers that match an image.
 
+## The workspace
+
+A site with several tools needs a memory of what the user is holding, and the patcher's single
+`File` is not it. The worker session owns a **workspace**: the sources the user opened, and the
+artifacts tools derived from them.
+
+* `src/core/workspace/detect.ts` classifies bytes by magic into a **container** (raw, zip, OTA
+  payload, sparse, gzip, LZ4, xz, zstd, …) and a **content** (boot, init_boot, vendor_boot, ext4,
+  erofs, f2fs, dtb, elf), then maps that to an **artifact kind**. Vendor boot logo containers are
+  deliberately absent from that table: their magics are not verified here yet, so a logo image is
+  reported as a blob instead of guessed at.
+* `src/core/workspace/kinds.ts` is the vocabulary tools match on: package, partition-image,
+  boot-container, filesystem, ramdisk, logo-container, report, blob.
+* `src/core/workspace/graph.ts` keeps sources, artifacts and their lineage: an artifact records the
+  source it belongs to, the artifact it was derived from, the tool and its parameters. Closing a
+  source drops its whole lineage with it, because the bytes came from it.
+* `src/core/workspace/matching.ts` answers which tools apply to a selection, in the same shape the
+  compatibility engine uses for images: a verdict plus stable reason codes the interface words itself
+  (`src/i18n/engine-keys.ts`).
+* Bytes never leave the worker. The main thread holds metadata only, and `readArtifact(id, offset,
+  length)` reads a range when something has to look inside a large image. The workspace shares the
+  session with the patcher, so opening an image and then patching it does not copy it.
+
+The entry point follows from that: opening a file puts it in the workspace, reports what it is, and
+either continues into the patcher (a boot image) or names the tools that accept it — with a planned
+tool shown, disabled, and saying why.
+
 ## Hard rules
 
 1. **Providers never parse boot images.** A provider receives the normalized object

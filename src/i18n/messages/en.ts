@@ -58,6 +58,14 @@ export const en = {
   "tool.inspect.description": "Look at a boot image without changing anything: sections, ramdisk entries, existing patch marks.",
   "notfound.body": "Pick a tool on the start page — the patcher starts with an image you drop in.",
 
+  "detect.title": "What you opened",
+  "detect.container": "Container",
+  "detect.content": "Content",
+  "detect.tools": "Tools for this file",
+  "detect.none": "No tool here handles this kind of file yet. It stays in your browser.",
+  "reason.tool.wrongKind": "This tool works on {accepts}.",
+  "reason.tool.planned": "Not implemented in this build yet.",
+
   "dropzone.title": "Drop an Android image here",
   "dropzone.hint": "or click to browse files",
   "dropzone.busy": "Analyzing image",

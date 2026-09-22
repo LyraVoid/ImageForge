@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router";
 import { FileDropzone } from "@/components/ui/file-dropzone";
+import { SourcePanel } from "@/components/app/source-panel";
 import { MAX_SUPPORTED_IMAGE_BYTES } from "@/core";
 import { PATCH_ROUTES } from "@/app/tools";
 import { useT } from "@/i18n/use-translation";
@@ -7,8 +8,9 @@ import { formatBytes } from "@/lib/format";
 import { useForgeStore } from "@/stores/forge-store";
 
 /**
- * The one place an image enters the patcher: it hands the file to the store (which keeps the bytes
- * in the worker) and moves to the analysis step. The tools page and the patcher's first step both
+ * The one place a file enters the site: it hands it to the workspace (which keeps the bytes in the
+ * worker and reports what it is), and either continues into the patcher — the file is a boot image —
+ * or names the tools that accept what was opened. The tools page and the patcher's first step both
  * use it, so the entry behaves the same wherever a user starts.
  */
 export function ImagePicker({ showLimit = true }: { showLimit?: boolean }) {
@@ -16,6 +18,7 @@ export function ImagePicker({ showLimit = true }: { showLimit?: boolean }) {
   const navigate = useNavigate();
   const analyzeFile = useForgeStore((state) => state.analyzeFile);
   const stage = useForgeStore((state) => state.stage);
+  const source = useForgeStore((state) => state.source);
 
   const handleFile = async (file: File) => {
     const analysis = await analyzeFile(file);
@@ -25,6 +28,7 @@ export function ImagePicker({ showLimit = true }: { showLimit?: boolean }) {
   return (
     <div className="space-y-3">
       <FileDropzone onFileSelected={handleFile} busy={stage === "analyzing"} maxBytes={MAX_SUPPORTED_IMAGE_BYTES} />
+      {source && stage !== "analyzing" ? <SourcePanel source={source} /> : null}
       {showLimit ? (
         <p className="text-center text-[11px] leading-5 text-muted-foreground">
           {t("picker.limit", { size: formatBytes(MAX_SUPPORTED_IMAGE_BYTES) })}
