@@ -97,6 +97,14 @@ export const en = {
   "unpack.incompatible": "This file is not a partition container this tool can open.",
   "unpack.packageHint": "This is a package; extract from it with the other tool.",
 
+  "inspect.hint": "Drop any image, package or partition here and the site will say what it is.",
+  "inspect.container": "Container details",
+  "inspect.digests": "Digests",
+  "inspect.methods": "Patch methods",
+  "inspect.browse": "Browse it in the unpack tool",
+  "inspect.package": "This is a package",
+  "inspect.readOnly": "This tool only looks: nothing is written and no image is produced.",
+
   "dropzone.title": "Drop an Android image here",
   "dropzone.hint": "or click to browse files",
   "dropzone.busy": "Analyzing image",

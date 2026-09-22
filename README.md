@@ -21,7 +21,7 @@ The start page is a set of tools; the patcher is the first one, and the only one
 | **Extract from a package** — OTA `payload.bin` and vendor archives (`/tools/extract`) | available |
 | **Unpack partitions** — sparse images, `super.img` logical partitions, erofs and ext4 browsing (`/tools/unpack`) | available |
 | **Boot logo (first screen)** — read, view and replace the splash images (`/tools/logo`) | planned |
-| **Inspect an image** — read-only look at a boot image (`/tools/inspect`) | planned |
+| **Inspect an image** — read-only look at anything you open: what it is, its report and digests (`/tools/inspect`) | available |
 
 Adding one is a data change (`src/app/tools.ts`) plus its own route; the tools page, the header and
 the routing table all render from that list. A tool also declares the artifact kinds it accepts and

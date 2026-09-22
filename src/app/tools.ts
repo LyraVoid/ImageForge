@@ -83,7 +83,7 @@ export const TOOLS: ToolDefinition[] = [
     path: "/tools/inspect",
     titleKey: "tool.inspect.title",
     descriptionKey: "tool.inspect.description",
-    status: "planned",
+    status: "available",
     flow: "single",
     accepts: ["boot-container", "package", "partition-image", "filesystem", "ramdisk", "logo-container", "blob"],
     produces: ["report"],
@@ -92,6 +92,9 @@ export const TOOLS: ToolDefinition[] = [
 
 /** The extract tool, referenced by the unpack page when a package is opened there. */
 export const EXTRACT_TOOL = TOOLS.find((tool) => tool.id === "extract") as ToolDefinition;
+
+/** The unpack tool, referenced by the inspect page when a partition container is opened there. */
+export const UNPACK_TOOL = TOOLS.find((tool) => tool.id === "unpack") as ToolDefinition;
 
 export const PRIMARY_TOOL = TOOLS.find((tool) => tool.id === PRIMARY_TOOL_ID) as ToolDefinition;
 

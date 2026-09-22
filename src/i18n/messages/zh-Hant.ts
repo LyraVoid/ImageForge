@@ -94,6 +94,14 @@ export const zhHant: Messages = {
   "unpack.incompatible": "這個檔案不是本工具能開啟的分割區容器。",
   "unpack.packageHint": "這是安裝包；請用另一個工具從包裡取出。",
 
+  "inspect.hint": "把任意映像、安裝包或分割區拖到這裡，它會告訴你這是什麼。",
+  "inspect.container": "容器資訊",
+  "inspect.digests": "摘要",
+  "inspect.methods": "修補方式",
+  "inspect.browse": "在分割區解包裡瀏覽它",
+  "inspect.package": "這是一個安裝包",
+  "inspect.readOnly": "這個工具只看不改：不寫任何東西，也不產出映像。",
+
   "dropzone.title": "把 Android 映像拖到這裡",
   "dropzone.hint": "或點擊選擇檔案",
   "dropzone.busy": "正在分析映像",

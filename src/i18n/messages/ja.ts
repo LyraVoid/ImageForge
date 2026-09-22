@@ -94,6 +94,14 @@ export const ja: Messages = {
   "unpack.incompatible": "このファイルは本ツールが開けるパーティションコンテナではありません。",
   "unpack.packageHint": "これはパッケージです。もう一方のツールで取り出してください。",
 
+  "inspect.hint": "イメージ、パッケージ、パーティションをここにドロップすると、何なのかを表示します。",
+  "inspect.container": "コンテナの情報",
+  "inspect.digests": "ダイジェスト",
+  "inspect.methods": "パッチ方式",
+  "inspect.browse": "パーティション展開ツールで中を見る",
+  "inspect.package": "これはパッケージです",
+  "inspect.readOnly": "このツールは見るだけです。何も書き込まず、イメージも作りません。",
+
   "dropzone.title": "Android イメージをここにドロップ",
   "dropzone.hint": "またはクリックしてファイルを選択",
   "dropzone.busy": "イメージを分析しています",

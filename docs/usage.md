@@ -132,6 +132,14 @@ what you are about to stack on top of.
 | "This ramdisk looks like it was already modified by another tool." | The ramdisk already carries another root solution; restore a stock image before stacking a second one. |
 | A verification check failed | Read the check's detail, export diagnostics, and do not use the image. |
 
+## Look at a file without patching it
+
+**Inspect an image** is the read-only face of the same workspace: open anything there and the page
+says what it is, which tools accept it, and — for a boot image — the whole analysis the patcher would
+show (report, detected patch programs, digests). It writes nothing and produces no image; it exists
+so that looking at a file never means starting a patch, and it points at the tool that does the work
+when you want it.
+
 ## Look inside a partition
 
 **Unpack a partition** takes the containers a dump arrives in:

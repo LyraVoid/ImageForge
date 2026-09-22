@@ -94,6 +94,14 @@ export const zhHans: Messages = {
   "unpack.incompatible": "这个文件不是本工具能打开的分区容器。",
   "unpack.packageHint": "这是安装包；请用另一个工具从包里提取。",
 
+  "inspect.hint": "把任意镜像、安装包或分区拖到这里，它会告诉你这是什么。",
+  "inspect.container": "容器信息",
+  "inspect.digests": "摘要",
+  "inspect.methods": "修补方式",
+  "inspect.browse": "在分区解包里浏览它",
+  "inspect.package": "这是一个安装包",
+  "inspect.readOnly": "这个工具只看不改：不写任何东西，也不产出镜像。",
+
   "dropzone.title": "把 Android 镜像拖到这里",
   "dropzone.hint": "或点击选择文件",
   "dropzone.busy": "正在分析镜像",

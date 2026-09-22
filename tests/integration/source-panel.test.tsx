@@ -27,8 +27,8 @@ describe("the source panel", () => {
     expect(screen.getByText("Zip archive")).toBeInTheDocument();
     expect(screen.getByText("Unknown content")).toBeInTheDocument();
     expect(screen.getByText("Extract from a package")).toBeInTheDocument();
-    // both tools that accept a package are planned, so both say so
-    expect(screen.getAllByText("Not implemented in this build yet.").length).toBeGreaterThanOrEqual(1);
+    // both tools that accept a package are implemented now, so neither says otherwise
+    expect(screen.queryByText("Not implemented in this build yet.")).toBeNull();
     // the patcher does not accept a package, so it is not offered here
     expect(screen.queryByText("Patch an image")).toBeNull();
   });
@@ -39,9 +39,9 @@ describe("the source panel", () => {
     expect(screen.getByText("Raw bytes")).toBeInTheDocument();
     expect(screen.getByText("Android init_boot image · v4")).toBeInTheDocument();
     expect(screen.getByText("Patch an image")).toBeInTheDocument();
-    // the patcher is the only available tool here; the read-only inspector is still planned
-    expect(screen.getByText("Available")).toBeInTheDocument();
-    expect(screen.getAllByText("Not implemented in this build yet.")).toHaveLength(1);
+    // the patcher and the read-only inspector both accept a boot image, and both are implemented
+    expect(screen.getAllByText("Available")).toHaveLength(2);
+    expect(screen.queryByText("Not implemented in this build yet.")).toBeNull();
   });
 
   it("says so when nothing implements the file it can name", () => {
