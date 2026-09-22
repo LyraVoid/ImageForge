@@ -27,6 +27,7 @@ export * from "./partition";
 export * from "./compat/types";
 export { evaluateCompatibility } from "./compat/engine";
 export type { CompatibilityInput } from "./compat/engine";
+export * from "./patch/manager-apps";
 export * from "./patch/types";
 export { ProviderRegistry, createProviderRegistry } from "./patch/providers/registry";
 export type { PatchProviderFactory } from "./patch/providers/registry";

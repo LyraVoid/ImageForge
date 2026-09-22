@@ -324,6 +324,7 @@ export const ja: Messages = {
   "readiness.target": "対象パーティション",
   "readiness.target.value": "生成物は {target} イメージで、{target} パーティションに属します。",
   "readiness.manager": "マネージャーアプリ",
+  "readiness.manager.link": "{app} の公式リリースを入手",
   "readiness.manager.value": "端末に {manager} が必要です。このイメージが信頼する唯一のマネージャーです。",
   "readiness.manager.unknown":
     "持ち込んだコアイメージは、それが作られたときのマネージャーだけを信頼します。そちらを入れてください。",

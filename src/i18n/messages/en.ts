@@ -330,6 +330,7 @@ export const en = {
   "readiness.target": "Target partition",
   "readiness.target.value": "The produced image is a {target} image and belongs in the {target} partition.",
   "readiness.manager": "Manager app",
+  "readiness.manager.link": "Get {app} from its official release",
   "readiness.manager.value":
     "{manager} has to be installed on the device: it is the only manager this image trusts.",
   "readiness.manager.unknown":

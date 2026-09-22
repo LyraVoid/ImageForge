@@ -320,6 +320,7 @@ export const zhHant: Messages = {
   "readiness.target": "目標分割區",
   "readiness.target.value": "產物是 {target} 映像，對應 {target} 分割區。",
   "readiness.manager": "管理器應用程式",
+  "readiness.manager.link": "到 {app} 官方 release 下載",
   "readiness.manager.value": "裝置上必須安裝 {manager}：這是該映像唯一信任的管理器。",
   "readiness.manager.unknown": "自備的核心映像只信任它被建置時對應的管理器，請安裝那一個。",
   "readiness.mock": "這個產物來自 Mock 提供者：它不會讓裝置取得 root。",

@@ -320,6 +320,7 @@ export const zhHans: Messages = {
   "readiness.target": "目标分区",
   "readiness.target.value": "产物是 {target} 镜像，对应 {target} 分区。",
   "readiness.manager": "管理器应用",
+  "readiness.manager.link": "到 {app} 官方 release 下载",
   "readiness.manager.value": "设备上必须安装 {manager}：这是该镜像唯一信任的管理器。",
   "readiness.manager.unknown": "自备的核心镜像只信任它被构建时对应的管理器，请安装那一个。",
   "readiness.mock": "这个产物来自 Mock 提供方：它不会让设备获得 root。",

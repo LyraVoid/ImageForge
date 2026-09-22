@@ -132,6 +132,15 @@ what you are about to stack on top of.
 | "This ramdisk looks like it was already modified by another tool." | The ramdisk already carries another root solution; restore a stock image before stacking a second one. |
 | A verification check failed | Read the check's detail, export diagnostics, and do not use the image. |
 
+## What the image needs before it is usable
+
+A patched image only works with the manager app that trusts it, so the result page's checklist names
+that app — Magisk, KernelSU, APatch or the Aster fork — and links straight to its **official release
+page**, so the app can be obtained without hunting for it. The links are data
+(`src/core/patch/manager-apps.ts`), and a test keeps them in step with the package names the
+providers record: a provider added without a release page fails the suite rather than shipping a dead
+end.
+
 ## Look at a file without patching it
 
 **Inspect an image** is the read-only face of the same workspace: open anything there and the page

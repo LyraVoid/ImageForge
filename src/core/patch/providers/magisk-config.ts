@@ -36,7 +36,11 @@ export function buildMagiskConfig(input: MagiskConfigInput): Uint8Array {
   const lines = [
     "KEEPVERITY=" + String(input.keepVerity),
     "KEEPFORCEENCRYPT=" + String(input.keepForceEncrypt),
-    // This build cannot patch a recovery image or a vendor boot ramdisk yet, so both stay false.
+    // RECOVERYMODE is what makes magiskinit treat a keyless boot as a normal boot: with the line set
+    // true, init sets skip_initramfs unless the recovery key combination is held, so a Magisk that
+    // lives in the recovery ramdisk still boots the system (native/src/init/getinfo.cpp:177). It only
+    // makes sense for an image that goes into a recovery partition, and this build offers no such
+    // target, so it stays false; the runtime half of the feature is already in the injected magiskinit.
     "RECOVERYMODE=false",
     "VENDORBOOT=false",
   ];

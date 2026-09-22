@@ -69,6 +69,10 @@ describe("result page readiness checklist", () => {
     expect(
       screen.getByText("The stale AVB bytes of the source image were kept; they are invalid after a patch either way, so verified boot fails unless you re-sign the image or disable verification."),
     ).toBeInTheDocument();
+    // the manager the image requires is one click away from its official release
+    const link = screen.getByRole("link", { name: /Get KernelSU from its official release/ });
+    expect(link).toHaveAttribute("href", "https://github.com/tiann/KernelSU/releases");
+    expect(link).toHaveAttribute("target", "_blank");
   });
 });
 

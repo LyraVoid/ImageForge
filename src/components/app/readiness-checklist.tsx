@@ -1,6 +1,7 @@
-import { CircleAlert, CircleCheck, Info } from "lucide-react";
+import { CircleAlert, CircleCheck, ExternalLink, Info } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useT } from "@/i18n/use-translation";
+import { managerApp } from "@/core";
 import type { PatchPlan, PatchVerificationResult } from "@/core";
 import { formatBytes } from "@/lib/format";
 
@@ -24,7 +25,15 @@ export function ReadinessChecklist({ plan, metadata, verification, sizeBytes }: 
   const checks = verification.checks.length;
   const failed = verification.checks.filter((entry) => entry.status !== "pass").length;
 
-  const rows: Array<{ icon: typeof Info; label: string; body: string; tone: "info" | "warn" }> = [];
+  const managerRelease = manager === undefined ? undefined : managerApp(manager);
+  const rows: Array<{
+    icon: typeof Info;
+    label: string;
+    body: string;
+    tone: "info" | "warn";
+    /** The manager app's official release page, so the app can actually be obtained. */
+    link?: { href: string; label: string };
+  }> = [];
 
   rows.push({
     icon: Info,
@@ -48,6 +57,9 @@ export function ReadinessChecklist({ plan, metadata, verification, sizeBytes }: 
       label: t("readiness.manager"),
       body: t("readiness.manager.value", { manager: manager }),
       tone: "warn",
+      ...(managerRelease === undefined
+        ? {}
+        : { link: { href: managerRelease.releaseUrl, label: t("readiness.manager.link", { app: managerRelease.name }) } }),
     });
   }
 
@@ -129,6 +141,17 @@ export function ReadinessChecklist({ plan, metadata, verification, sizeBytes }: 
             <div className="min-w-0 space-y-0.5">
               <p className="text-xs font-medium text-foreground">{row.label}</p>
               <p className="text-[11px] leading-4 text-muted-foreground">{row.body}</p>
+              {row.link === undefined ? null : (
+                <a
+                  className="inline-flex items-center gap-1 text-[11px] font-medium text-primary underline-offset-2 hover:underline"
+                  href={row.link.href}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  {row.link.label}
+                  <ExternalLink className="size-3" aria-hidden />
+                </a>
+              )}
             </div>
           </div>
         ))}
