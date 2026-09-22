@@ -143,7 +143,7 @@ and a real device `init_boot` image is used to enforce that
 | --- | --- |
 | boot image header v0 / v1 / v2 / v3 / v4 | parse, extract, repack, verify |
 | `init_boot` classification (v4, no kernel) | yes |
-| vendor boot header v3 / v4 | parse and extract (read-only) |
+| vendor boot header v3 / v4 | parse, extract and repack (the platform ramdisk fragment is replaced; the dtb, table and bootconfig are preserved) |
 | Kernel architecture detection | arm64, arm (zImage), x86_64 (bzImage) heuristics |
 | Compression detection | gzip, LZ4 (legacy and frame), XZ, LZMA, BZip2, Zstandard, CPIO |
 | Compression expansion | gzip, LZ4 legacy and LZ4 frame (including dependent blocks), xz |
