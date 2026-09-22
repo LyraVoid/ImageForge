@@ -14,6 +14,9 @@ import {
   APATCH_FLAVORS,
   KERNELSU_KMI_SETTING,
   KNOWN_KMIS,
+  MAGISK_KEEP_FORCE_ENCRYPT_SETTING,
+  MAGISK_KEEP_VERITY_SETTING,
+  MAGISK_PREINIT_DEVICE_SETTING,
   plannedKmi,
 } from "@/core";
 import { mergePlanOptions } from "@/stores/plan-options";
@@ -33,6 +36,7 @@ export function PatchPage() {
   // the plan stays the single source of truth, and they keep the inputs responsive.
   const [optionDraft, setOptionDraft] = useState<Record<string, string>>({});
   const [superkeyDraft, setSuperkeyDraft] = useState("");
+  const [preinitDraft, setPreinitDraft] = useState("");
   const kpmInputRef = useRef<HTMLInputElement>(null);
   const attachments = useForgeStore((state) => state.attachments);
   const setAttachments = useForgeStore((state) => state.setAttachments);
@@ -353,6 +357,81 @@ export function PatchPage() {
               (named <code className="mx-1">{chosenKmi() === "" ? "{kmi}_kernelsu.ko" : chosenKmi() + "_kernelsu.ko"}</code>
               ) overrides it. Find the KMI with
               <code className="mx-1">uname -r</code> on the device: 6.6.118-android15-... means android15-6.6.
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {plan.providerId === "magisk" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Magisk options</CardTitle>
+            <CardDescription>
+              These are what Magisk reads at boot from .backup/.magisk.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-foreground">Keep verity (KEEPVERITY)</p>
+              <p className="text-[11px] leading-4 text-muted-foreground">
+                On keeps verity enabled and leaves fstab alone. Off removes magiskboot's verity flags
+                from any fstab entry inside the ramdisk and drops verity_key.
+              </p>
+            </div>
+            <Switch
+              aria-label="Keep verity"
+              checked={readOption(MAGISK_KEEP_VERITY_SETTING, "true") === "true"}
+              onCheckedChange={(checked) =>
+                applyOption({ [MAGISK_KEEP_VERITY_SETTING]: String(checked) })
+              }
+            />
+          </CardContent>
+          <CardContent className="flex items-start justify-between gap-4 border-t border-border/60 pt-4">
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-foreground">
+                Keep forced encryption (KEEPFORCEENCRYPT)
+              </p>
+              <p className="text-[11px] leading-4 text-muted-foreground">
+                On keeps forced encryption and leaves fstab alone. Off removes the encryption flags
+                magiskboot removes (forceencrypt, forcefdeorfbe, fileencryption).
+              </p>
+            </div>
+            <Switch
+              aria-label="Keep forced encryption"
+              checked={readOption(MAGISK_KEEP_FORCE_ENCRYPT_SETTING, "true") === "true"}
+              onCheckedChange={(checked) =>
+                applyOption({ [MAGISK_KEEP_FORCE_ENCRYPT_SETTING]: String(checked) })
+              }
+            />
+          </CardContent>
+          <CardContent className="space-y-2 border-t border-border/60 pt-4">
+            <p className="text-xs font-medium text-foreground">
+              Pre-init storage (PREINITDEVICE)
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                aria-label="Pre-init storage partition"
+                className="max-w-xs"
+                placeholder={plan.configuration.preinitDevice === "auto" ? "auto (Magisk detects it)" : ""}
+                value={preinitDraft}
+                onChange={(event) => setPreinitDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") applyOption({ [MAGISK_PREINIT_DEVICE_SETTING]: preinitDraft.trim() });
+                }}
+              />
+              <Button
+                variant="secondary"
+                onClick={() => applyOption({ [MAGISK_PREINIT_DEVICE_SETTING]: preinitDraft.trim() })}
+              >
+                Apply
+              </Button>
+              <Badge variant={plan.configuration.preinitDevice === "auto" ? "neutral" : "primary"}>
+                plan: {plan.configuration.preinitDevice ?? "auto"}
+              </Badge>
+            </div>
+            <p className="text-[11px] leading-4 text-muted-foreground">
+              Read it on the device with <code className="mx-1">magisk --preinit-device</code>, for
+              example sda10. Leaving it empty lets Magisk detect it at boot.
             </p>
           </CardContent>
         </Card>

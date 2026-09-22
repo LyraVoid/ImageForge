@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { beforeEach, describe, expect, it } from "vitest";
 import { PatchPage } from "@/routes/PatchPage";
@@ -52,5 +52,21 @@ describe("patch page re-planning", () => {
     renderPatchPage();
 
     expect(await screen.findByText("analyze page")).toBeInTheDocument();
+  }, 60000);
+
+  it("offers the Magisk options and turns them into plan configuration", async () => {
+    await store().selectProvider("magisk");
+    renderPatchPage();
+
+    expect(await screen.findByText("Magisk options")).toBeInTheDocument();
+    expect(screen.getByLabelText("Pre-init storage partition")).toBeInTheDocument();
+
+    const keepVerity = screen.getByLabelText("Keep verity");
+    expect(keepVerity).toBeChecked();
+    fireEvent.click(keepVerity);
+
+    await waitFor(() => expect(store().planResponse?.plan.configuration.keepVerity).toBe("false"));
+    // the other option is untouched, and the plan still pins the default
+    expect(store().planResponse?.plan.configuration.keepForceEncrypt).toBe("true");
   }, 60000);
 });

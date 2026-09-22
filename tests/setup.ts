@@ -16,17 +16,25 @@ if (typeof globalScope.CompressionStream === "undefined") {
   globalScope.CompressionStream = CompressionStream;
 }
 
-// A browser loads the WebAssembly module over fetch. Serving exactly that path from public/ under
-// Node means the tests exercise the real codec instead of the TypeScript fallback. Every other URL
-// keeps the runtime's behaviour, which the artifact tests depend on.
+// A browser loads the WebAssembly module and the bundled artifacts over fetch. Serving exactly
+// those paths from public/ under Node means the tests exercise the real codecs and the real digests
+// instead of a stub. Every other URL (a remote artifact, for one) keeps the runtime's behaviour,
+// which the artifact tests depend on.
 const runtimeFetch = globalThis.fetch;
 globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
   const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-  if (url.startsWith("/wasm/")) {
-    const bytes = readFileSync(join(process.cwd(), "public", url.replace(/^\/+/, "")));
-    return new Response(new Uint8Array(bytes), {
+  if (url.startsWith("/wasm/") || url.startsWith("/artifacts/")) {
+    const path = url.split("?")[0];
+    let bytes: Uint8Array;
+    try {
+      bytes = new Uint8Array(readFileSync(join(process.cwd(), "public", path.replace(/^\/+/, ""))));
+    } catch {
+      return new Response(null, { status: 404 });
+    }
+    const body = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    return new Response(body, {
       status: 200,
-      headers: { "content-type": "application/wasm" },
+      headers: { "content-type": url.startsWith("/wasm/") ? "application/wasm" : "application/octet-stream" },
     });
   }
   if (typeof runtimeFetch === "function") return runtimeFetch(input as never, init);
