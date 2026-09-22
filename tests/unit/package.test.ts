@@ -95,10 +95,27 @@ describe("OTA payloads", () => {
     expect(await sha256Hex(extracted)).toBe(await sha256Hex(image));
   });
 
-  it("refuses a delta payload instead of half applying it", async () => {
-    const payload = await buildPayload([{ name: "boot", data: new Uint8Array(8192) }], { minorVersion: 4 });
+  it("reads a payload that declares a minor version, because vendor full packages do", async () => {
+    // A CPH2723 full OTA declares minor_version = 9 while every operation still carries its data,
+    // so the decision has to be made per operation rather than from this field.
+    const image = await buildBootImage({ kernel: null });
+    const payload = await buildPayload([{ name: "init_boot", data: image }], { minorVersion: 9 });
+    const parsed = parsePayload(payload);
 
-    expect(() => parsePayload(payload)).toThrowError(/full OTA payloads/);
+    expect(parsed.minorVersion).toBe(9);
+    expect(parsed.partitions[0].requiresSource).toBe(false);
+    expect(await sha256Hex(await extractPayloadPartition(payload, parsed, "init_boot"))).toBe(
+      await sha256Hex(image),
+    );
+  });
+
+  it("marks a partition whose operations read the source image, and refuses to guess it", async () => {
+    // SOURCE_COPY (4) copies from the partition being replaced, so the payload alone is not enough
+    const payload = await buildPayload([{ name: "system", data: new Uint8Array(8192) }], { operationType: 4 });
+    const opened = openPackage(payload);
+
+    expect(opened.entries[0].requiresSource).toBe(true);
+    await expect(extractPackageEntry(payload, "system")).rejects.toThrowError(/needs the image/);
   });
 
   it("refuses an operation it has no decoder for, and names it", async () => {

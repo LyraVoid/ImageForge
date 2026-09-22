@@ -104,15 +104,19 @@ export function ExtractPage() {
                       {entry.suggestedKind ? (
                         <Badge variant="outline">{record(kindLabel(entry.suggestedKind))}</Badge>
                       ) : null}
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        disabled={busyEntry !== null}
-                        onClick={() => void handleExtract(entry.id)}
-                      >
-                        {busyEntry === entry.id ? <LoaderCircle className="animate-spin" /> : null}
-                        {t("extract.extract")}
-                      </Button>
+                      {entry.requiresSource ? (
+                        <span className="text-[11px] text-muted-foreground">{t("extract.needsSource")}</span>
+                      ) : (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={busyEntry !== null}
+                          onClick={() => void handleExtract(entry.id)}
+                        >
+                          {busyEntry === entry.id ? <LoaderCircle className="animate-spin" /> : null}
+                          {t("extract.extract")}
+                        </Button>
+                      )}
                     </li>
                   ))}
                 </ul>

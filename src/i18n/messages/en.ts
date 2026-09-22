@@ -71,6 +71,7 @@ export const en = {
   "extract.hint": "A payload names its own partitions; what an entry really is gets detected after it is extracted.",
   "extract.reading": "Reading the package…",
   "extract.extract": "Extract",
+  "extract.needsSource": "This entry is stored as a delta: extracting it needs the image it was generated against.",
   "extract.extracted": "Extracted files",
   "extract.empty": "Nothing extracted yet. Pick an entry above.",
   "extract.useInPatcher": "Use in the patcher",

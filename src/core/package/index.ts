@@ -19,6 +19,8 @@ export interface PackageEntry {
   sizeBytes: number;
   /** A hint from the format itself (a payload names its partitions), not a detection. */
   suggestedKind: ArtifactKind | null;
+  /** A payload partition whose operations read the source image cannot be extracted on its own. */
+  requiresSource: boolean;
 }
 
 export interface OpenedPackage {
@@ -52,6 +54,7 @@ export function openPackage(bytes: Uint8Array): OpenedPackage {
         name: entry.name.split("/").pop() ?? entry.name,
         sizeBytes: entry.uncompressedSize,
         suggestedKind: null,
+        requiresSource: false,
       })),
     };
   }
@@ -63,6 +66,7 @@ export function openPackage(bytes: Uint8Array): OpenedPackage {
       name: partition.name + ".img",
       sizeBytes: partition.sizeBytes,
       suggestedKind: BOOT_PARTITION_NAMES.has(partition.name) ? "boot-container" : null,
+      requiresSource: partition.requiresSource,
     })),
   };
 }

@@ -68,6 +68,7 @@ export const zhHans: Messages = {
   "extract.hint": "payload 会声明自己的分区名；条目到底是什么，要提取之后再识别。",
   "extract.reading": "正在读取安装包…",
   "extract.extract": "提取",
+  "extract.needsSource": "这个条目是差分存储的：提取它需要它生成时对应的源镜像。",
   "extract.extracted": "已提取的文件",
   "extract.empty": "还没有提取任何内容，先在上方选一个条目。",
   "extract.useInPatcher": "用它开始修补",

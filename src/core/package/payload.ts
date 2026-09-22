@@ -51,7 +51,15 @@ export interface PayloadPartition {
   sizeBytes: number;
   declaredSha256: Uint8Array | null;
   operations: PayloadOperation[];
+  /**
+   * True when an operation reads the source image (SOURCE_COPY, the diff formats), which means this
+   * partition cannot be rebuilt from the payload alone.
+   */
+  requiresSource: boolean;
 }
+
+/** `InstallOperation.Type` values that read the partition being replaced (update_metadata.proto:136). */
+const SOURCE_OPERATION_TYPES = new Set([2, 3, 4, 5, 9, 10, 11, 12, 13]);
 
 export interface ParsedPayload {
   version: number;
@@ -138,6 +146,7 @@ function parsePartition(bytes: Uint8Array): PayloadPartition {
     sizeBytes: 0,
     declaredSha256: null,
     operations: [],
+    requiresSource: false,
   };
   while (!reader.done) {
     const tag = reader.readTag();
@@ -155,7 +164,11 @@ function parsePartition(bytes: Uint8Array): PayloadPartition {
             partition.declaredSha256 = info.readLengthDelimited();
           } else info.skip(infoTag.wire);
         }
-      } else if (tag.field === 8) partition.operations.push(parseOperation(value));
+      } else if (tag.field === 8) {
+        const operation = parseOperation(value);
+        if (SOURCE_OPERATION_TYPES.has(operation.type)) partition.requiresSource = true;
+        partition.operations.push(operation);
+      }
       continue;
     }
     reader.skip(tag.wire);
@@ -226,12 +239,9 @@ export function parsePayload(bytes: Uint8Array): ParsedPayload {
     reader.skip(tag.wire);
   }
 
-  if (payload.minorVersion !== 0) {
-    throw new PackageError(
-      "The manifest declares minor version " + payload.minorVersion + ", which means a delta payload.",
-      "Only full OTA payloads can be read: a delta payload describes changes against an image this tool does not have.",
-    );
-  }
+  // The declared minor version is *not* used to decide whether a payload can be read: vendor full
+  // packages in the wild declare a non-zero one (a CPH2723 full OTA says 9) while every operation
+  // still carries its own data. What matters is per partition, and that is `requiresSource`.
   if (payload.partitions.length === 0) {
     throw new PackageError("The manifest lists no partitions.", "This payload describes no partitions.");
   }
@@ -364,6 +374,15 @@ export async function extractPayloadPartition(
       }
       writeExtents(output, operation.dstExtents, expanded, payload.blockSize, operation);
       continue;
+    }
+    if (SOURCE_OPERATION_TYPES.has(operation.type)) {
+      throw new PackageError(
+        "Operation " + operation.typeName + " reads the partition being replaced, so the source image is required.",
+        partitionName +
+          " is stored as a delta (" +
+          operation.typeName +
+          "): extracting it needs the image it was generated against.",
+      );
     }
     throw new PackageError(
       "Operation type " + operation.type + " (" + operation.typeName + ") has no decoder here.",

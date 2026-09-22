@@ -149,7 +149,13 @@ describe("PatchWorkerSession", () => {
     const listing = await session.listPackage(source.id);
     expect(listing.kind).toBe("ota-payload");
     expect(listing.entries).toEqual([
-      { id: "init_boot", name: "init_boot.img", sizeBytes: image.length, suggestedKind: "boot-container" },
+      {
+        id: "init_boot",
+        name: "init_boot.img",
+        sizeBytes: image.length,
+        suggestedKind: "boot-container",
+        requiresSource: false,
+      },
     ]);
 
     const artifact = await session.extractPackageEntry(source.id, "init_boot");
