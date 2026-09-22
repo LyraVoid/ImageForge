@@ -1,4 +1,5 @@
 import { PackageError } from "../errors";
+import { readAll } from "../package/source";
 import type { ByteSource } from "../package/source";
 
 /**
@@ -137,6 +138,97 @@ export async function parseSplash(source: ByteSource): Promise<ParsedSplash> {
   };
 }
 
+/** One frame of a repack: either the stored stream, or a new BMP to compress in. */
+export type SplashPackEntry =
+  | { kind: "keep"; frame: SplashFrame }
+  | { kind: "replace"; index: number; bmp: Uint8Array; name?: string };
+
+export interface PackedSplash {
+  bytes: Uint8Array;
+  /** How much larger the result is than the image it was built from (negative when it shrank). */
+  sizeDelta: number;
+  /** Frames whose streams were compressed again. */
+  replaced: number;
+}
+
+/**
+ * Builds a splash image.
+ *
+ * Everything the format does not require to change is copied from the image that was read: the DDPH
+ * block and the header blocks, the metadata entries (each one is patched in place, so a frame's name
+ * bytes stay exactly as they were) and, above all, the stored gzip stream of every frame that is not
+ * being replaced. Repacking an unmodified image therefore reproduces it byte for byte — the invariant
+ * the rest of this project holds its containers to. The result keeps the original file size unless
+ * the new frames need more room, which is what the vendor's own tooling does.
+ */
+export async function packSplash(
+  source: ByteSource,
+  parsed: ParsedSplash,
+  entries: SplashPackEntry[],
+  options: { originalSize?: number } = {},
+): Promise<PackedSplash> {
+  const { encodeGzip } = await import("../image/gzip");
+  const encoder = new TextEncoder();
+
+  const streams: Uint8Array[] = [];
+  const realSizes: number[] = [];
+  const names: (Uint8Array | null)[] = [];
+  let replaced = 0;
+
+  for (const entry of entries) {
+    if (entry.kind === "keep") {
+      streams.push(await readSplashFrameCompressed(source, entry.frame));
+      realSizes.push(entry.frame.realSize);
+      names.push(null);
+    } else {
+      streams.push(await encodeGzip(entry.bmp));
+      realSizes.push(entry.bmp.length);
+      names.push(entry.name === undefined ? null : encoder.encode(entry.name));
+      replaced += 1;
+    }
+  }
+
+  const originalSize = options.originalSize ?? source.size;
+  const dataSize = streams.reduce((sum, stream) => sum + stream.length, 0);
+  const needed = SPLASH_DATA_OFFSET + dataSize;
+  const totalSize = Math.max(originalSize, needed);
+
+  // Start from the image as it is: the DDPH block, the magic, the three reserved blocks, the header
+  // info, the metadata area, whatever sits between it and the data area, and everything after the
+  // frames all come from the source. Only the entries and the frame streams are written below, which
+  // is what makes a repack of an unmodified image come back byte for byte.
+  const stock = await readAll(source);
+  const out = new Uint8Array(totalSize);
+  out.set(stock.subarray(0, Math.min(stock.length, totalSize)), 0);
+  if (entries.length !== parsed.imgnumber) {
+    writeU32(out, SPLASH_HEADER_INFO_OFFSET, entries.length);
+    // Entries the new image no longer has must not point into the data area any more.
+    for (let index = entries.length; index < parsed.imgnumber; index += 1) {
+      out.fill(0, SPLASH_METADATA_OFFSET + index * SPLASH_METADATA_SIZE, SPLASH_METADATA_OFFSET + (index + 1) * SPLASH_METADATA_SIZE);
+    }
+  }
+
+  let offset = 0;
+  for (let index = 0; index < streams.length; index += 1) {
+    const at = SPLASH_METADATA_OFFSET + index * SPLASH_METADATA_SIZE;
+    writeU32(out, at, offset);
+    writeU32(out, at + 4, realSizes[index]);
+    writeU32(out, at + 8, streams[index].length);
+    if (names[index] !== null) {
+      out.fill(0, at + 12, at + SPLASH_METADATA_SIZE);
+      out.set((names[index] as Uint8Array).subarray(0, SPLASH_NAME_SIZE), at + 12);
+    }
+    out.set(streams[index], SPLASH_DATA_OFFSET + offset);
+    offset += streams[index].length;
+  }
+
+  return { bytes: out, sizeDelta: totalSize - source.size, replaced };
+}
+
+function writeU32(out: Uint8Array, at: number, value: number): void {
+  new DataView(out.buffer, out.byteOffset + at, 4).setUint32(0, value >>> 0, true);
+}
+
 /** The gzip stream of one frame, exactly as it is stored. */
 export async function readSplashFrameCompressed(
   source: ByteSource,
@@ -154,16 +246,8 @@ export async function readSplashFrameBmp(source: ByteSource, frame: SplashFrame)
       "This splash image is truncated.",
     );
   }
-  if (typeof DecompressionStream === "undefined") {
-    throw new PackageError(
-      "DecompressionStream is unavailable in this environment.",
-      "This browser cannot expand the frames of a splash image.",
-    );
-  }
-  const stream = new Blob([compressed as BlobPart])
-    .stream()
-    .pipeThrough(new DecompressionStream("gzip"));
-  const bmp = new Uint8Array(await new Response(stream).arrayBuffer());
+  const { decodeGzip } = await import("../image/gzip");
+  const bmp = await decodeGzip(compressed);
   if (frame.realSize !== 0 && bmp.length !== frame.realSize) {
     throw new PackageError(
       "Frame " +

@@ -182,6 +182,12 @@ byte the input. And the header's width and height are **not** a bound on the fra
 was read from declares 1080x1920 while its frames are up to 1440x3168, so resizing to the header
 would shrink the images the panel really shows.
 
+Repacking follows the rule the rest of the project uses: the packer starts from the image's own bytes
+and writes only the metadata entries and the frame streams, so a repack of an unmodified image is
+byte for byte the input (verified against a real 15 MB partition, frames included), a replaced frame
+leaves every other frame's stored stream untouched, and the result keeps the original file size
+unless the new frames need more room.
+
 bzip2 streams come out of OTA payloads (`REPLACE_BZ`), and a hand written decoder disagreed with one
 of them, so the reference implementation decodes them: `public/wasm/bzip2.wasm` is bzip2 1.0.8
 compiled by `scripts/build-bzip2-wasm.sh`, the same pattern as `lz4.wasm`, and its output was
