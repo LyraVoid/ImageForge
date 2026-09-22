@@ -27,7 +27,7 @@ export const APATCH_PROVIDER_DESCRIPTOR: PatchProviderDescriptor = {
   notes: [
     "Patches the kernel only, therefore boot.img is the only valid target: init_boot.img carries no kernel.",
     "Requires CONFIG_KALLSYMS=y in the target kernel. This is verified before the patch runs.",
-    "Uncompressed, gzip and LZ4 (frame or legacy, independent or dependent blocks) kernels are supported and re-compressed in the original container; XZ, LZMA, BZip2 and Zstandard kernels are refused.",
+    "Uncompressed, gzip, LZ4 (frame or legacy, independent or dependent blocks) and xz kernels are supported and re-compressed in the original container; LZMA, BZip2 and Zstandard kernels are refused.",
     "The superkey is optional and unset by default, matching the manager default where authentication is signature based.",
     "Two KernelPatch core images are registered: the official upstream build (only the me.bmax.apatch manager is trusted) and the Aster fork build (only the me.yuki.aster manager is trusted).",
     "Runs the upstream KernelPatch kptools, compiled to WebAssembly, inside the patch worker.",

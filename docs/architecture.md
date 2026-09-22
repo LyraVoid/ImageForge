@@ -43,7 +43,7 @@ never parses a raw `boot.img` itself.
 
     init_boot.img (or a boot.img with a ramdisk)
       -> Image Engine extracts the ramdisk section
-      -> decompress (LZ4 legacy / LZ4 frame / gzip) -> CPIO newc
+      -> decompress (LZ4 legacy / LZ4 frame / gzip / xz) -> CPIO newc
       -> checks: not already Magisk patched, module pinned by the plan, module declares name=kernelsu,
          module vermagic matches the kernel version implied by the KMI
       -> init -> init.real, add init (ksuinit, 0755), add kernelsu.ko (0755), optional ksu_config
@@ -61,11 +61,30 @@ their own licence, never linked into this AGPL-3.0-or-later project (`THIRD_PART
 Whichever module is used, the provider reads its `.modinfo` and checks the kernel version it was
 built for against the KMI, and the result records its name, licence and vermagic.
 
+## Magisk provider
+
+    init_boot.img (or a boot.img with a ramdisk)
+      -> Image Engine extracts the ramdisk section
+      -> decompress (LZ4 legacy / LZ4 frame / gzip / xz) -> CPIO newc
+      -> checks: not already Magisk or KernelSU patched
+      -> fstab entries: the verity and encryption flag strings are removed exactly as magiskboot
+         removes them, and verity_key is dropped when verity is not kept
+      -> init -> magiskinit (0750), overlay.d/ and overlay.d/sbin (0750) with magisk.xz, stub.xz and
+         init-ld.xz (0644), .backup/.magisk (000) with the configuration, the stock init as
+         .backup/init.xz (0750) and the added paths as .backup/.rmlist (000)
+      -> serialise CPIO -> recompress in the original container -> Image Engine repacks the image
+      -> verification reads the produced ramdisk back and requires the payloads and the config
+
+The three payloads are shipped pre-compressed, because Magisk's patcher compresses them with
+magiskboot at patch time and a browser cannot run it. The stock init, on the other hand, depends on
+the image being patched, so it is compressed here with the WebAssembly codec, using magiskboot's
+settings; agree with its stream to the byte in size.
+
 ## Ramdisk layer
 
 Android ramdisks are CPIO `newc` archives, usually inside a gzip or LZ4 container:
 
-    ramdisk section -> decompress (LZ4 legacy / LZ4 frame / gzip) -> CPIO newc -> entries
+    ramdisk section -> decompress (LZ4 legacy / LZ4 frame / gzip / xz) -> CPIO newc -> entries
                     -> edit entries -> serialise CPIO -> recompress in the same container
 
 Everything a producer wrote is preserved, including the padding after a name, the padding after a
@@ -99,8 +118,9 @@ Real images shaped two decisions:
 
 Compression support: gzip is expanded through `DecompressionStream`; LZ4 legacy and LZ4
 frame payloads are expanded by the WebAssembly codec, which also keeps a 64 KiB window so
-frames with dependent blocks decode correctly. XZ, LZMA, BZip2 and Zstandard are detected
-and reported but cannot be expanded. "unknown" means no container magic matched, which is
+frames with dependent blocks decode correctly; xz goes through the same module, which holds an
+LZMA2 codec built from the crate magiskboot uses. LZMA, BZip2 and Zstandard are detected and
+reported but cannot be expanded. "unknown" means no container magic matched, which is
 what a plain arm64 `Image` looks like, so those payloads are passed through unchanged.
 
 When a provider has to rewrite a compressed section, `describeCompression` captures the

@@ -33,12 +33,14 @@ Deliberately honest limits:
   modules are built from KernelSU's kernel directory, which is GPL-2.0-only, so they are
   redistributed unmodified as separate programs with their own licence record
   (`THIRD_PARTY_LICENSES/kernelsu/`) rather than being linked into this AGPL-3.0-or-later project.
-* **Magisk is declared but not implemented.** It is `planned` in the
-  registry; both need CPIO read/write and the full compression matrix first, and their
-  upstream sources and licenses must be read from the current revision before implementing.
-* **APatch patches arm64 kernels in uncompressed, gzip or LZ4 containers.** The kernel is
+* **Magisk is the third provider.** It replaces the ramdisk `init` with `magiskinit`, writes its
+  payloads to `overlay.d/sbin`, keeps its configuration in `.backup/.magisk`, patches fstab entries
+  the way `magiskboot` does, and keeps the stock init inside the ramdisk as `.backup/init.xz` so
+  Magisk's app can restore the image by itself. Its payloads are bundled from the pinned release,
+  which is GPL-3.0 throughout.
+* **APatch patches arm64 kernels in uncompressed, gzip, LZ4 or xz containers.** The kernel is
   expanded, patched and written back into the same container (LZ4 frames with dependent
-  blocks included). XZ, LZMA, BZip2 and Zstandard kernels are refused with a structured
+  blocks included). LZMA, BZip2 and Zstandard kernels are refused with a structured
   error instead of being patched wrongly. It also requires `CONFIG_KALLSYMS=y`, which is
   verified before the patch runs.
 * **The superkey is optional and unset by default**, matching the manager default where
@@ -112,7 +114,7 @@ Full details in [docs/architecture.md](docs/architecture.md).
     Image Engine  parse / extract / transform / repack / verify
     Ramdisk       CPIO newc read and write inside the original container
     Worker        Comlink RPC with progress events
-    WASM          CRC32 and LZ4 block decoding
+    WASM          CRC32, LZ4 block coding and xz (LZMA2) coding
 
 Hard rules: providers never parse boot images, the UI never decides compatibility, versions
 are never hardcoded in the UI, and heavy work never runs on the main thread.
@@ -144,8 +146,8 @@ and a real device `init_boot` image is used to enforce that
 | vendor boot header v3 / v4 | parse and extract (read-only) |
 | Kernel architecture detection | arm64, arm (zImage), x86_64 (bzImage) heuristics |
 | Compression detection | gzip, LZ4 (legacy and frame), XZ, LZMA, BZip2, Zstandard, CPIO |
-| Compression expansion | gzip, LZ4 legacy and LZ4 frame (including dependent blocks) |
-| Compression re-encoding | gzip and LZ4, reproducing the original block size, checksums, content size and dictionary id |
+| Compression expansion | gzip, LZ4 legacy and LZ4 frame (including dependent blocks), xz |
+| Compression re-encoding | gzip and LZ4 (reproducing the original block size, checksums, content size and dictionary id) and xz (magiskboot's settings: preset 6, CRC32) |
 | AVB signature | detected, dropped on repack with a warning |
 
 ## Verification model

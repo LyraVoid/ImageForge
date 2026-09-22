@@ -59,6 +59,12 @@ kptools reports its declared identity back. Such modules are usually proprietary
 bundled: the test runs when one is supplied through `IMAGEFORGE_TEST_KPM`, or found through
 `IMAGEFORGE_KPM_DIR` (default `.research/kpm`). Without one it reports itself as skipped.
 
+## The WebAssembly module under Node
+
+`tests/setup.ts` serves `/wasm/*.wasm` from `public/` for the tests, so they exercise the real
+codecs (LZ4 and xz) instead of the TypeScript fallback. Every other URL keeps the runtime
+behaviour, which the artifact tests rely on.
+
 ## KernelPatch module fixtures
 
 `tests/fixtures/kernelpatch/` holds two small modules from the KernelPatch-Aster `0.13.8`
