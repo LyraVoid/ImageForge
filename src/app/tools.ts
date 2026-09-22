@@ -73,7 +73,7 @@ export const TOOLS: ToolDefinition[] = [
     path: "/tools/logo",
     titleKey: "tool.logo.title",
     descriptionKey: "tool.logo.description",
-    status: "planned",
+    status: "available",
     flow: "single",
     accepts: ["logo-container", "partition-image", "blob"],
     produces: ["logo-container"],

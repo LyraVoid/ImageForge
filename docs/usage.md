@@ -141,6 +141,20 @@ page**, so the app can be obtained without hunting for it. The links are data
 providers record: a provider added without a release page fails the suite rather than shipping a dead
 end.
 
+## Change the picture the device shows when it boots
+
+**Splash screen** edits an OPPO / Realme / OnePlus `splash.img` (Qualcomm devices). Open the image — or
+the `splash` partition of an OTA package, with **Browse** in the extract tool — and it lists every
+frame with a thumbnail: `boot`, `fastboot`, `verify`, the carrier logos and the rest. Pick one,
+choose how your picture should be adapted (as it is, fitted to the frame by cropping, fitted by
+stretching, or a size you name) and replace it; the preview shows the adapted result before anything
+is packed.
+
+Packing keeps every frame you did not touch as the exact bytes it had, and repacking without changes
+gets the image back byte for byte. If your picture needs more room than the frame had, the result
+grows and the page says by how much: a device partition has a fixed size, so a larger image needs a
+partition at least that big. The tool never flashes anything — you get the `splash.img` to download.
+
 ## Look at a file without patching it
 
 **Inspect an image** is the read-only face of the same workspace: open anything there and the page

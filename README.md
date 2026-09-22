@@ -20,7 +20,7 @@ The start page is a set of tools; the patcher is the first one, and the only one
 | **Patch an image** — analyze, plan, patch, verify, download (`/tools/patch/*`) | available |
 | **Extract from a package** — OTA `payload.bin` and vendor archives (`/tools/extract`) | available |
 | **Unpack partitions** — sparse images, `super.img` logical partitions, erofs and ext4 browsing (`/tools/unpack`) | available |
-| **Boot logo (first screen)** — read, view and replace the splash images (`/tools/logo`) | planned |
+| **Boot logo (first screen)** — read, view and replace the splash images (`/tools/logo`) | available |
 | **Inspect an image** — read-only look at anything you open: what it is, its report and digests (`/tools/inspect`) | available |
 
 Adding one is a data change (`src/app/tools.ts`) plus its own route; the tools page, the header and
@@ -39,6 +39,12 @@ never loaded, and a payload stored inside it is descended into rather than extra
 (`payload.bin::init_boot`). Entries that cannot be handed over honestly — a deflated entry that only
 exists compressed, an entry past the in-memory limit, a partition stored as a delta that needs the
 source image — are refused by name instead of guessed at.
+
+**The boot screen is editable too.** A splash image's frames are listed with thumbnails, any frame
+can be replaced with a picture of your own (kept as it is, cropped or stretched to the frame, or a
+size you name), and the image is packed again: frames you did not touch keep their exact bytes, and
+repacking without changes reproduces the partition byte for byte. The result is a download, never a
+flash.
 
 **And they are read where they lie.** A partition inside an OTA payload is a range source: browsing
 its filesystem decodes only the operations that cover the bytes being looked at, so a 759 MB `system`

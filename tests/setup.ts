@@ -15,6 +15,21 @@ if (typeof globalScope.DecompressionStream === "undefined") {
 if (typeof globalScope.CompressionStream === "undefined") {
   globalScope.CompressionStream = CompressionStream;
 }
+// jsdom's Blob has no stream(); the gzip codecs build their pipelines on it.
+if (typeof Blob !== "undefined" && typeof Blob.prototype.stream !== "function") {
+  Object.defineProperty(Blob.prototype, "stream", {
+    configurable: true,
+    writable: true,
+    value: function stream(this: Blob): ReadableStream<Uint8Array> {
+      return new ReadableStream<Uint8Array>({
+        start: async (controller) => {
+          controller.enqueue(new Uint8Array(await this.arrayBuffer()));
+          controller.close();
+        },
+      });
+    },
+  });
+}
 
 // A browser loads the WebAssembly module and the bundled artifacts over fetch. Serving exactly
 // those paths from public/ under Node means the tests exercise the real codecs and the real digests
