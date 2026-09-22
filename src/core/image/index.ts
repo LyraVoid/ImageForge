@@ -49,6 +49,7 @@ export {
   isPayloadUsable,
 } from "./compression";
 export type { CompressionDescriptor, CompressionFormat } from "./compression";
+export { decodeBzip2 } from "./bzip2";
 export { decodeLz4, encodeLz4, parseLz4Settings, xxh32 } from "./lz4";
 export {
   REFERENCE_XZ_DICTIONARY,

@@ -1,5 +1,6 @@
 import { sha256Hex } from "@/core/hash";
 import { encodeXz } from "@/core/image";
+import { bzip2Compress } from "./bzip2";
 
 /**
  * Builds an Android OTA payload the way update_engine writes a full one: the CrAU header, a
@@ -9,7 +10,7 @@ import { encodeXz } from "@/core/image";
 export interface PayloadFixturePartition {
   name: string;
   data: Uint8Array;
-  compress?: "xz" | "none";
+  compress?: "xz" | "bz2" | "none";
 }
 
 function varint(value: number): number[] {
@@ -73,11 +74,16 @@ export async function buildPayload(
 
   for (const partition of partitions) {
     const compress = partition.compress ?? "none";
-    const blob = compress === "xz" ? await encodeXz(partition.data) : partition.data;
+    const blob =
+      compress === "xz"
+        ? await encodeXz(partition.data)
+        : compress === "bz2"
+          ? bzip2Compress(partition.data)
+          : partition.data;
     const blobDigest = hexToBytes(await sha256Hex(blob));
     const numBlocks = Math.ceil(partition.data.length / blockSize) || 1;
     const operation = concat([
-      varintField(1, options.operationType ?? (compress === "xz" ? 8 : 0)),
+      varintField(1, options.operationType ?? (compress === "xz" ? 8 : compress === "bz2" ? 1 : 0)),
       varintField(2, offset),
       varintField(3, blob.length),
       bytesField(6, extent(0, numBlocks)),

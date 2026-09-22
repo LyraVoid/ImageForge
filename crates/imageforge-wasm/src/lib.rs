@@ -456,3 +456,58 @@ pub unsafe extern "C" fn imageforge_xz_decompress(
     }
     expanded.len() as i64
 }
+
+/// The bzip2 stream header: "BZh", a block size digit, then the 6 byte block magic (0x314159265359).
+fn bzip2_header_ok(input: &[u8]) -> bool {
+    input.len() >= 10
+        && input[0] == b'B'
+        && input[1] == b'Z'
+        && input[2] == b'h'
+        && (b'1'..=b'9').contains(&input[3])
+        && input[4..10] == [0x31, 0x41, 0x59, 0x26, 0x53, 0x59]
+}
+
+/// Expands one bzip2 stream into `dst`. Returns the bytes written, -1 on a malformed stream, or -2
+/// when the destination is too small so the caller can retry with a larger buffer.
+///
+/// Real OTA payloads carry partitions as REPLACE_BZ blobs, and bzip2 is not block addressable: the
+/// stream is expanded into a bounded buffer, with the size the extents already promise as the cap.
+#[no_mangle]
+pub unsafe extern "C" fn imageforge_bzip2_decompress(
+    src: *const u8,
+    src_len: usize,
+    dst: *mut u8,
+    dst_cap: usize,
+) -> i64 {
+    use bzip2_rs::DecoderReader;
+    use std::io::Read;
+
+    let input = std::slice::from_raw_parts(src, src_len);
+    // Check the stream header first: the decoder is written for well formed input, and a corrupt
+    // payload must fail the extraction rather than trap the module.
+    if !bzip2_header_ok(input) {
+        return -1;
+    }
+    let mut reader = DecoderReader::new(std::io::Cursor::new(input));
+    // Bounded by hand rather than with Take: stopping a Take in the middle of a block leaves the
+    // decoder at a half-read position, which it treats as a fatal error. Reading a chunk at a time
+    // and stopping between chunks keeps both the decoder and the heap happy.
+    let mut expanded = Vec::<u8>::new();
+    let mut chunk = [0u8; 64 * 1024];
+    loop {
+        match reader.read(&mut chunk) {
+            Ok(0) => break,
+            Ok(written) => {
+                expanded.extend_from_slice(&chunk[..written]);
+                if expanded.len() > dst_cap {
+                    return -2;
+                }
+            }
+            Err(_) => return -1,
+        }
+    }
+    if !expanded.is_empty() {
+        std::slice::from_raw_parts_mut(dst, expanded.len()).copy_from_slice(&expanded);
+    }
+    expanded.len() as i64
+}

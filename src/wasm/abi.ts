@@ -15,6 +15,11 @@ export interface WasmImageModule {
   lz4CompressBlock(input: Uint8Array): Uint8Array;
   /** Expands an xz stream; the codec lives in the WebAssembly module. */
   xzDecompress(input: Uint8Array): Uint8Array;
+  /**
+   * Expands a bzip2 stream, which is how real OTA payloads store some partitions. `capacityHint`
+   * is the size the caller already knows (the operation's extents); the buffer grows if needed.
+   */
+  bzip2Decompress(input: Uint8Array, capacityHint?: number): Uint8Array;
   /** Compresses into an xz stream with magiskboot's settings (preset 6, CRC32 check). */
   xzCompress(input: Uint8Array): Uint8Array;
 }

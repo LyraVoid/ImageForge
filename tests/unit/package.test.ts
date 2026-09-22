@@ -134,9 +134,20 @@ describe("OTA payloads", () => {
     await expect(extractPackageEntry(bytesSource(payload), "system")).rejects.toThrowError(/needs the image/);
   });
 
-  it("names an operation it has no decoder for", async () => {
-    // REPLACE_BZ (1) needs a bzip2 decoder this build does not have yet
-    const payload = await buildPayload([{ name: "boot", data: new Uint8Array(4096) }], { operationType: 1 });
+  it("rebuilds a partition whose blob is a bzip2 stream, which real packages use", async () => {
+    const image = await buildBootImage({ kernel: null });
+    const payload = await buildPayload([{ name: "init_boot", data: image, compress: "bz2" }]);
+    const source = bytesSource(payload);
+    const parsed = await parsePayload(source);
+
+    expect(parsed.partitions[0].operations[0].typeName).toBe("REPLACE_BZ");
+    const extracted = await extractPayloadPartition(source, parsed, "init_boot");
+    expect(await sha256Hex(extracted)).toBe(await sha256Hex(image));
+  });
+
+  it("names an operation type it has no decoder for", async () => {
+    // 14 is not an operation this schema defines
+    const payload = await buildPayload([{ name: "boot", data: new Uint8Array(4096) }], { operationType: 14 });
     const source = bytesSource(payload);
 
     await expect(

@@ -132,6 +132,18 @@ what you are about to stack on top of.
 | "This ramdisk looks like it was already modified by another tool." | The ramdisk already carries another root solution; restore a stock image before stacking a second one. |
 | A verification check failed | Read the check's detail, export diagnostics, and do not use the image. |
 
+## Running the tests with real material
+
+The test suite skips the checks that need real files and says which variable supplies each one:
+
+| Variable | Material |
+| --- | --- |
+| `IMAGEFORGE_TEST_IMAGE` | A stock boot image (defaults to the GKI sample under `.research/images/`). |
+| `IMAGEFORGE_INIT_BOOT`, `IMAGEFORGE_VENDOR_BOOT`, `IMAGEFORGE_STOCK_IMAGE` | Device dumps of the partitions the pipeline patches. |
+| `IMAGEFORGE_OTA_PACKAGE` | A real OTA package. An 8 GiB zip64 file is fine: it is read in ranges. |
+| `IMAGEFORGE_OTA_INIT_BOOT_SHA256` | The digest the `init_boot` extracted from that package must have, which turns the package test into a byte-for-byte check against a device dump. |
+| `IMAGEFORGE_MAGISK_REFERENCE`, `IMAGEFORGE_KERNELSU_REFERENCE` | Outputs of the official patch apps, compared byte for byte. |
+
 ## Languages and privacy
 
 The interface ships in English, Simplified Chinese, Traditional Chinese and Japanese (header and

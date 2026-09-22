@@ -131,6 +131,16 @@ export function xzCompress(): never {
   return xzUnavailable();
 }
 
+function bzip2Unavailable(): never {
+  throw new Error(
+    "BZip2 support needs the WebAssembly module; hard refresh if this page predates it.",
+  );
+}
+
+export function bzip2Decompress(): never {
+  return bzip2Unavailable();
+}
+
 export function lz4CompressBlock(input: Uint8Array): Uint8Array {
   const n = input.length;
   if (n === 0) return new Uint8Array(0);
@@ -203,5 +213,6 @@ export function createTypeScriptModule(reason = "The WebAssembly module is not l
     // so is better than pretending the fallback can do it.
     xzDecompress,
     xzCompress,
+    bzip2Decompress,
   };
 }

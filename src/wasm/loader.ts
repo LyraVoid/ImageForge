@@ -35,6 +35,12 @@ interface WasmExports {
     destination: number,
     destinationCapacity: number,
   ): number | bigint;
+  imageforge_bzip2_decompress(
+    source: number,
+    sourceLength: number,
+    destination: number,
+    destinationCapacity: number,
+  ): number | bigint;
 }
 
 function versionString(raw: number): string {
@@ -145,25 +151,64 @@ function createWasmModule(exports: WasmExports): WasmImageModule {
       let capacity = Math.max(64 * 1024, input.length * 4);
       try {
         for (let attempt = 0; attempt < 16; attempt += 1) {
-          const destination = exports.alloc(capacity);
+          // The size the block was allocated with, so a retry frees exactly that and not the grown
+          // request: freeing with the wrong size corrupts the module's allocator.
+          const allocated = capacity;
+          const destination = exports.alloc(allocated);
           if (destination === 0) throw new Error("imageforge wasm: allocation failed.");
           try {
             const written = Number(
-              exports.imageforge_xz_decompress(source.pointer, source.size, destination, capacity),
+              exports.imageforge_xz_decompress(source.pointer, source.size, destination, allocated),
             );
             if (written === -2) {
-              capacity *= 2;
+              capacity = allocated * 2;
               continue;
             }
             if (written < 0) throw new Error("imageforge wasm: XZ decompression failed.");
             return new Uint8Array(exports.memory.buffer, destination, written).slice();
           } finally {
-            exports.dealloc(destination, capacity);
+            exports.dealloc(destination, allocated);
           }
         }
         throw new Error("imageforge wasm: the XZ payload needs more memory than this build can give it.");
       } finally {
         exports.dealloc(source.pointer, Math.max(1, source.size));
+      }
+    },
+    bzip2Decompress(input: Uint8Array, capacityHint = 0): Uint8Array {
+      const source = writeHeap(input);
+      let capacity = Math.max(64 * 1024, capacityHint, input.length * 4);
+      try {
+        for (let attempt = 0; attempt < 16; attempt += 1) {
+          const allocated = capacity;
+          const destination = exports.alloc(allocated);
+          if (destination === 0) throw new Error("imageforge wasm: allocation failed.");
+          try {
+            const written = Number(
+              exports.imageforge_bzip2_decompress(source.pointer, source.size, destination, allocated),
+            );
+            if (written === -2) {
+              // Free the block with the size it was allocated with before asking for a bigger one.
+              capacity = allocated * 2;
+              continue;
+            }
+            if (written < 0) throw new Error("imageforge wasm: the bzip2 stream is malformed.");
+            return new Uint8Array(exports.memory.buffer, destination, written).slice();
+          } finally {
+            exports.dealloc(destination, allocated);
+          }
+        }
+        throw new Error("imageforge wasm: the bzip2 stream needs more memory than this build can give it.");
+      } catch (error) {
+        // A trap poisons the instance, so it is dropped: the next call instantiates a clean module.
+        resetWasmModule();
+        throw error instanceof Error ? error : new Error(String(error));
+      } finally {
+        try {
+          exports.dealloc(source.pointer, Math.max(1, source.size));
+        } catch {
+          // the instance is gone; there is nothing left to free
+        }
       }
     },
     xzCompress(input: Uint8Array): Uint8Array {

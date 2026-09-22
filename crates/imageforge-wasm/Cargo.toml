@@ -18,3 +18,6 @@ strip = true
 [dependencies]
 # The same crate and version Magisk's magiskboot uses, so the xz streams agree in settings.
 lzma-rust2 = { version = "0.21.0", default-features = false, features = ["std", "xz", "encoder"] }
+# Decode only, pure Rust: real OTA payloads carry REPLACE_BZ blobs, and a C binding would not build
+# for wasm32-unknown-unknown without dragging a C toolchain into the browser build.
+bzip2-rs = "0.1.2"

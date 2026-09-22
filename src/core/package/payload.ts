@@ -1,5 +1,6 @@
 import { PackageError } from "../errors";
 import { sha256Hex } from "../hash";
+import { decodeBzip2 } from "../image/bzip2";
 import { decodeXz } from "../image/xz";
 import { ProtoReader, WIRE_LENGTH_DELIMITED, WIRE_VARINT } from "./protobuf";
 import type { ByteSource } from "./source";
@@ -39,6 +40,7 @@ export const OPERATION_TYPE: Record<number, string> = {
 const SOURCE_OPERATION_TYPES = new Set([2, 3, 4, 5, 9, 10, 11, 12, 13]);
 
 const OPERATION_REPLACE = 0;
+const OPERATION_REPLACE_BZ = 1;
 const OPERATION_ZERO = 6;
 const OPERATION_DISCARD = 7;
 const OPERATION_REPLACE_XZ = 8;
@@ -365,6 +367,24 @@ export async function extractPayloadPartition(
 
     if (operation.type === OPERATION_REPLACE) {
       writeExtents(output, operation.dstExtents, blob, payload.blockSize, operation);
+      continue;
+    }
+    if (operation.type === OPERATION_REPLACE_BZ) {
+      // The extents say how much room the stream has, which is the size it expands to.
+      const capacity = extentsCapacity(operation, payload.blockSize);
+      let expanded: Uint8Array;
+      try {
+        expanded = await decodeBzip2(blob, capacity);
+      } catch (error) {
+        throw new PackageError(
+          "The bzip2 stream of " +
+            partitionName +
+            " could not be expanded: " +
+            (error instanceof Error ? error.message : String(error)),
+          "This payload is damaged: a compressed partition stream could not be expanded.",
+        );
+      }
+      writeExtents(output, operation.dstExtents, expanded, payload.blockSize, operation);
       continue;
     }
     if (operation.type === OPERATION_REPLACE_XZ) {
