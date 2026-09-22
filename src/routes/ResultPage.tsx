@@ -8,10 +8,33 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CodeBlock } from "@/components/ui/code-block";
+import { checkLabel } from "@/i18n/engine-keys";
+import { useRecordText, useT } from "@/i18n/use-translation";
+import type { Translator } from "@/i18n";
 import { formatBytes } from "@/lib/format";
 import { useForgeStore } from "@/stores/forge-store";
 
+function providerNote(
+  t: Translator,
+  providerId: string,
+  providerName: string,
+  kernelPatchVersion: string | undefined,
+): string {
+  if (providerId === "mock") return t("result.note.mock");
+  if (providerId === "apatch") {
+    return t("result.note.apatch", {
+      provider: providerName,
+      kernelPatch: kernelPatchVersion
+        ? t("result.note.withKernelPatch", { version: kernelPatchVersion })
+        : "",
+    });
+  }
+  return t("result.note.ramdisk", { provider: providerName });
+}
+
 export function ResultPage() {
+  const t = useT();
+  const record = useRecordText();
   const navigate = useNavigate();
   const output = useForgeStore((state) => state.output);
   const error = useForgeStore((state) => state.error);
@@ -37,10 +60,8 @@ export function ResultPage() {
   return (
     <div className="mx-auto w-full max-w-3xl space-y-5">
       <div className="space-y-1">
-        <h1 className="text-base font-semibold tracking-tight">Patch complete</h1>
-        <p className="text-xs text-muted-foreground">
-          The output image was repacked and re-verified in the browser.
-        </p>
+        <h1 className="text-base font-semibold tracking-tight">{t("result.title")}</h1>
+        <p className="text-xs text-muted-foreground">{t("result.subtitle")}</p>
       </div>
 
       <ErrorPanel error={error} />
@@ -50,21 +71,31 @@ export function ResultPage() {
           <div className="space-y-1">
             <CardTitle className="font-mono">{output.fileName}</CardTitle>
             <CardDescription>
-              {formatBytes(output.sizeBytes)} · target {output.plan.target} · provider{" "}
-              {output.plan.providerName}
+              {t("result.meta", {
+                size: formatBytes(output.sizeBytes),
+                target: output.plan.target,
+                provider: output.plan.providerName,
+              })}
             </CardDescription>
           </div>
           <Badge variant={output.verification.verification.valid ? "success" : "danger"}>
             <ShieldCheck className="size-3" aria-hidden />
-            {output.verification.verification.valid ? "Verified" : "Needs attention"}
+            {output.verification.verification.valid ? t("result.verified") : t("result.needsAttention")}
           </Badge>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Verification</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              {t("result.verification")}
+            </p>
             <div className="space-y-2">
               {checks.map((entry) => (
-                <StatusBadge key={entry.id} status={entry.status} label={entry.label} detail={entry.detail} />
+                <StatusBadge
+                  key={entry.id}
+                  status={entry.status}
+                  label={checkLabel(t, entry)}
+                  detail={entry.detail}
+                />
               ))}
             </div>
           </div>
@@ -72,19 +103,16 @@ export function ResultPage() {
           {output.metadata.imageSizeBefore !== undefined &&
           output.metadata.imageSizeBefore !== output.metadata.imageSizeAfter ? (
             <p className="text-[11px] leading-4 text-muted-foreground">
-              Input {formatBytes(Number(output.metadata.imageSizeBefore))} → output{" "}
-              {formatBytes(Number(output.metadata.imageSizeAfter))}. The input was a whole-partition image:
-              partition padding and the AVB blob are not part of a boot image, so the output is the compact
-              boot image that mkbootimg and Magisk also produce. The kernel itself is unchanged apart from the
-              patch.
+              {t("result.compactNote", {
+                input: formatBytes(Number(output.metadata.imageSizeBefore)),
+                output: formatBytes(Number(output.metadata.imageSizeAfter)),
+              })}
             </p>
           ) : null}
 
           {output.metadata.preserveImageSize === "true" ? (
             <p className="text-[11px] leading-4 text-muted-foreground">
-              The output was zero padded to {formatBytes(Number(output.metadata.imageSizeAfter))} so it keeps
-              the original image size. The padding is not part of the boot image, and the AVB signature is
-              still invalid.
+              {t("result.paddedNote", { size: formatBytes(Number(output.metadata.imageSizeAfter)) })}
             </p>
           ) : null}
 
@@ -93,7 +121,7 @@ export function ResultPage() {
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="primary" size="lg" onClick={handleDownload}>
               <Download />
-              Download image
+              {t("result.download")}
             </Button>
             <Button
               variant="ghost"
@@ -103,38 +131,28 @@ export function ResultPage() {
               }}
             >
               <RotateCcw />
-              Patch another image
+              {t("result.another")}
             </Button>
           </div>
         </CardContent>
       </Card>
 
       <div className="rounded-lg border border-info/30 bg-info-muted px-4 py-3">
-        {output.plan.providerId === "mock" ? (
-          <p className="text-[11px] leading-4 text-muted-foreground">
-            Produced by the Mock Provider. This output demonstrates the pipeline, not a root solution: it
-            rewrites the kernel cmdline and the bootconfig manifest. Flashing it will not grant root.
-          </p>
-        ) : (
-          <p className="text-[11px] leading-4 text-muted-foreground">
-            Produced by {output.plan.providerName}
-            {output.metadata.kpimgVersion ? " with KernelPatch " + output.metadata.kpimgVersion : ""}. Only the
-            kernel section was modified. The AVB signature was dropped, so verified boot will fail unless the
-            image is re-signed or verification is disabled. ImageForge never flashes a device.
-          </p>
-        )}
+        <p className="text-[11px] leading-4 text-muted-foreground">
+          {providerNote(t, output.plan.providerId, output.plan.providerName, output.metadata.kpimgVersion)}
+        </p>
       </div>
 
       {warningEntries.length > 0 ? (
         <Card>
           <CardHeader>
-            <CardTitle>Warnings</CardTitle>
+            <CardTitle>{t("result.warnings")}</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-1.5">
               {warningEntries.map((warning) => (
                 <li key={warning} className="text-[11px] leading-4 text-muted-foreground">
-                  {warning}
+                  {record(warning)}
                 </li>
               ))}
             </ul>
@@ -144,8 +162,8 @@ export function ResultPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Technical details</CardTitle>
-          <CardDescription>Patch metadata recorded by the engine and the provider.</CardDescription>
+          <CardTitle>{t("result.technical")}</CardTitle>
+          <CardDescription>{t("result.technical.description")}</CardDescription>
         </CardHeader>
         <CardContent>
           <KeyValueList entries={metadataEntries} />
@@ -154,7 +172,7 @@ export function ResultPage() {
 
       <p className="text-center text-[11px] text-muted-foreground">
         <Link to="/settings" className="text-primary underline-offset-4 hover:underline">
-          Inspect the artifact registry and runtime settings
+          {t("result.settingsLink")}
         </Link>
       </p>
     </div>

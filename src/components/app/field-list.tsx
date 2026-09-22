@@ -1,4 +1,5 @@
 import type { ReportField } from "@/core";
+import { useRecordText } from "@/i18n/use-translation";
 import { cn } from "@/lib/utils";
 
 export interface FieldListProps {
@@ -8,6 +9,8 @@ export interface FieldListProps {
 }
 
 export function FieldList({ fields, className, columns = 2 }: FieldListProps) {
+  const record = useRecordText();
+
   return (
     <dl
       className={cn(
@@ -19,10 +22,12 @@ export function FieldList({ fields, className, columns = 2 }: FieldListProps) {
       {fields.map((entry) => (
         <div key={entry.label} className="min-w-0 space-y-0.5">
           <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            {entry.label}
+            {record(entry.label)}
           </dt>
-          <dd className="break-words font-mono text-xs leading-5 text-foreground">{entry.value}</dd>
-          {entry.hint ? <p className="text-[11px] leading-4 text-muted-foreground">{entry.hint}</p> : null}
+          <dd className="break-words font-mono text-xs leading-5 text-foreground">{record(entry.value)}</dd>
+          {entry.hint ? (
+            <p className="text-[11px] leading-4 text-muted-foreground">{record(entry.hint)}</p>
+          ) : null}
         </div>
       ))}
     </dl>

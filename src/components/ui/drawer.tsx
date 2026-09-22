@@ -1,5 +1,6 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
+import { useT } from "@/i18n/use-translation";
 import { cn } from "@/lib/utils";
 
 export const Drawer = DialogPrimitive.Root;
@@ -11,6 +12,7 @@ export interface DrawerContentProps extends React.ComponentProps<typeof DialogPr
 }
 
 export function DrawerContent({ className, children, side = "right", ...props }: DrawerContentProps) {
+  const t = useT();
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[1px]" />
@@ -27,7 +29,7 @@ export function DrawerContent({ className, children, side = "right", ...props }:
         {children}
         <DialogPrimitive.Close
           className="absolute right-3 top-3 rounded-sm p-1 text-muted-foreground transition-colors hover:bg-surface-muted hover:text-foreground"
-          aria-label="Close"
+          aria-label={t("shell.aria.close")}
         >
           <X className="size-4" />
         </DialogPrimitive.Close>

@@ -3,6 +3,7 @@ import * as React from "react";
 import type { ImageForgeErrorJson } from "@/core";
 import { Button } from "@/components/ui/button";
 import { CodeBlock } from "@/components/ui/code-block";
+import { useT } from "@/i18n/use-translation";
 import { cn } from "@/lib/utils";
 
 export interface ErrorPanelProps {
@@ -11,6 +12,7 @@ export interface ErrorPanelProps {
 }
 
 export function ErrorPanel({ error, className }: ErrorPanelProps) {
+  const t = useT();
   const [showTechnical, setShowTechnical] = React.useState(false);
   if (!error) return null;
 
@@ -33,9 +35,11 @@ export function ErrorPanel({ error, className }: ErrorPanelProps) {
                 onClick={() => setShowTechnical((value) => !value)}
                 aria-expanded={showTechnical}
               >
-                {showTechnical ? "Hide technical details" : "Show technical details"}
+                {showTechnical ? t("error.hideTechnical") : t("error.showTechnical")}
               </Button>
-              {showTechnical ? <CodeBlock label="technical detail" value={error.technical} wrap /> : null}
+              {showTechnical ? (
+                <CodeBlock label={t("error.technicalLabel")} value={error.technical} wrap />
+              ) : null}
             </div>
           ) : null}
         </div>

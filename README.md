@@ -57,7 +57,16 @@ Deliberately honest limits:
   image is re-signed or verification is disabled.
 * **Remote artifact downloads are not implemented.** Only bundled artifacts (digest
   verified against the registry) and the built-in mock artifact can be resolved.
-* **Vendor boot images are read-only** in this build.
+* **Vendor boot images are supported by the ramdisk providers.** The platform ramdisk fragment is
+  replaced and the image is repacked with its original layout: the dtb, the ramdisk table and the
+  bootconfig stay where they were.
+
+* **The interface speaks English, Simplified Chinese, Traditional Chinese and Japanese.** The
+  language picker is in the header and in Settings. Patch records are deliberately *not* translated:
+  a plan pins provider, release, artifact and configuration, and its id is a hash over them, so the
+  same run has to produce the same plan whatever language the interface is in. Verdicts the
+  interface words itself (compatibility reasons and warnings, verification checks) travel as stable
+  codes and are translated where they are shown.
 
 ## Quick start
 
@@ -138,7 +147,8 @@ and a real device `init_boot` image is used to enforce that
     third_party/       sources added around bundled upstream artifacts (not upstream code)
     src/components/    design system and shared application components
     src/routes/        Home, Analyze, Patch, Processing, Result, Settings
-    src/stores/        Zustand stores (workflow + theme)
+    src/stores/        Zustand stores (workflow + theme + language)
+    src/i18n/          message catalogues (en, zh-Hans, zh-Hant, ja) and engine prose tables
     crates/            Rust crate compiled to WebAssembly
     tests/             unit, integration, worker, wasm and UI tests
     THIRD_PARTY_LICENSES/  upstream license texts and integration policy

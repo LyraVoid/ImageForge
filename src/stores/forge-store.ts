@@ -1,5 +1,8 @@
 import { create } from "zustand";
 import { toImageForgeError } from "@/core/errors";
+import { translate } from "@/i18n/translate";
+import type { MessageKey } from "@/i18n";
+import { useLocaleStore } from "./locale-store";
 import type {
   ImageForgeErrorJson,
   PatchOptions,
@@ -40,6 +43,11 @@ export interface ForgeOutput {
 }
 
 let client: PatchWorkerClient | null = null;
+
+/** Progress lines the store itself reports are read at the moment they are produced. */
+function message(key: MessageKey): string {
+  return translate(useLocaleStore.getState().locale, key);
+}
 
 function getClient(): PatchWorkerClient {
   if (!client) client = createPatchWorkerClient();
@@ -162,7 +170,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       error: null,
       cancelRequested: false,
       output: null,
-      progress: { stage: "analyze", progress: 0, message: "Preparing" },
+      progress: { stage: "analyze", progress: 0, message: message("process.message.preparing") },
     });
     try {
       const attachments = state.attachments.map((file) => ({
@@ -196,7 +204,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
         stage: "patched",
         isBusy: false,
         cancelRequested: false,
-        progress: { stage: "complete", progress: 100, message: "Patch complete" },
+        progress: { stage: "complete", progress: 100, message: message("process.message.complete") },
       });
       return true;
     } catch (error) {

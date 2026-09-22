@@ -1,5 +1,6 @@
 import { FileUp, LoaderCircle } from "lucide-react";
 import * as React from "react";
+import { useT } from "@/i18n/use-translation";
 import { cn } from "@/lib/utils";
 
 export interface FileDropzoneProps {
@@ -19,30 +20,33 @@ export function FileDropzone({
   maxBytes = 512 * 1024 * 1024,
   disabled = false,
   busy = false,
-  title = "Drop an Android image here",
-  hint = "or click to browse files",
+  title,
+  hint,
   className,
 }: FileDropzoneProps) {
+  const t = useT();
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = React.useState(false);
   const [problem, setProblem] = React.useState<string | null>(null);
 
   const accept_ = disabled || busy;
+  const shownTitle = title ?? t("dropzone.title");
+  const shownHint = hint ?? t("dropzone.hint");
 
   const validate = React.useCallback(
     (file: File): boolean => {
       if (file.size === 0) {
-        setProblem("The selected file is empty.");
+        setProblem(t("dropzone.empty"));
         return false;
       }
       if (file.size > maxBytes) {
-        setProblem("The file is larger than the supported limit.");
+        setProblem(t("dropzone.tooLarge"));
         return false;
       }
       setProblem(null);
       return true;
     },
-    [maxBytes],
+    [maxBytes, t],
   );
 
   const handleFiles = React.useCallback(
@@ -68,7 +72,7 @@ export function FileDropzone({
         role="button"
         tabIndex={accept_ ? -1 : 0}
         aria-disabled={accept_}
-        aria-label={title}
+        aria-label={shownTitle}
         onClick={() => {
           if (!accept_) inputRef.current?.click();
         }}
@@ -101,8 +105,8 @@ export function FileDropzone({
           )}
         </div>
         <div className="space-y-1">
-          <p className="text-sm font-medium text-foreground">{busy ? "Analyzing image" : title}</p>
-          <p className="text-xs text-muted-foreground">{hint}</p>
+          <p className="text-sm font-medium text-foreground">{busy ? t("dropzone.busy") : shownTitle}</p>
+          <p className="text-xs text-muted-foreground">{shownHint}</p>
         </div>
         <p className="font-mono text-[11px] text-muted-foreground">boot.img / init_boot.img / vendor_boot.img</p>
         <input

@@ -1,11 +1,14 @@
-import { ExternalLink, Layers, MemoryStick, Terminal } from "lucide-react";
+import { ExternalLink, Languages, Layers, MemoryStick, Terminal } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ARTIFACT_CATALOG, MAX_SUPPORTED_IMAGE_BYTES, PROVIDER_DESCRIPTORS } from "@/core";
 import type { PatchProviderDescriptor } from "@/core";
 import { KeyValueList } from "@/components/app/key-value-list";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { LanguageOptions } from "@/components/ui/language-menu";
 import { Separator } from "@/components/ui/separator";
+import { useRecordText, useT } from "@/i18n/use-translation";
+import type { MessageKey } from "@/i18n";
 import { formatBytes, truncateHash } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useForgeStore } from "@/stores/forge-store";
@@ -14,19 +17,24 @@ import type { ThemeMode } from "@/stores/theme-store";
 import { loadWasmModule } from "@/wasm/loader";
 import type { WasmStatus } from "@/wasm/abi";
 
-const THEME_OPTIONS: Array<{ value: ThemeMode; label: string }> = [
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
-  { value: "system", label: "System" },
+const THEME_OPTIONS: Array<{ value: ThemeMode; labelKey: MessageKey }> = [
+  { value: "light", labelKey: "shell.theme.light" },
+  { value: "dark", labelKey: "shell.theme.dark" },
+  { value: "system", labelKey: "shell.theme.system" },
 ];
 
 function ProviderRow({ descriptor }: { descriptor: PatchProviderDescriptor }) {
+  const t = useT();
+  const record = useRecordText();
+
   return (
     <div className="space-y-1.5 py-3 first:pt-0 last:pb-0">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-medium text-foreground">{descriptor.name}</span>
         <Badge variant={descriptor.status === "available" ? "success" : "neutral"}>
-          {descriptor.status === "available" ? "Available" : "Planned"}
+          {descriptor.status === "available"
+            ? t("settings.providers.available")
+            : t("settings.providers.planned")}
         </Badge>
         <span className="font-mono text-[11px] text-muted-foreground">{descriptor.id}</span>
         {descriptor.website ? (
@@ -36,17 +44,17 @@ function ProviderRow({ descriptor }: { descriptor: PatchProviderDescriptor }) {
             rel="noreferrer noopener"
             className="inline-flex items-center gap-1 text-[11px] text-primary underline-offset-4 hover:underline"
           >
-            upstream
+            {t("settings.providers.upstream")}
             <ExternalLink className="size-3" aria-hidden />
           </a>
         ) : null}
       </div>
-      <p className="text-[11px] leading-4 text-muted-foreground">{descriptor.description}</p>
+      <p className="text-[11px] leading-4 text-muted-foreground">{record(descriptor.description)}</p>
       {descriptor.notes.length > 0 ? (
         <ul className="space-y-0.5">
           {descriptor.notes.map((note) => (
             <li key={note} className="text-[11px] leading-4 text-muted-foreground">
-              — {note}
+              — {record(note)}
             </li>
           ))}
         </ul>
@@ -56,6 +64,7 @@ function ProviderRow({ descriptor }: { descriptor: PatchProviderDescriptor }) {
 }
 
 export function SettingsPage() {
+  const t = useT();
   const mode = useThemeStore((state) => state.mode);
   const setMode = useThemeStore((state) => state.setMode);
   const workerMode = useForgeStore((state) => state.workerMode);
@@ -76,25 +85,38 @@ export function SettingsPage() {
   }, []);
 
   const runtimeEntries = [
-    { key: "Executor", value: workerMode === "worker" ? "Web Worker (Comlink RPC)" : "Inline session (no Worker available)" },
-    { key: "WASM module", value: wasm ? (wasm.available ? "loaded " + (wasm.version ?? "") : "TypeScript fallback") : "checking" },
-    { key: "WASM path", value: wasm?.path ?? "/wasm/imageforge.wasm" },
-    { key: "Image size limit", value: formatBytes(MAX_SUPPORTED_IMAGE_BYTES) },
+    {
+      key: t("settings.runtime.executor"),
+      value:
+        workerMode === "worker"
+          ? t("settings.runtime.executor.worker")
+          : t("settings.runtime.executor.inline"),
+    },
+    {
+      key: t("settings.runtime.wasm"),
+      value: wasm
+        ? wasm.available
+          ? wasm.version
+            ? t("settings.runtime.wasm.loaded", { version: wasm.version })
+            : t("settings.runtime.wasm.loaded", { version: "" }).trim()
+          : t("settings.runtime.wasm.fallback")
+        : t("settings.runtime.wasm.checking"),
+    },
+    { key: t("settings.runtime.wasmPath"), value: wasm?.path ?? "/wasm/imageforge.wasm" },
+    { key: t("settings.runtime.limit"), value: formatBytes(MAX_SUPPORTED_IMAGE_BYTES) },
   ];
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-5">
       <div className="space-y-1">
-        <h1 className="text-base font-semibold tracking-tight">Settings</h1>
-        <p className="text-xs text-muted-foreground">
-          Runtime, registry and appearance. Everything is stored locally.
-        </p>
+        <h1 className="text-base font-semibold tracking-tight">{t("settings.title")}</h1>
+        <p className="text-xs text-muted-foreground">{t("settings.subtitle")}</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Appearance</CardTitle>
-          <CardDescription>Design tokens switch between the light and dark themes.</CardDescription>
+          <CardTitle>{t("settings.appearance.title")}</CardTitle>
+          <CardDescription>{t("settings.appearance.description")}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="inline-flex items-center gap-0.5 rounded-md border border-border bg-surface-muted p-0.5">
@@ -111,7 +133,7 @@ export function SettingsPage() {
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                {option.label}
+                {t(option.labelKey)}
               </button>
             ))}
           </div>
@@ -120,17 +142,30 @@ export function SettingsPage() {
 
       <Card>
         <CardHeader className="flex-row items-center gap-2">
+          <Languages className="size-3.5 text-muted-foreground" aria-hidden />
+          <div>
+            <CardTitle>{t("settings.language.title")}</CardTitle>
+            <CardDescription>{t("settings.language.description")}</CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <LanguageOptions />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex-row items-center gap-2">
           <Terminal className="size-3.5 text-muted-foreground" aria-hidden />
           <div>
-            <CardTitle>Runtime</CardTitle>
-            <CardDescription>Heavy work executes off the main thread.</CardDescription>
+            <CardTitle>{t("settings.runtime.title")}</CardTitle>
+            <CardDescription>{t("settings.runtime.description")}</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
           <KeyValueList entries={runtimeEntries} />
           {wasm && !wasm.available && wasm.reason ? (
             <p className="mt-3 text-[11px] leading-4 text-muted-foreground">
-              Reason: {wasm.reason} Run <code>pnpm wasm:build</code> to produce the WebAssembly module.
+              {t("settings.runtime.reason", { reason: wasm.reason, command: "pnpm wasm:build" })}
             </p>
           ) : null}
         </CardContent>
@@ -140,10 +175,8 @@ export function SettingsPage() {
         <CardHeader className="flex-row items-center gap-2">
           <Layers className="size-3.5 text-muted-foreground" aria-hidden />
           <div>
-            <CardTitle>Artifact registry</CardTitle>
-            <CardDescription>
-              Versions, architectures and digests are declared here, never hardcoded in the UI.
-            </CardDescription>
+            <CardTitle>{t("settings.artifacts.title")}</CardTitle>
+            <CardDescription>{t("settings.artifacts.description")}</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -153,7 +186,9 @@ export function SettingsPage() {
                 <span className="font-mono text-xs text-foreground">
                   {release.providerId}@{release.release}
                 </span>
-                <Badge variant="neutral">{release.artifacts.length} artifact(s)</Badge>
+                <Badge variant="neutral">
+                  {t("settings.artifacts.count", { count: release.artifacts.length })}
+                </Badge>
               </div>
               <ul className="space-y-2">
                 {release.artifacts.map((artifact) => (
@@ -169,9 +204,13 @@ export function SettingsPage() {
                       ) : null}
                     </div>
                     <p className="break-all font-mono text-[11px] text-muted-foreground">
-                      sha256 {artifact.sha256 ? truncateHash(artifact.sha256, 32, 16) : "not recorded"}
+                      sha256 {artifact.sha256 ? truncateHash(artifact.sha256, 32, 16) : t("settings.artifacts.notRecorded")}
                     </p>
-                    <p className="font-mono text-[11px] text-muted-foreground">source {artifact.source ?? "unknown"}</p>
+                    <p className="font-mono text-[11px] text-muted-foreground">
+                      {t("settings.artifacts.source", {
+                        source: artifact.source ?? t("settings.artifacts.unknownSource"),
+                      })}
+                    </p>
                   </li>
                 ))}
               </ul>
@@ -181,10 +220,7 @@ export function SettingsPage() {
               <Separator />
             </div>
           ))}
-          <p className="text-[11px] leading-4 text-muted-foreground">
-            Remote artifact downloads are not part of this build. Upstream releases, their build systems and
-            their licenses must be reviewed before a provider is implemented.
-          </p>
+          <p className="text-[11px] leading-4 text-muted-foreground">{t("settings.artifacts.remote")}</p>
         </CardContent>
       </Card>
 
@@ -192,29 +228,24 @@ export function SettingsPage() {
         <CardHeader className="flex-row items-center gap-2">
           <MemoryStick className="size-3.5 text-muted-foreground" aria-hidden />
           <div>
-            <CardTitle>Patch providers</CardTitle>
-            <CardDescription>Providers only see the normalized image produced by the Image Engine.</CardDescription>
+            <CardTitle>{t("settings.providers.title")}</CardTitle>
+            <CardDescription>{t("settings.providers.description")}</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="divide-y divide-border">
           {PROVIDER_DESCRIPTORS.map((descriptor) => (
             <ProviderRow key={descriptor.id} descriptor={descriptor} />
           ))}
-
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>License</CardTitle>
-          <CardDescription>ImageForge is AGPL-3.0-or-later.</CardDescription>
+          <CardTitle>{t("settings.license.title")}</CardTitle>
+          <CardDescription>{t("settings.license.description")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
-          <p className="text-[11px] leading-4 text-muted-foreground">
-            Third-party components keep their own licenses and are never re-licensed. See LICENSE, NOTICE and
-            THIRD_PARTY_LICENSES/ in the repository root. No upstream root solution code is bundled in this
-            build.
-          </p>
+          <p className="text-[11px] leading-4 text-muted-foreground">{t("settings.license.body")}</p>
         </CardContent>
       </Card>
     </div>

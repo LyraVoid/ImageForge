@@ -54,7 +54,8 @@ describe.skipIf(!hasInitBoot)("ramdisk layer against a real init_boot image", ()
         )?.value;
       expect(value("Archive")).toBe("CPIO newc");
       expect(value("Entries")).toBe(String(decoded.archive.entries.length));
-      expect(value("Contents")).toMatch(/director(y|ies)/);
+      expect(Number(value("Directories"))).toBeGreaterThanOrEqual(1);
+      expect(Number(value("Files"))).toBeGreaterThanOrEqual(1);
       expect(value("Compression")).toBe("LZ4 (legacy)");
     },
     300000,

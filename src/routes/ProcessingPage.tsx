@@ -5,20 +5,29 @@ import { ErrorPanel } from "@/components/app/error-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { useRecordText, useT } from "@/i18n/use-translation";
+import type { MessageKey } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { useForgeStore } from "@/stores/forge-store";
 
-const MILESTONES = [
-  { id: "analyze", label: "Analyze", progress: 0, description: "Reading the boot header" },
-  { id: "extract", label: "Extract", progress: 20, description: "Splitting kernel and ramdisk" },
-  { id: "prepare", label: "Prepare", progress: 40, description: "Building the patch payload" },
-  { id: "patch", label: "Patch", progress: 60, description: "Applying the provider pipeline" },
-  { id: "repack", label: "Repack", progress: 80, description: "Rebuilding the boot image" },
-  { id: "verify", label: "Verify", progress: 95, description: "Re-parsing and hashing the output" },
-  { id: "complete", label: "Complete", progress: 100, description: "Output ready to download" },
+const MILESTONES: Array<{
+  id: string;
+  labelKey: MessageKey;
+  descriptionKey: MessageKey;
+  progress: number;
+}> = [
+  { id: "analyze", labelKey: "process.stage.analyze.label", descriptionKey: "process.stage.analyze.description", progress: 0 },
+  { id: "extract", labelKey: "process.stage.extract.label", descriptionKey: "process.stage.extract.description", progress: 20 },
+  { id: "prepare", labelKey: "process.stage.prepare.label", descriptionKey: "process.stage.prepare.description", progress: 40 },
+  { id: "patch", labelKey: "process.stage.patch.label", descriptionKey: "process.stage.patch.description", progress: 60 },
+  { id: "repack", labelKey: "process.stage.repack.label", descriptionKey: "process.stage.repack.description", progress: 80 },
+  { id: "verify", labelKey: "process.stage.verify.label", descriptionKey: "process.stage.verify.description", progress: 95 },
+  { id: "complete", labelKey: "process.stage.complete.label", descriptionKey: "process.stage.complete.description", progress: 100 },
 ];
 
 export function ProcessingPage() {
+  const t = useT();
+  const record = useRecordText();
   const navigate = useNavigate();
   const stage = useForgeStore((state) => state.stage);
   const progress = useForgeStore((state) => state.progress);
@@ -41,17 +50,15 @@ export function ProcessingPage() {
       <div className="space-y-4">
         <Card>
           <CardHeader>
-            <CardTitle>The patch did not finish</CardTitle>
-            <CardDescription>
-              Nothing is running now. The reason is below, and technical details are available.
-            </CardDescription>
+            <CardTitle>{t("process.failed.title")}</CardTitle>
+            <CardDescription>{t("process.failed.body")}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap items-center gap-2">
             <Button variant="primary" onClick={() => navigate("/patch")}>
-              Back to the patch plan
+              {t("process.failed.back")}
             </Button>
             <Button variant="ghost" onClick={() => navigate("/")}>
-              Start over
+              {t("process.failed.restart")}
             </Button>
           </CardContent>
         </Card>
@@ -64,17 +71,15 @@ export function ProcessingPage() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Nothing is being processed</CardTitle>
-          <CardDescription>
-            Start from an image, choose a patch method and press Start patch.
-          </CardDescription>
+          <CardTitle>{t("process.idle.title")}</CardTitle>
+          <CardDescription>{t("process.idle.body")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-2">
           <Button asChild variant="secondary">
-            <Link to="/">Select an image</Link>
+            <Link to="/">{t("process.idle.select")}</Link>
           </Button>
           <Button asChild variant="ghost">
-            <Link to="/patch">Back to the patch plan</Link>
+            <Link to="/patch">{t("process.failed.back")}</Link>
           </Button>
         </CardContent>
       </Card>
@@ -83,13 +88,16 @@ export function ProcessingPage() {
 
   const current = progress?.progress ?? 0;
   const activeStage = progress?.stage ?? "analyze";
+  const activeMilestone = MILESTONES.find((entry) => entry.id === activeStage);
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-5 py-4">
       <div className="space-y-2">
-        <h1 className="text-base font-semibold tracking-tight">Patching image</h1>
+        <h1 className="text-base font-semibold tracking-tight">{t("process.title")}</h1>
         <p className="text-xs text-muted-foreground">
-          {progress?.message ?? "Working inside the patch worker"} · all processing stays on this device.
+          {t("process.subtitle", {
+            message: progress?.message ? record(progress.message) : t("process.working"),
+          })}
         </p>
       </div>
 
@@ -105,12 +113,12 @@ export function ProcessingPage() {
                 <CircleCheck className="size-4 text-success" aria-hidden />
               )}
               <span className="text-sm font-medium">
-                {MILESTONES.find((entry) => entry.id === activeStage)?.label ?? "Working"}
+                {activeMilestone ? t(activeMilestone.labelKey) : t("process.working")}
               </span>
             </div>
             <span className="font-mono text-xs text-muted-foreground">{current}%</span>
           </div>
-          <Progress value={current} aria-label="Patch progress" />
+          <Progress value={current} aria-label={t("process.aria.progress")} />
         </CardContent>
       </Card>
 
@@ -133,9 +141,11 @@ export function ProcessingPage() {
                   <div className="flex min-w-0 flex-1 items-baseline justify-between gap-3">
                     <div className="min-w-0">
                       <p className={cn("text-xs", done ? "text-foreground" : "text-muted-foreground")}>
-                        {milestone.label}
+                        {t(milestone.labelKey)}
                       </p>
-                      <p className="text-[11px] leading-4 text-muted-foreground">{milestone.description}</p>
+                      <p className="text-[11px] leading-4 text-muted-foreground">
+                        {t(milestone.descriptionKey)}
+                      </p>
                     </div>
                     <span className="font-mono text-[11px] text-muted-foreground">{milestone.progress}%</span>
                   </div>
@@ -156,7 +166,7 @@ export function ProcessingPage() {
           }}
         >
           <X />
-          Cancel
+          {t("process.cancel")}
         </Button>
       </div>
     </div>

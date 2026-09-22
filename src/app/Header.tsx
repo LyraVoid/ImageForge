@@ -12,15 +12,25 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { LanguageMenu } from "@/components/ui/language-menu";
 import { StepIndicator } from "@/components/ui/step-indicator";
+import { useT } from "@/i18n/use-translation";
 import { useThemeStore } from "@/stores/theme-store";
 import type { ThemeMode } from "@/stores/theme-store";
-import { WORKFLOW_STEPS, stepIndexForPath } from "./workflow";
+import { useWorkflowSteps, stepIndexForPath } from "./workflow";
+
+const THEME_KEYS: Array<{ value: ThemeMode; labelKey: "shell.theme.light" | "shell.theme.dark" | "shell.theme.system" }> = [
+  { value: "light", labelKey: "shell.theme.light" },
+  { value: "dark", labelKey: "shell.theme.dark" },
+  { value: "system", labelKey: "shell.theme.system" },
+];
 
 export function Header() {
+  const t = useT();
   const location = useLocation();
   const mode = useThemeStore((state) => state.mode);
   const setMode = useThemeStore((state) => state.setMode);
+  const steps = useWorkflowSteps();
   const stepIndex = stepIndexForPath(location.pathname);
 
   return (
@@ -37,39 +47,42 @@ export function Header() {
         </Link>
 
         <div className="hidden flex-1 justify-center md:flex">
-          <StepIndicator steps={WORKFLOW_STEPS} currentIndex={stepIndex} />
+          <StepIndicator steps={steps} currentIndex={stepIndex} />
         </div>
 
         <div className="ml-auto flex items-center gap-1">
-          <Button asChild variant="ghost" size="icon" aria-label="Open settings">
+          <LanguageMenu />
+          <Button asChild variant="ghost" size="icon" aria-label={t("shell.aria.settings")}>
             <Link to="/settings">
               <Settings />
             </Link>
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Change theme">
+              <Button variant="ghost" size="icon" aria-label={t("shell.aria.theme")}>
                 {mode === "dark" ? <Moon /> : mode === "light" ? <Sun /> : <Monitor />}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuLabel>Appearance</DropdownMenuLabel>
+              <DropdownMenuLabel>{t("shell.appearance")}</DropdownMenuLabel>
               <DropdownMenuRadioGroup value={mode} onValueChange={(value) => setMode(value as ThemeMode)}>
-                <DropdownMenuRadioItem value="light">Light</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="dark">Dark</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="system">System</DropdownMenuRadioItem>
+                {THEME_KEYS.map((entry) => (
+                  <DropdownMenuRadioItem key={entry.value} value={entry.value}>
+                    {t(entry.labelKey)}
+                  </DropdownMenuRadioItem>
+                ))}
               </DropdownMenuRadioGroup>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link to="/settings">
                   <Settings className="size-3.5" />
-                  Settings
+                  {t("shell.settings")}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <a href="https://github.com/" target="_blank" rel="noreferrer noopener">
                   <GitBranch className="size-3.5" />
-                  Source
+                  {t("shell.source")}
                 </a>
               </DropdownMenuItem>
             </DropdownMenuContent>

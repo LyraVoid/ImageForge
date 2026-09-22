@@ -1,5 +1,6 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
+import { useT } from "@/i18n/use-translation";
 import { cn } from "@/lib/utils";
 
 export const Dialog = DialogPrimitive.Root;
@@ -11,6 +12,7 @@ export function DialogContent({
   children,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content>) {
+  const t = useT();
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[1px]" />
@@ -24,7 +26,7 @@ export function DialogContent({
         {children}
         <DialogPrimitive.Close
           className="absolute right-3 top-3 rounded-sm p-1 text-muted-foreground transition-colors hover:bg-surface-muted hover:text-foreground"
-          aria-label="Close"
+          aria-label={t("shell.aria.close")}
         >
           <X className="size-4" />
         </DialogPrimitive.Close>

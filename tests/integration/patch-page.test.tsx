@@ -59,9 +59,9 @@ describe("patch page re-planning", () => {
     renderPatchPage();
 
     expect(await screen.findByText("Magisk options")).toBeInTheDocument();
-    expect(screen.getByLabelText("Pre-init storage partition")).toBeInTheDocument();
+    expect(screen.getByLabelText("Pre-init storage (PREINITDEVICE)")).toBeInTheDocument();
 
-    const keepVerity = screen.getByLabelText("Keep verity");
+    const keepVerity = screen.getByLabelText("Keep verity (KEEPVERITY)");
     expect(keepVerity).toBeChecked();
     fireEvent.click(keepVerity);
 

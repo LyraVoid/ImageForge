@@ -39,6 +39,31 @@ never parses a raw `boot.img` itself.
 6. **Bundled artifacts are digest verified before execution.** `loadVerifiedPayload`
    refuses bytes whose SHA-256 differs from the registry entry.
 
+## Internationalization
+
+The interface ships in English, Simplified Chinese, Traditional Chinese and Japanese. Each
+language has one catalogue in `src/i18n/messages/`; the English one is the source of truth, its keys
+are the `MessageKey` union, and the other catalogues are typed as `Messages`, so a language that
+misses a message does not compile. The prose the engine produces is separate: `src/i18n/record/`
+holds one table per language keyed by the English source string, gettext style, and is used for
+display only.
+
+Two kinds of string stay English on purpose, for the same reason: **a plan is the record of a run**.
+A plan pins provider, release, artifact, architecture, target, header version and configuration, and
+its id is a hash over exactly those fields, so changing the interface language must not change a
+plan or its id. Engine prose that can end up in a plan (stage labels, provider notes) therefore
+stays English in the plan, and the interface translates what it displays. Verdicts the interface has
+to word itself are reported as stable codes with parameters instead of sentences: compatibility
+reasons (`reasonDetails[].code`), compatibility warnings and verification checks (`checks[].id`)
+are matched against the tables in `src/i18n/engine-keys.ts`, and a code without a message falls
+back to the English sentence the engine sent rather than showing nothing.
+
+`tests/unit/i18n.test.ts` checks the catalogues (key parity, no empty message, identical
+placeholders, a language that is actually translated) and `tests/unit/i18n-coverage.test.ts`
+checks coverage in both directions: every report label, provider sentence, stage label and progress
+line the engine can produce has a translation in every language, and every translation is tied to
+prose that still exists in `src/core`.
+
 ## KernelSU (LKM) provider
 
     init_boot.img (or a boot.img with a ramdisk)
@@ -132,18 +157,20 @@ and `compressSection` writes the payload back into the same container using our 
 compressor and XXH32. Without that step the bootloader would try to decompress an
 uncompressed payload.
 
-Vendor boot images are parsed read-only.
+Vendor boot images are parsed and repacked: the platform ramdisk fragment is replaced and the
+layout is recomputed by the parser's own rule (page aligned ramdisk, then dtb, table and bootconfig),
+so every other section ends up where it started.
 
 ## Patch providers
 
 | Provider | Target | Mechanism |
 | --- | --- | --- |
-| `apatch` | `boot.img` only | KernelPatch core image injected into the kernel by the upstream kptools build in WebAssembly. Two core images are registered as artifacts (upstream and the Aster fork); each only trusts its own manager app, so the plan records `kernelPatchFlavor` and `requiredManager` |
+| `apatch` | `boot.img` only | KernelPatch core image injected into the kernel by the upstream kptools build in WebAssembly. Two core images are registered as artifacts (upstream and the Aster fork); each only trusts its own manager app, so the plan records `kernelPatchFlavor` and `requiredManager`. A run can also carry its own core image (`kernelPatchFlavor: custom`), which is checked for the KernelPatch magic before kptools sees it |
+| `kernelsu` | `boot.img`, `init_boot.img`, `vendor_boot.img` | The ramdisk init becomes `init.real` and the ksuinit wrapper takes its place, with the KernelSU loadable module next to it. The module comes from the registry for the device KMI or from the run |
+| `magisk` | `boot.img`, `init_boot.img`, `vendor_boot.img` | magiskinit replaces the ramdisk init, Magisk's payloads are written under `overlay.d/sbin`, its configuration goes to `.backup/.magisk`, and the stock init is kept as `.backup/init.xz` |
 | `mock` | `boot.img`, `init_boot.img` | Rewrites the kernel cmdline and a bootconfig manifest |
 
-Magisk and KernelSU are declared as `planned`. Both need CPIO read/write, the full
-compression matrix and their own upstream artifact and license review before they can be
-implemented.
+All four are implemented; the two ramdisk providers are described above.
 
 ### APatch pipeline
 

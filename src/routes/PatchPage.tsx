@@ -19,12 +19,24 @@ import {
   MAGISK_PREINIT_DEVICE_SETTING,
   plannedKmi,
 } from "@/core";
+import { useRecordText, useT } from "@/i18n/use-translation";
+import type { MessageKey } from "@/i18n";
 import { mergePlanOptions } from "@/stores/plan-options";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useForgeStore } from "@/stores/forge-store";
 
+/** What each provider writes, so the banner never describes another provider's work. */
+const BANNER_BODY: Record<string, MessageKey> = {
+  mock: "patch.banner.mock.body",
+  apatch: "patch.banner.apatch.body",
+  kernelsu: "patch.banner.kernelsu.body",
+  magisk: "patch.banner.magisk.body",
+};
+
 export function PatchPage() {
+  const t = useT();
+  const record = useRecordText();
   const navigate = useNavigate();
   const analysis = useForgeStore((state) => state.analysis);
   const planResponse = useForgeStore((state) => state.planResponse);
@@ -84,7 +96,7 @@ export function PatchPage() {
       <Card>
         <CardContent className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
           <LoaderCircle className="size-4 animate-spin text-primary" aria-hidden />
-          Building the patch plan
+          {t("patch.building")}
         </CardContent>
       </Card>
     );
@@ -92,23 +104,25 @@ export function PatchPage() {
 
   const plan = planResponse.plan;
   const candidate = analysis.compatibility.candidates.find((entry) => entry.providerId === selectedProviderId);
+  const bannerBody = BANNER_BODY[plan.providerId];
+  const flavour = APATCH_FLAVORS.find((entry) => entry.id === readOption(APATCH_FLAVOR_SETTING, "upstream"));
 
   const planEntries = [
-    { key: "Provider", value: plan.providerName + " (" + plan.providerId + ")" },
-    { key: "Release", value: plan.release },
-    { key: "Artifact", value: plan.artifact.id + "@" + plan.artifact.version },
-    { key: "Artifact type", value: plan.artifact.type },
+    { key: t("patch.field.provider"), value: plan.providerName + " (" + plan.providerId + ")" },
+    { key: t("patch.field.release"), value: plan.release },
+    { key: t("patch.field.artifact"), value: plan.artifact.id + "@" + plan.artifact.version },
+    { key: t("patch.field.artifactType"), value: plan.artifact.type },
     {
-      key: "Artifact SHA-256",
-      value: plan.artifact.sha256 ? truncateHash(plan.artifact.sha256, 24, 12) : "not recorded",
+      key: t("patch.field.artifactSha256"),
+      value: plan.artifact.sha256 ? truncateHash(plan.artifact.sha256, 24, 12) : t("patch.value.notRecorded"),
     },
-    { key: "Architecture", value: plan.architecture },
-    { key: "Target image", value: plan.target },
-    { key: "Boot header", value: "v" + plan.headerVersion },
-    { key: "Page size", value: formatBytes(plan.pageSize) },
-    { key: "Source SHA-256", value: truncateHash(plan.sourceImageSha256, 24, 12) },
-    { key: "Plan id", value: plan.id },
-    { key: "Reproducible", value: plan.reproducible ? "yes" : "no" },
+    { key: t("patch.field.architecture"), value: plan.architecture },
+    { key: t("patch.field.target"), value: plan.target },
+    { key: t("patch.field.header"), value: "v" + plan.headerVersion },
+    { key: t("patch.field.pageSize"), value: formatBytes(plan.pageSize) },
+    { key: t("patch.field.sourceSha256"), value: truncateHash(plan.sourceImageSha256, 24, 12) },
+    { key: t("patch.field.planId"), value: plan.id },
+    { key: t("patch.field.reproducible"), value: plan.reproducible ? t("patch.value.yes") : t("patch.value.no") },
   ];
 
   const configurationEntries = Object.entries(plan.configuration).map(([key, value]) => ({
@@ -121,10 +135,14 @@ export function PatchPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
           <h1 className="text-base font-semibold tracking-tight">{plan.providerName}</h1>
-          <p className="max-w-2xl text-xs text-muted-foreground">{candidate?.description}</p>
+          <p className="max-w-2xl text-xs text-muted-foreground">
+            {candidate ? record(candidate.description) : null}
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          {candidate?.status === "planned" ? <Badge variant="neutral">Not available</Badge> : null}
+          {candidate?.status === "planned" ? (
+            <Badge variant="neutral">{t("analyze.method.notAvailable")}</Badge>
+          ) : null}
           <Badge variant="outline">{plan.target}</Badge>
           <Badge variant="neutral">v{plan.headerVersion}</Badge>
         </div>
@@ -138,14 +156,12 @@ export function PatchPage() {
           <div className="space-y-1">
             <p className="text-xs font-medium text-foreground">
               {plan.providerId === "mock"
-                ? "This is the Mock Provider."
-                : "This runs the upstream " + plan.providerName + " implementation."}
+                ? t("patch.banner.mock.title")
+                : t("patch.banner.upstream", { provider: plan.providerName })}
             </p>
-            <p className="text-[11px] leading-4 text-muted-foreground">
-              {plan.providerId === "mock"
-                ? "It rewrites the kernel cmdline and writes a bootconfig manifest so the pipeline can be verified end to end. It does not root a device."
-                : "KernelPatch is injected into the kernel image inside boot.img by the upstream kptools build running in WebAssembly. The ramdisk is untouched, the original AVB signature is dropped, and flashing the result is your responsibility."}
-            </p>
+            {bannerBody ? (
+              <p className="text-[11px] leading-4 text-muted-foreground">{t(bannerBody)}</p>
+            ) : null}
           </div>
         </div>
       </div>
@@ -153,10 +169,8 @@ export function PatchPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Patch plan</CardTitle>
-            <CardDescription>
-              Provider, release and artifact are pinned so the same plan can be reproduced later.
-            </CardDescription>
+            <CardTitle>{t("patch.plan")}</CardTitle>
+            <CardDescription>{t("patch.plan.description")}</CardDescription>
           </CardHeader>
           <CardContent>
             <KeyValueList entries={planEntries} />
@@ -166,8 +180,8 @@ export function PatchPage() {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Configuration</CardTitle>
-              <CardDescription>Plan configuration passed to the provider.</CardDescription>
+              <CardTitle>{t("patch.configuration")}</CardTitle>
+              <CardDescription>{t("patch.configuration.description")}</CardDescription>
             </CardHeader>
             <CardContent>
               <KeyValueList entries={configurationEntries} />
@@ -176,19 +190,19 @@ export function PatchPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Pipeline</CardTitle>
-              <CardDescription>The stages executed inside the Web Worker.</CardDescription>
+              <CardTitle>{t("patch.pipeline")}</CardTitle>
+              <CardDescription>{t("patch.pipeline.description")}</CardDescription>
             </CardHeader>
             <CardContent>
               <ol className="space-y-1.5">
                 {plan.steps.map((step) => (
                   <li key={step.id} className="flex items-center justify-between gap-3 text-xs">
-                    <span className="text-foreground">{step.label}</span>
+                    <span className="text-foreground">{record(step.label)}</span>
                     <span className="font-mono text-[11px] text-muted-foreground">{step.progress}%</span>
                   </li>
                 ))}
                 <li className="flex items-center justify-between gap-3 border-t border-border pt-1.5 text-xs">
-                  <span className="font-medium text-foreground">Complete</span>
+                  <span className="font-medium text-foreground">{t("patch.pipeline.complete")}</span>
                   <span className="font-mono text-[11px] text-muted-foreground">100%</span>
                 </li>
               </ol>
@@ -200,13 +214,13 @@ export function PatchPage() {
       {planResponse.providerNotes.length > 0 ? (
         <Card>
           <CardHeader>
-            <CardTitle>Provider notes</CardTitle>
+            <CardTitle>{t("patch.notes")}</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-1.5">
               {planResponse.providerNotes.map((note) => (
                 <li key={note} className="text-[11px] leading-4 text-muted-foreground">
-                  {note}
+                  {record(note)}
                 </li>
               ))}
             </ul>
@@ -217,26 +231,23 @@ export function PatchPage() {
       {plan.providerId === "apatch" ? (
         <Card>
           <CardHeader>
-            <CardTitle>KernelPatch flavour</CardTitle>
-            <CardDescription>
-              Which core image is injected. Each build only trusts its own manager app, so the
-              manager below must be installed for the patch to be usable.
-            </CardDescription>
+            <CardTitle>{t("patch.kpimg.title")}</CardTitle>
+            <CardDescription>{t("patch.kpimg.description")}</CardDescription>
           </CardHeader>
           <CardContent className="flex items-start justify-between gap-4">
             <div className="min-w-0 space-y-1">
               <Select
-                aria-label="KernelPatch flavour"
+                aria-label={t("patch.kpimg.title")}
                 className="max-w-xs"
                 value={readOption(APATCH_FLAVOR_SETTING, "upstream")}
                 onChange={(event) => applyOption({ [APATCH_FLAVOR_SETTING]: event.target.value })}
               >
-                {APATCH_FLAVORS.map((flavor) => (
-                  <option key={flavor.id} value={flavor.id}>
-                    {flavor.label}
+                {APATCH_FLAVORS.map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {record(entry.label)}
                   </option>
                 ))}
-                <option value="custom">Custom core image (attach your own)</option>
+                <option value="custom">{t("patch.kpimg.custom")}</option>
               </Select>
               {isCustomFlavour() ? (
                 <div className="flex flex-wrap items-center gap-2 pt-1">
@@ -248,40 +259,31 @@ export function PatchPage() {
                   />
                   <Button variant="secondary" size="sm" onClick={() => kpimgInputRef.current?.click()}>
                     <Layers />
-                    Attach a core image
+                    {t("patch.kpimg.attach")}
                   </Button>
                   <Badge variant={attachments.length > 0 ? "primary" : "neutral"}>
                     {attachments.length === 0
-                      ? "no core image attached"
-                      : (plan.configuration.kernelPatchSource ?? "attached")}
+                      ? t("patch.kpimg.none")
+                      : (plan.configuration.kernelPatchSource ?? t("patch.kpimg.attached"))}
                   </Badge>
                   {attachments.length > 0 ? (
                     <Button variant="ghost" size="sm" onClick={() => void setAttachments([])}>
-                      Clear
+                      {t("common.clear")}
                     </Button>
                   ) : null}
-                  <p className="w-full text-[11px] leading-4 text-muted-foreground">
-                    It has to be a KernelPatch core image (it starts with KP1158). The bytes travel
-                    with this run only, the plan records the file name, and the result reports the
-                    digest and the version kptools reads from it. Whatever manager it was built to
-                    trust is the one the device needs.
-                  </p>
+                  <p className="w-full text-[11px] leading-4 text-muted-foreground">{t("patch.kpimg.hint")}</p>
                 </div>
               ) : (
                 <p className="text-[11px] leading-4 text-muted-foreground">
-                  {APATCH_FLAVORS.find((flavor) => flavor.id === readOption(APATCH_FLAVOR_SETTING, "upstream"))
-                    ?.source ?? ""}
+                  {flavour ? record(flavour.source) : ""}
                 </p>
               )}
             </div>
             <p className="shrink-0 text-right font-mono text-[11px] text-muted-foreground">
-              required manager
+              {t("patch.kpimg.requiredManager")}
               <br />
               <span className="text-foreground">
-                {isCustomFlavour()
-                  ? "unknown"
-                  : (APATCH_FLAVORS.find((flavor) => flavor.id === readOption(APATCH_FLAVOR_SETTING, "upstream"))
-                      ?.managerPackage ?? "unknown")}
+                {isCustomFlavour() ? t("patch.kpimg.unknownManager") : (flavour?.managerPackage ?? t("patch.kpimg.unknownManager"))}
               </span>
             </p>
           </CardContent>
@@ -291,11 +293,8 @@ export function PatchPage() {
       {plan.providerId === "apatch" ? (
         <Card>
           <CardHeader>
-            <CardTitle>KernelPatch modules (KPM)</CardTitle>
-            <CardDescription>
-              Optional. Each module is embedded into the patched kernel image. The bytes stay in your
-              browser and are only handed to the patch worker for this run; the plan records the names.
-            </CardDescription>
+            <CardTitle>{t("patch.kpm.title")}</CardTitle>
+            <CardDescription>{t("patch.kpm.description")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
@@ -309,7 +308,7 @@ export function PatchPage() {
               />
               <Button variant="secondary" onClick={() => kpmInputRef.current?.click()}>
                 <Layers />
-                Attach .kpm files
+                {t("patch.kpm.attach")}
               </Button>
               <Badge
                 variant={
@@ -319,12 +318,12 @@ export function PatchPage() {
                 }
               >
                 {plan.configuration.kpmModules === undefined || plan.configuration.kpmModules === "none"
-                  ? "plan: no modules"
-                  : "plan: " + plan.configuration.kpmModules}
+                  ? t("patch.kpm.none")
+                  : t("patch.planValue", { value: plan.configuration.kpmModules })}
               </Badge>
               {attachments.length > 0 ? (
                 <Button variant="ghost" size="sm" onClick={() => void setAttachments([])}>
-                  Clear
+                  {t("common.clear")}
                 </Button>
               ) : null}
             </div>
@@ -340,10 +339,7 @@ export function PatchPage() {
                 ))}
               </ul>
             ) : null}
-            <p className="text-[11px] leading-4 text-muted-foreground">
-              Modules are embedded exactly as provided. Whether a module loads at boot depends on the
-              module and the kernel, and its licence is yours to check.
-            </p>
+            <p className="text-[11px] leading-4 text-muted-foreground">{t("patch.kpm.hint")}</p>
           </CardContent>
         </Card>
       ) : null}
@@ -351,20 +347,17 @@ export function PatchPage() {
       {plan.providerId === "kernelsu" ? (
         <Card>
           <CardHeader>
-            <CardTitle>Device KMI and module</CardTitle>
-            <CardDescription>
-              The KernelSU module has to match the kernel module interface of the device. It can only be
-              read from an image that carries a kernel, so an init_boot image needs it selected here.
-            </CardDescription>
+            <CardTitle>{t("patch.kernelsu.title")}</CardTitle>
+            <CardDescription>{t("patch.kernelsu.description")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             <Select
-              aria-label="Kernel module interface"
+              aria-label={t("patch.kernelsu.title")}
               className="max-w-xs"
               value={chosenKmi()}
               onChange={(event) => applyOption({ [KERNELSU_KMI_SETTING]: event.target.value })}
             >
-              <option value="">select the device KMI</option>
+              <option value="">{t("patch.kernelsu.selectKmi")}</option>
               {KNOWN_KMIS.map((kmi) => (
                 <option key={kmi} value={kmi}>
                   {kmi}
@@ -381,24 +374,29 @@ export function PatchPage() {
               />
               <Button variant="secondary" onClick={() => kpmInputRef.current?.click()}>
                 <Layers />
-                {chosenKmi() === "" ? "Override the bundled module" : "Override with " + chosenKmi() + "_kernelsu.ko"}
+                {chosenKmi() === ""
+                  ? t("patch.kernelsu.override")
+                  : t("patch.kernelsu.overrideWith", { name: chosenKmi() + "_kernelsu.ko" })}
               </Button>
               <Badge variant={attachments.length > 0 ? "primary" : "neutral"}>
                 {attachments.length === 0
-                  ? "plan: no module attached"
-                  : "plan: " + (plan.configuration.moduleSource ?? "module attached")}
+                  ? t("patch.kernelsu.noModule")
+                  : t("patch.planValue", { value: plan.configuration.moduleSource ?? "" })}
               </Badge>
               {attachments.length > 0 ? (
                 <Button variant="ghost" size="sm" onClick={() => void setAttachments([])}>
-                  Clear
+                  {t("common.clear")}
                 </Button>
               ) : null}
             </div>
             <p className="text-[11px] leading-4 text-muted-foreground">
-              This build already ships the module for the selected KMI and uses it by default; attaching one
-              (named <code className="mx-1">{chosenKmi() === "" ? "{kmi}_kernelsu.ko" : chosenKmi() + "_kernelsu.ko"}</code>
-              ) overrides it. Find the KMI with
-              <code className="mx-1">uname -r</code> on the device: 6.6.118-android15-... means android15-6.6.
+              {t("patch.kernelsu.hint.before")}
+              <code className="mx-1">
+                {chosenKmi() === "" ? "{kmi}_kernelsu.ko" : chosenKmi() + "_kernelsu.ko"}
+              </code>
+              {t("patch.kernelsu.hint.after")}
+              <code className="mx-1">uname -r</code>
+              {t("patch.kernelsu.hint.tail")}
             </p>
           </CardContent>
         </Card>
@@ -407,21 +405,16 @@ export function PatchPage() {
       {plan.providerId === "magisk" ? (
         <Card>
           <CardHeader>
-            <CardTitle>Magisk options</CardTitle>
-            <CardDescription>
-              These are what Magisk reads at boot from .backup/.magisk.
-            </CardDescription>
+            <CardTitle>{t("patch.magisk.title")}</CardTitle>
+            <CardDescription>{t("patch.magisk.description")}</CardDescription>
           </CardHeader>
           <CardContent className="flex items-start justify-between gap-4">
             <div className="space-y-1">
-              <p className="text-xs font-medium text-foreground">Keep verity (KEEPVERITY)</p>
-              <p className="text-[11px] leading-4 text-muted-foreground">
-                On keeps verity enabled and leaves fstab alone. Off removes magiskboot's verity flags
-                from any fstab entry inside the ramdisk and drops verity_key.
-              </p>
+              <p className="text-xs font-medium text-foreground">{t("patch.magisk.keepVerity")}</p>
+              <p className="text-[11px] leading-4 text-muted-foreground">{t("patch.magisk.keepVerity.body")}</p>
             </div>
             <Switch
-              aria-label="Keep verity"
+              aria-label={t("patch.magisk.keepVerity")}
               checked={readOption(MAGISK_KEEP_VERITY_SETTING, "true") === "true"}
               onCheckedChange={(checked) =>
                 applyOption({ [MAGISK_KEEP_VERITY_SETTING]: String(checked) })
@@ -430,16 +423,13 @@ export function PatchPage() {
           </CardContent>
           <CardContent className="flex items-start justify-between gap-4 border-t border-border/60 pt-4">
             <div className="space-y-1">
-              <p className="text-xs font-medium text-foreground">
-                Keep forced encryption (KEEPFORCEENCRYPT)
-              </p>
+              <p className="text-xs font-medium text-foreground">{t("patch.magisk.keepForceEncrypt")}</p>
               <p className="text-[11px] leading-4 text-muted-foreground">
-                On keeps forced encryption and leaves fstab alone. Off removes the encryption flags
-                magiskboot removes (forceencrypt, forcefdeorfbe, fileencryption).
+                {t("patch.magisk.keepForceEncrypt.body")}
               </p>
             </div>
             <Switch
-              aria-label="Keep forced encryption"
+              aria-label={t("patch.magisk.keepForceEncrypt")}
               checked={readOption(MAGISK_KEEP_FORCE_ENCRYPT_SETTING, "true") === "true"}
               onCheckedChange={(checked) =>
                 applyOption({ [MAGISK_KEEP_FORCE_ENCRYPT_SETTING]: String(checked) })
@@ -447,14 +437,12 @@ export function PatchPage() {
             />
           </CardContent>
           <CardContent className="space-y-2 border-t border-border/60 pt-4">
-            <p className="text-xs font-medium text-foreground">
-              Pre-init storage (PREINITDEVICE)
-            </p>
+            <p className="text-xs font-medium text-foreground">{t("patch.magisk.preinit")}</p>
             <div className="flex flex-wrap items-center gap-2">
               <Input
-                aria-label="Pre-init storage partition"
+                aria-label={t("patch.magisk.preinit")}
                 className="max-w-xs"
-                placeholder={plan.configuration.preinitDevice === "auto" ? "auto (Magisk detects it)" : ""}
+                placeholder={plan.configuration.preinitDevice === "auto" ? t("patch.magisk.preinit.placeholder") : ""}
                 value={preinitDraft}
                 onChange={(event) => setPreinitDraft(event.target.value)}
                 onKeyDown={(event) => {
@@ -465,15 +453,16 @@ export function PatchPage() {
                 variant="secondary"
                 onClick={() => applyOption({ [MAGISK_PREINIT_DEVICE_SETTING]: preinitDraft.trim() })}
               >
-                Apply
+                {t("common.apply")}
               </Button>
               <Badge variant={plan.configuration.preinitDevice === "auto" ? "neutral" : "primary"}>
-                plan: {plan.configuration.preinitDevice ?? "auto"}
+                {t("patch.planValue", { value: plan.configuration.preinitDevice ?? "auto" })}
               </Badge>
             </div>
             <p className="text-[11px] leading-4 text-muted-foreground">
-              Read it on the device with <code className="mx-1">magisk --preinit-device</code>, for
-              example sda10. Leaving it empty lets Magisk detect it at boot.
+              {t("patch.magisk.preinit.hint.before")}
+              <code className="mx-1">magisk --preinit-device</code>
+              {t("patch.magisk.preinit.hint.after")}
             </p>
           </CardContent>
         </Card>
@@ -482,22 +471,20 @@ export function PatchPage() {
       {plan.providerId === "apatch" ? (
         <Card>
           <CardHeader>
-            <CardTitle>Root credentials</CardTitle>
-            <CardDescription>
-              Optional. Without a key the injected KernelPatch authenticates the manager by its
-              signature. With one, the key is hashed into the kernel so an authorised client can
-              use it and rotate it at runtime.
-            </CardDescription>
+            <CardTitle>{t("patch.superkey.title")}</CardTitle>
+            <CardDescription>{t("patch.superkey.description")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <Input
                 type="password"
                 autoComplete="off"
-                aria-label="Root superkey"
+                aria-label={t("patch.superkey.title")}
                 className="max-w-xs"
                 placeholder={
-                  plan.configuration.superkeyMode === "custom" ? "a superkey is set" : "no superkey (default)"
+                  plan.configuration.superkeyMode === "custom"
+                    ? t("patch.superkey.placeholder.set")
+                    : t("patch.superkey.placeholder.none")
                 }
                 value={superkeyDraft}
                 onChange={(event) => setSuperkeyDraft(event.target.value)}
@@ -506,54 +493,42 @@ export function PatchPage() {
                 }}
               />
               <Button variant="secondary" onClick={() => applyOption({ superkey: superkeyDraft })}>
-                Apply
+                {t("common.apply")}
               </Button>
               <Badge variant={plan.configuration.superkeyMode === "custom" ? "success" : "neutral"}>
-                plan: {plan.configuration.superkeyMode ?? "none"}
+                {t("patch.planValue", { value: plan.configuration.superkeyMode ?? t("patch.value.none") })}
               </Badge>
             </div>
-            <p className="text-[11px] leading-4 text-muted-foreground">
-              The key is sent to the patch worker for this run only. Only its SHA-256 is written
-              into the kernel; the plan, the metadata and the produced image never contain the key
-              itself. Leave the field empty and apply to go back to the signature default.
-            </p>
+            <p className="text-[11px] leading-4 text-muted-foreground">{t("patch.superkey.hint")}</p>
           </CardContent>
         </Card>
       ) : null}
 
       <Card>
         <CardHeader>
-          <CardTitle>Output</CardTitle>
-          <CardDescription>
-            Device images are usually whole-partition dumps, so only the boot image itself is kept by
-            default.
-          </CardDescription>
+          <CardTitle>{t("patch.output.title")}</CardTitle>
+          <CardDescription>{t("patch.output.description")}</CardDescription>
         </CardHeader>
         <CardContent className="flex items-start justify-between gap-4">
           <div className="space-y-1">
-            <p className="text-xs font-medium text-foreground">Preserve the original image size</p>
+            <p className="text-xs font-medium text-foreground">{t("patch.output.preserve")}</p>
             <p className="text-[11px] leading-4 text-muted-foreground">
-              Zero pads the output to {formatBytes(analysis.summary.totalSize)} so tools that expect a
-              partition sized image keep their file size. The AVB signature stays invalid either way.
+              {t("patch.output.preserve.body", { size: formatBytes(analysis.summary.totalSize) })}
             </p>
           </div>
           <Switch
-            aria-label="Preserve the original image size"
+            aria-label={t("patch.output.preserve")}
             checked={readOption("preserveImageSize", "false") === "true"}
             onCheckedChange={(checked) => applyOption({ preserveImageSize: String(checked) })}
           />
         </CardContent>
         <CardContent className="flex items-start justify-between gap-4 border-t border-border/60 pt-4">
           <div className="space-y-1">
-            <p className="text-xs font-medium text-foreground">Keep the original AVB bytes</p>
-            <p className="text-[11px] leading-4 text-muted-foreground">
-              The official patchers keep the signature area of the source image. Those bytes are stale
-              after a patch either way, so verified boot fails with or without them; turn this off to
-              leave the area empty instead.
-            </p>
+            <p className="text-xs font-medium text-foreground">{t("patch.output.keepSignature")}</p>
+            <p className="text-[11px] leading-4 text-muted-foreground">{t("patch.output.keepSignature.body")}</p>
           </div>
           <Switch
-            aria-label="Keep the original AVB bytes"
+            aria-label={t("patch.output.keepSignature")}
             checked={readOption("keepSignature", "true") === "true"}
             onCheckedChange={(checked) => applyOption({ keepSignature: String(checked) })}
           />
@@ -563,11 +538,11 @@ export function PatchPage() {
       <div className="flex flex-wrap items-center justify-end gap-2">
         <Button variant="ghost" onClick={() => navigate("/analyze")}>
           <ArrowLeft />
-          Back to analysis
+          {t("patch.back")}
         </Button>
         <Button variant="primary" disabled={isBusy} onClick={() => navigate("/processing")}>
           {isBusy ? <LoaderCircle className="animate-spin" /> : <Play />}
-          Start patch
+          {t("patch.start")}
         </Button>
       </div>
     </div>

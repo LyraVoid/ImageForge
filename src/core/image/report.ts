@@ -37,6 +37,9 @@ export interface ImageReport {
 /** The magic a KernelPatch core image carries; finding it means the kernel is already patched. */
 const KERNELPATCH_MAGIC = "KP1158";
 
+/** The sentence the report shows for a kernel that already carries that magic. */
+const KERNELPATCH_FOUND = "KernelPatch (APatch or Aster): the kernel carries KP1158";
+
 /**
  * Looks for the marks known patch programs leave behind, so that stacking a second root solution on
  * top of an existing one is a visible decision rather than an accident. Everything here comes from
@@ -48,7 +51,7 @@ function detectExistingPatch(image: ParsedImage, archive: CpioArchive | undefine
   const kernel = sectionOf(image, "kernel");
   if (kernel && kernel.size > 0 && detectCompression(kernel.data) === "unknown") {
     if (new TextDecoder("latin1").decode(kernel.data).includes(KERNELPATCH_MAGIC)) {
-      found.push("KernelPatch (APatch or Aster): the kernel carries " + KERNELPATCH_MAGIC);
+      found.push(KERNELPATCH_FOUND);
     }
   }
 
@@ -128,16 +131,12 @@ export async function buildImageReport(
         }
         ramdiskFields.push(field("Archive", archive.format === "crc" ? "CPIO newc (crc)" : "CPIO newc"));
         ramdiskFields.push(field("Entries", String(archive.entries.length)));
-        ramdiskFields.push(
-          field(
-            "Contents",
-            kinds.directory +
-              " director" + (kinds.directory === 1 ? "y" : "ies") +
-              ", " + kinds.file + " file" + (kinds.file === 1 ? "" : "s") +
-              ", " + kinds.link + " symbolic link" + (kinds.link === 1 ? "" : "s") +
-              (kinds.other > 0 ? ", " + kinds.other + " other" : ""),
-          ),
-        );
+        // Counts are separate fields rather than one English sentence: a sentence would have to be
+        // rebuilt per language (and per plural), while a label and a number can be translated.
+        ramdiskFields.push(field("Directories", String(kinds.directory)));
+        ramdiskFields.push(field("Files", String(kinds.file)));
+        ramdiskFields.push(field("Symlinks", String(kinds.link)));
+        if (kinds.other > 0) ramdiskFields.push(field("Other entries", String(kinds.other)));
       } else {
         ramdiskFields.push(
           field("Archive", "not a CPIO archive", "Android ramdisks are normally CPIO newc archives."),

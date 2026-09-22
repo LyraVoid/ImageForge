@@ -1,16 +1,28 @@
 // @vitest-environment jsdom
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { StepIndicator } from "@/components/ui/step-indicator";
-import { WORKFLOW_STEPS } from "@/app/workflow";
+import { WORKFLOW_STEP_KEYS } from "@/app/workflow";
+import { translate } from "@/i18n/translate";
+
+const steps = WORKFLOW_STEP_KEYS.map((step) => ({ id: step.id, label: translate("en", step.labelKey) }));
+
+afterEach(cleanup);
 
 describe("workflow UI", () => {
   it("marks the current workflow step for assistive technology", () => {
-    render(<StepIndicator steps={WORKFLOW_STEPS} currentIndex={2} />);
+    render(<StepIndicator steps={steps} currentIndex={2} />);
     expect(screen.getByRole("list", { name: /workflow progress/i })).toBeInTheDocument();
     const current = screen.getByText("Patch").closest("button");
     expect(current).toHaveAttribute("aria-current", "step");
+  });
+
+  it("renders the step names of the chosen language", () => {
+    const japanese = WORKFLOW_STEP_KEYS.map((step) => ({ id: step.id, label: translate("ja", step.labelKey) }));
+    render(<StepIndicator steps={japanese} currentIndex={2} />);
+    expect(screen.getByText("パッチ")).toBeInTheDocument();
+    expect(screen.queryByText("Patch")).toBeNull();
   });
 
   it("renders verification states with their label and detail", () => {
