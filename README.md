@@ -19,7 +19,7 @@ The start page is a set of tools; the patcher is the first one, and the only one
 | --- | --- |
 | **Patch an image** — analyze, plan, patch, verify, download (`/tools/patch/*`) | available |
 | **Extract from a package** — OTA `payload.bin` and vendor archives (`/tools/extract`) | available |
-| **Unpack partitions** — sparse images, `super.img` logical partitions, erofs browsing (`/tools/unpack`) | available |
+| **Unpack partitions** — sparse images, `super.img` logical partitions, erofs and ext4 browsing (`/tools/unpack`) | available |
 | **Boot logo (first screen)** — read, view and replace the splash images (`/tools/logo`) | planned |
 | **Inspect an image** — read-only look at a boot image (`/tools/inspect`) | planned |
 
@@ -46,7 +46,10 @@ their extents and extracts one without copying the image, and walks an **erofs**
 format Android 16 system images use — listing directories, descending, and reading files out of it,
 including the ones stored as LZ4 compressed clusters (which is most of an Android system image).
 Files in the packed inode, interlaced or inline pclusters and non-LZ4 compression are refused by
-name.
+name. **ext4** images are read too: superblock, extent tree (any depth) and directories, so a
+`vendor_dlkm` or any other ext4 partition can be walked and its files taken out. Both filesystems
+are verified against the device itself: the tests reproduce `sha256sum` digests taken from the
+running system, and they match byte for byte.
 
 **The workspace knows what you dropped.** Every file is classified by its magic into a container
 (zip, OTA payload, sparse image, a compressed stream …) and a content (boot image, ext4, erofs, device

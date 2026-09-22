@@ -145,7 +145,11 @@ what you are about to stack on top of.
   walked and read: directories open, and files come out whether they are stored flat or as LZ4
   compressed clusters. What is refused is named instead of guessed: a file that lives in the erofs
   packed inode (a fragment), one with interlaced or inline pclusters, and one compressed with
-  anything other than LZ4.
+  anything other than LZ4;
+* an **ext4** image (for example a vendor's `vendor_dlkm`) can be walked and read the same way: the
+  superblock, the extent tree of each file and the directories. Inodes that use the old indirect
+  block map, meta block groups, inline data directories and encrypted directories are refused by
+  name.
 
 Everything is read in ranges from the file you opened, so browsing a 3 GB image does not need 3 GB of
 memory.
@@ -161,6 +165,7 @@ The test suite skips the checks that need real files and says which variable sup
 | `IMAGEFORGE_OTA_PACKAGE` | A real OTA package. An 8 GiB zip64 file is fine: it is read in ranges. |
 | `IMAGEFORGE_OTA_INIT_BOOT_SHA256` | The digest the `init_boot` extracted from that package must have, which turns the package test into a byte-for-byte check against a device dump. |
 | `IMAGEFORGE_MAGISK_REFERENCE`, `IMAGEFORGE_KERNELSU_REFERENCE` | Outputs of the official patch apps, compared byte for byte. |
+| `IMAGEFORGE_EROFS_DIGESTS`, `IMAGEFORGE_EXT4_DIGESTS` | Filesystem digests taken from the device itself, in `sha256sum` format (`adb shell sha256sum /product/etc/build_flags.json … > digests.txt`). The tests then have to reproduce every digest from the image, which is how the erofs LZ4 and ext4 readers are checked byte for byte. |
 
 ## Languages and privacy
 
