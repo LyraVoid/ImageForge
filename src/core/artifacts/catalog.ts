@@ -69,9 +69,9 @@ const KERNELSU_LKM: Array<{ kmi: string; sha256: string; sizeBytes: number }> = 
 export const MAGISK_RELEASE = "v30.7";
 
 export const MAGISK_MAGISKINIT_ID = "magisk-magiskinit";
-export const MAGISK_MAGISK_XZ_ID = "magisk-magisk-xz";
-export const MAGISK_STUB_XZ_ID = "magisk-stub-xz";
-export const MAGISK_INIT_LD_XZ_ID = "magisk-init-ld-xz";
+export const MAGISK_MAGISK_PAYLOAD_ID = "magisk-magisk";
+export const MAGISK_STUB_PAYLOAD_ID = "magisk-stub";
+export const MAGISK_INIT_LD_PAYLOAD_ID = "magisk-init-ld";
 
 export const ARTIFACT_CATALOG: ArtifactCatalog = {
   schemaVersion: 1,
@@ -82,7 +82,7 @@ export const ARTIFACT_CATALOG: ArtifactCatalog = {
       release: MAGISK_RELEASE,
       releasedAt: "2026-02-23T00:00:00.000Z",
       notes:
-        "Official Magisk release. The patcher injects magiskinit as init and three xz payloads under overlay.d/sbin, then stores its configuration in .backup/.magisk. Magisk compresses those payloads with magiskboot at patch time; a browser cannot run magiskboot, so they are compressed ahead of time with the same settings (preset 6, CRC32) and shipped as artifacts. Magisk is GPL-3.0 throughout, so there is no per-directory licence split to observe.",
+        "Official Magisk release. The patcher injects magiskinit as init and compresses three payloads into overlay.d/sbin, then stores its configuration in .backup/.magisk. The payloads are bundled uncompressed, exactly the files Magisk's own patcher feeds to magiskboot, and are compressed at patch time with the same codec, settings and declared dictionary (preset 6, CRC32, 64 MiB), so the produced streams are byte for byte the ones its patcher writes. Magisk is GPL-3.0 throughout, so there is no per-directory licence split to observe.",
       artifacts: [
         {
           id: MAGISK_MAGISKINIT_ID,
@@ -94,31 +94,31 @@ export const ARTIFACT_CATALOG: ArtifactCatalog = {
           sizeBytes: 199960,
         },
         {
-          id: MAGISK_MAGISK_XZ_ID,
+          id: MAGISK_MAGISK_PAYLOAD_ID,
           version: MAGISK_RELEASE,
           type: "payload",
           architecture: "arm64",
-          sha256: "36603be2f8c505eb9d8f58e464fda66b25b8a7887364ef83e15c877391c38341",
-          source: "bundled:/artifacts/magisk/magisk.xz",
-          sizeBytes: 158896,
+          sha256: "2d8419018dda41f7d9aca94c0ca8f926f3b8447ca5cf7fb71faeb8d05e29694e",
+          source: "bundled:/artifacts/magisk/magisk",
+          sizeBytes: 394232,
         },
         {
-          id: MAGISK_STUB_XZ_ID,
+          id: MAGISK_STUB_PAYLOAD_ID,
           version: MAGISK_RELEASE,
           type: "payload",
           architecture: "arm64",
-          sha256: "12dcb358399263968c64bc3fce2c6de7b271f48677b1e41002ec43e7994081ba",
-          source: "bundled:/artifacts/magisk/stub.xz",
-          sizeBytes: 65420,
+          sha256: "f0230e0864be255d963befa929ae1c0bb85c4df3e3578bb6cecc3049b6881eb0",
+          source: "bundled:/artifacts/magisk/stub",
+          sizeBytes: 70013,
         },
         {
-          id: MAGISK_INIT_LD_XZ_ID,
+          id: MAGISK_INIT_LD_PAYLOAD_ID,
           version: MAGISK_RELEASE,
           type: "payload",
           architecture: "arm64",
-          sha256: "646b99306dd479c2b5e4f123fd962fe49dec4b1d8a368dc3e7210354efdcd10d",
-          source: "bundled:/artifacts/magisk/init-ld.xz",
-          sizeBytes: 1560,
+          sha256: "c71e69780bb7ce6d6c26b2d794a3c631689bed130519762716fee285a10417f0",
+          source: "bundled:/artifacts/magisk/init-ld",
+          sizeBytes: 5208,
         },
       ],
     },

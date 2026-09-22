@@ -46,26 +46,39 @@ function stockRamdisk(fstab = FSTAB_LINE, extra: Array<{ name: string; data?: st
   ]);
 }
 
-async function ramdiskOf(imageBytes: Uint8Array) {
+function ramdiskSectionOf(imageBytes: Uint8Array): Uint8Array {
   const image = assertBootImage(parseImage(imageBytes));
   const section = sectionOf(image, "ramdisk");
   if (!section) throw new Error("the produced image has no ramdisk");
-  return (await decodeRamdisk(section.data)).archive;
+  return section.data;
+}
+
+async function ramdiskOf(imageBytes: Uint8Array) {
+  return (await decodeRamdisk(ramdiskSectionOf(imageBytes))).archive;
 }
 
 describe.skipIf(!hasMagiskReference || !hasInitBootImage)("Magisk against the official patcher", () => {
   it(
-    "agrees with the official patcher on everything that matters for booting (real material)",
+    "produces the ramdisk the official patcher produces, byte for byte (real material)",
     async () => {
       const source = readInitBootImage();
       const reference = readMagiskReference();
       const analyzed = await engine.analyze(source);
+      // Magisk's app detects the pre-init partition on the device and records it; pinning the same
+      // value makes the configuration file, and with it the whole ramdisk, comparable.
       const ours = await engine.run(analyzed.image, analyzed.sha256, "magisk", {
-        configuration: { preserveImageSize: "true" },
+        configuration: { preserveImageSize: "true", preinitDevice: "sda10" },
       });
 
       const ourArchive = await ramdiskOf(ours.result.bytes);
       const refArchive = await ramdiskOf(reference);
+
+      // The whole container, not just its entries: the reference liblz4 codec, magiskboot's archive
+      // layout and its xz settings are reproduced, so the section is the bytes the app wrote.
+      const ourSection = ramdiskSectionOf(ours.result.bytes);
+      const refSection = ramdiskSectionOf(reference);
+      expect(ourSection.length).toBe(refSection.length);
+      expect(await sha256Hex(ourSection)).toBe(await sha256Hex(refSection));
 
       const ourInit = findEntry(ourArchive, MAGISK_INIT_ENTRY);
       const refInit = findEntry(refArchive, MAGISK_INIT_ENTRY);
@@ -92,7 +105,8 @@ describe.skipIf(!hasMagiskReference || !hasInitBootImage)("Magisk against the of
       const refBackup = findEntry(refArchive, MAGISK_BACKUP_INIT_ENTRY);
       if (!oursBackup || !refBackup) throw new Error("the init backup is missing in one of the images");
       expect(oursBackup.mode & 0o777).toBe(refBackup.mode & 0o777);
-      // the streams come from different encoders, so compare what they expand to
+      expect(await sha256Hex(oursBackup.data)).toBe(await sha256Hex(refBackup.data));
+      // and it still expands to the stock init
       expect(Array.from(await decodeXz(oursBackup.data))).toEqual(Array.from(await decodeXz(refBackup.data)));
     },
     TIMEOUT,
@@ -137,10 +151,11 @@ describe("Magisk provider", () => {
       expect(overlay.mode & 0o777).toBe(0o750);
       expect(sbin.mode & 0o777).toBe(0o750);
 
-      // the payloads match the bundled artifacts byte for byte
-      expect(await sha256Hex(magiskXz.data)).toBe("36603be2f8c505eb9d8f58e464fda66b25b8a7887364ef83e15c877391c38341");
-      expect(await sha256Hex(stubXz.data)).toBe("12dcb358399263968c64bc3fce2c6de7b271f48677b1e41002ec43e7994081ba");
-      expect(await sha256Hex(initLdXz.data)).toBe("646b99306dd479c2b5e4f123fd962fe49dec4b1d8a368dc3e7210354efdcd10d");
+      // The payloads are the bundled files Magisk's patcher compresses, compressed here with its
+      // codec, settings and declared dictionary: these are the streams its patcher writes.
+      expect(await sha256Hex(magiskXz.data)).toBe("ba82d76c6b7bdfbe7cfa7ea86eb43ad86c40df1356ac0757b329ec97e9313537");
+      expect(await sha256Hex(stubXz.data)).toBe("4fc706f8317ff4116d7015c5d2bed81885a32a0ef84c3fadeccbbfdce080d083");
+      expect(await sha256Hex(initLdXz.data)).toBe("440cea2f2754fe73ff65496e5ca764a035f53644623f486e037146b458164214");
       expect(magiskXz.mode & 0o777).toBe(0o644);
 
       // the configuration is what Magisk reads at boot, SHA1 being the digest of the source image

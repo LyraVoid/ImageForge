@@ -1,6 +1,7 @@
 export * from "./types";
 export {
   CPIO_TRAILER,
+  canonicalizeCpio,
   findEntry,
   isCpio,
   parseCpio,
@@ -43,7 +44,15 @@ export {
 } from "./compression";
 export type { CompressionDescriptor, CompressionFormat } from "./compression";
 export { decodeLz4, encodeLz4, parseLz4Settings, xxh32 } from "./lz4";
-export { decodeXz, encodeXz } from "./xz";
+export {
+  REFERENCE_XZ_DICTIONARY,
+  XZ_ENCODER_DICTIONARY,
+  declareDictionary,
+  decodeXz,
+  dictionaryProperty,
+  encodeXz,
+} from "./xz";
+export type { XzEncodeOptions } from "./xz";
 export type { Lz4FrameSettings, Lz4LegacySettings, Lz4Settings } from "./lz4";
 export { decodeOsVersion, detectKernelArchitecture } from "./architecture";
 export type { ArchitectureGuess } from "./architecture";

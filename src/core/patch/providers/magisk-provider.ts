@@ -1,14 +1,16 @@
 import type { ArtifactRegistry } from "../../artifacts/registry";
 import {
-  MAGISK_INIT_LD_XZ_ID,
+  MAGISK_INIT_LD_PAYLOAD_ID,
   MAGISK_MAGISKINIT_ID,
-  MAGISK_MAGISK_XZ_ID,
-  MAGISK_STUB_XZ_ID,
+  MAGISK_MAGISK_PAYLOAD_ID,
+  MAGISK_STUB_PAYLOAD_ID,
 } from "../../artifacts/catalog";
 import { AbortedError, PatchError } from "../../errors";
 import { sha1Hex, sha256Hex } from "../../hash";
 import {
   COMPRESSION_LABEL,
+  REFERENCE_XZ_DICTIONARY,
+  canonicalizeCpio,
   decodeRamdisk,
   encodeRamdisk,
   encodeXz,
@@ -225,7 +227,12 @@ export class MagiskPatchProvider implements PatchProvider {
         injection: "ramdisk",
         initEntry: MAGISK_INIT_ENTRY,
         initHandling: "replaced by magiskinit",
-        magiskArtifacts: [MAGISK_MAGISKINIT_ID, MAGISK_MAGISK_XZ_ID, MAGISK_STUB_XZ_ID, MAGISK_INIT_LD_XZ_ID].join(","),
+        magiskArtifacts: [
+          MAGISK_MAGISKINIT_ID,
+          MAGISK_MAGISK_PAYLOAD_ID,
+          MAGISK_STUB_PAYLOAD_ID,
+          MAGISK_INIT_LD_PAYLOAD_ID,
+        ].join(","),
         [MAGISK_KEEP_VERITY_SETTING]: keepVerity ? "true" : "false",
         [MAGISK_KEEP_FORCE_ENCRYPT_SETTING]: keepForceEncrypt ? "true" : "false",
         [MAGISK_PREINIT_DEVICE_SETTING]: preinitDevice === "" ? "auto" : preinitDevice,
@@ -290,13 +297,16 @@ export class MagiskPatchProvider implements PatchProvider {
     }
 
     const magiskinitBytes = await this.artifacts.loadVerifiedPayload(plan.artifact);
-    const payloadIds = [MAGISK_MAGISK_XZ_ID, MAGISK_STUB_XZ_ID, MAGISK_INIT_LD_XZ_ID];
+    const payloadIds = [MAGISK_MAGISK_PAYLOAD_ID, MAGISK_STUB_PAYLOAD_ID, MAGISK_INIT_LD_PAYLOAD_ID];
     const payloadEntries = [MAGISK_MAGISK_ENTRY, MAGISK_STUB_ENTRY, MAGISK_INIT_LD_ENTRY];
     const payloads: Array<{ entry: string; bytes: Uint8Array }> = [];
     for (let index = 0; index < payloadIds.length; index += 1) {
+      // The bundled artifacts are the uncompressed files Magisk's patcher compresses; compressing
+      // them here, with its settings and declared dictionary, is what makes the streams identical.
+      const raw = await this.artifacts.loadVerifiedPayload(this.artifact(payloadIds[index]));
       payloads.push({
         entry: payloadEntries[index],
-        bytes: await this.artifacts.loadVerifiedPayload(this.artifact(payloadIds[index])),
+        bytes: await encodeXz(raw, { declareDictionarySize: REFERENCE_XZ_DICTIONARY }),
       });
     }
 
@@ -341,13 +351,16 @@ export class MagiskPatchProvider implements PatchProvider {
     upsertEntry(archive, MAGISK_BACKUP_RMLIST_ENTRY, rmlist, 0o100000);
     let backupSha256 = "none";
     if (stockInit) {
-      const compressed = await encodeXz(stockInit);
+      const compressed = await encodeXz(stockInit, { declareDictionarySize: REFERENCE_XZ_DICTIONARY });
       upsertEntry(archive, MAGISK_BACKUP_INIT_ENTRY, compressed, 0o100750);
       backupSha256 = await sha256Hex(compressed);
     }
 
     emit("repack", 80, "Repacking the boot image");
-    const encoded = await encodeRamdisk(archive, decoded.descriptor);
+    // Magisk's own patcher writes the archive through its BTreeMap based writer, so the produced
+    // ramdisk is sorted, deduplicated and renumbered. Reproducing that is what makes the output
+    // comparable with the app's byte for byte (see canonicalizeCpio).
+    const encoded = await encodeRamdisk(canonicalizeCpio(archive), decoded.descriptor);
     const output = outputOptions(plan.configuration, context.options?.configuration);
     const outcome = repackWithRamdisk(image, ramdisk, encoded, {
       preserveImageSize: output.preserveImageSize,

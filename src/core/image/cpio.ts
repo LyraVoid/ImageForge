@@ -161,6 +161,83 @@ export function parseCpio(bytes: Uint8Array): CpioArchive {
   throw new Error("The CPIO archive has no TRAILER entry.");
 }
 
+/** The first inode magiskboot assigns when it writes an archive (native/src/boot/cpio.rs:273). */
+const CANONICAL_INODE_BASE = 300000;
+
+const NAME_ENCODER = new TextEncoder();
+
+/** Rust compares strings as UTF-8 byte sequences, which is what the reference writer sorts by. */
+function compareNames(left: string, right: string): number {
+  if (left === right) return 0;
+  const a = NAME_ENCODER.encode(left);
+  const b = NAME_ENCODER.encode(right);
+  const limit = Math.min(a.length, b.length);
+  for (let i = 0; i < limit; i += 1) {
+    if (a[i] !== b[i]) return a[i] - b[i];
+  }
+  return a.length - b.length;
+}
+
+/**
+ * Rearranges an archive exactly the way magiskboot writes one (Magisk v30.7,
+ * `native/src/boot/cpio.rs:269`, `Cpio::dump`):
+ *
+ * * entries in ascending name order (its store is a `BTreeMap`, so a repeated name collapses into
+ *   the last entry that carried it — the stock ramdisks of some devices contain a duplicate `dev`);
+ * * inodes renumbered from 300000, `nlink` 1, `mtime` 0 and the device fields zeroed;
+ * * one TRAILER entry with mode 0755 and the next inode, and nothing after it (a producer that
+ *   padded the archive loses that padding here).
+ *
+ * The ramdisk layer itself stays byte-exact for untouched archives; this is what a provider calls
+ * when it is reproducing an official patcher, so the produced ramdisk is structurally the same
+ * archive that patcher writes.
+ */
+export function canonicalizeCpio(archive: CpioArchive): CpioArchive {
+  const byName = new Map<string, CpioEntry>();
+  for (const entry of archive.entries) byName.set(entry.name, entry);
+
+  const entries = [...byName.keys()].sort(compareNames).map((name, index) => {
+    const entry = byName.get(name) as CpioEntry;
+    return {
+      name,
+      ino: CANONICAL_INODE_BASE + index,
+      mode: entry.mode,
+      uid: entry.uid,
+      gid: entry.gid,
+      nlink: 1,
+      mtime: 0,
+      devmajor: 0,
+      devminor: 0,
+      rdevmajor: entry.rdevmajor,
+      rdevminor: entry.rdevminor,
+      check: 0,
+      data: entry.data,
+    };
+  });
+
+  return {
+    // magiskboot only reads and writes "070701"; a CRC archive is not something it can produce.
+    format: "newc",
+    entries,
+    trailer: {
+      name: CPIO_TRAILER,
+      ino: CANONICAL_INODE_BASE + entries.length,
+      mode: 0o755,
+      uid: 0,
+      gid: 0,
+      nlink: 1,
+      mtime: 0,
+      devmajor: 0,
+      devminor: 0,
+      rdevmajor: 0,
+      rdevminor: 0,
+      check: 0,
+      data: new Uint8Array(0),
+    },
+    trailing: new Uint8Array(0),
+  };
+}
+
 export function serializeCpio(archive: CpioArchive): Uint8Array {
   const parts: Uint8Array[] = [];
 

@@ -72,12 +72,18 @@ prose that still exists in `src/core`.
       -> checks: not already Magisk patched, module pinned by the plan, module declares name=kernelsu,
          module vermagic matches the kernel version implied by the KMI
       -> init -> init.real, add init (ksuinit, 0755), add kernelsu.ko (0755), optional ksu_config
-      -> serialise CPIO -> recompress in the original container -> Image Engine repacks the image
+      -> serialise CPIO in ksud's canonical layout -> recompress in the original container
+      -> Image Engine repacks the image
       -> verification reads the produced ramdisk back and requires init and kernelsu.ko to be there
 
 The KMI decides which module is loadable (GKI keeps the module ABI stable within one). It is read
 from the kernel banner when the image carries a kernel, and has to be selected for `init_boot.img`,
 which carries none; a selection that contradicts the banner is refused rather than trusted.
+
+The archive is written in the layout ksud uses, through `canonicalizeCpio`: entries sorted by
+name, one per name, inodes renumbered from 300000 and nothing after the trailer. That is what makes
+the produced ramdisk section byte for byte the one KernelSU's own app writes, which the real-material
+test asserts.
 
 One module per KMI is bundled and used by default, and a module supplied by the user overrides it.
 The modules come from KernelSU's `kernel/` directory, which is GPL-2.0-only, so they are
@@ -100,10 +106,24 @@ built for against the KMI, and the result records its name, licence and vermagic
       -> serialise CPIO -> recompress in the original container -> Image Engine repacks the image
       -> verification reads the produced ramdisk back and requires the payloads and the config
 
-The three payloads are shipped pre-compressed, because Magisk's patcher compresses them with
-magiskboot at patch time and a browser cannot run it. The stock init, on the other hand, depends on
-the image being patched, so it is compressed here with the WebAssembly codec, using magiskboot's
-settings; agree with its stream to the byte in size.
+The three payloads are bundled **uncompressed** — exactly the files Magisk's own patcher feeds to
+`magiskboot compress=xz` — and ImageForge compresses them at patch time with the same codec
+(`lzma-rust2` 0.21.0, preset 6, CRC32) and the same declared dictionary as the official streams
+(64 MiB, see `src/core/image/xz.ts`), so the produced streams are byte for byte the ones the app
+writes. The stock init is compressed the same way.
+
+Two further details decide whether the output matches the app rather than merely booting:
+
+* **The archive layout.** Magisk's patcher writes its ramdisk through a `BTreeMap`
+  (`native/src/boot/cpio.rs:269`, `Cpio::dump`), so the entries come out sorted by name, a repeated
+  name collapses into one entry, inodes are renumbered from 300000 with `nlink` 1 and `mtime` 0, and
+  nothing follows the trailer. `canonicalizeCpio` (`src/core/image/cpio.ts`) reproduces that, and the
+  Magisk provider calls it before encoding. The ramdisk layer itself stays byte-exact for untouched
+  archives: normalising is the provider's decision, taken because it is reproducing this patcher.
+* **The container codec.** LZ4 blocks are compressed by upstream liblz4 (see the WASM table below).
+
+`tests/integration/magisk.test.ts` verifies the whole ramdisk section against an image the official
+app produced from the same source image: same length, same SHA-256, byte for byte.
 
 ## Ramdisk layer
 

@@ -2,6 +2,7 @@ import type { ArtifactRegistry } from "../../artifacts/registry";
 import { KERNELSU_KSUINIT_ID, kernelsuLkmId } from "../../artifacts/catalog";
 import type { PatchArtifact } from "../../artifacts/types";
 import { KEEP_SIGNATURE_SETTING, outputOptions } from "./output-options";
+import { canonicalizeCpio } from "../../image";
 import {
   KERNELSU_CONFIG_ENTRY,
   KERNELSU_CONFIG_SETTING,
@@ -373,7 +374,10 @@ export class KernelsuPatchProvider implements PatchProvider {
     removeEntry(archive, "allow_shell");
 
     emit("repack", 80, "Repacking the boot image");
-    const encoded = await encodeRamdisk(archive, decoded.descriptor);
+    // ksud writes its ramdisk through the same magiskboot derived writer as Magisk does (sorted
+    // names, inodes from 300000, nothing after the trailer), so normalising here is what makes the
+    // produced section the one its app writes.
+    const encoded = await encodeRamdisk(canonicalizeCpio(archive), decoded.descriptor);
     const output = outputOptions(plan.configuration, context.options?.configuration);
     const outcome = repackWithRamdisk(image, ramdisk, encoded, {
       preserveImageSize: output.preserveImageSize,

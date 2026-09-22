@@ -13,8 +13,10 @@ import {
   fsPayloadLoader,
   hasInitBootImage,
   hasKernelsuModule,
+  hasKernelsuReference,
   readInitBootImage,
   readKernelsuModule,
+  readKernelsuReference,
 } from "../fixtures/artifacts";
 
 const artifacts = createArtifactRegistry(ARTIFACT_CATALOG, fsPayloadLoader);
@@ -87,9 +89,45 @@ describe.skipIf(!hasInitBootImage || !hasKernelsuModule)("KernelSU provider agai
       const reanalyzed = await engine.analyze(outcome.result.bytes);
       const report = await buildImageReport(reanalyzed.image, { sourceName: "produced.img" });
       expect(report.existingPatch?.join(" ")).toMatch(/KernelSU: kernelsu.ko/);
-      // init keeps its entry (renamed), a new init and the module are added
-      expect(archive.entries.length).toBe(stock.entries.length + 2);
+      // init keeps its entry (renamed) and a new init and the module are added; the canonical
+      // layout collapses the repeated `dev` entry some stock ramdisks contain
+      const uniqueStockNames = new Set(stock.entries.map((entry) => entry.name));
+      expect(archive.entries.length).toBe(uniqueStockNames.size + 2);
     },
     TIMEOUT,
   );
 });
+
+function ramdiskSectionOf(imageBytes: Uint8Array): Uint8Array {
+  const image = assertBootImage(parseImage(imageBytes));
+  const section = sectionOf(image, "ramdisk");
+  if (!section) throw new Error("no ramdisk section");
+  return section.data;
+}
+
+/**
+ * The same acceptance criterion the Magisk provider is held to: an image the KernelSU app produced
+ * from this device's init_boot image has to come out of this provider byte for byte, which is what
+ * the canonical archive layout makes possible (ksud writes through the same magiskboot derived
+ * writer: sorted names, inodes from 300000, nothing after the trailer).
+ */
+describe.skipIf(!hasInitBootImage || !hasKernelsuReference)("KernelSU against the official app", () => {
+  it(
+    "produces the ramdisk ksud produces, byte for byte (real material)",
+    async () => {
+      const source = readInitBootImage();
+      const reference = readKernelsuReference();
+      const analyzed = await engine.analyze(source);
+      const ours = await engine.run(analyzed.image, analyzed.sha256, "kernelsu", {
+        configuration: { [KERNELSU_KMI_SETTING]: KMI, preserveImageSize: "true" },
+      });
+
+      const ourSection = ramdiskSectionOf(ours.result.bytes);
+      const refSection = ramdiskSectionOf(reference);
+      expect(ourSection.length).toBe(refSection.length);
+      expect(await sha256Hex(ourSection)).toBe(await sha256Hex(refSection));
+    },
+    TIMEOUT,
+  );
+});
+

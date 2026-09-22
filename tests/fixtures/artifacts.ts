@@ -83,6 +83,20 @@ export function readKernelsuModule(): Uint8Array {
 }
 
 /**
+ * An image produced by KernelSU's own app for the same source image, used the way the Magisk
+ * reference is: it is never committed.
+ */
+export const KERNELSU_REFERENCE_PATH =
+  process.env.IMAGEFORGE_KERNELSU_REFERENCE ??
+  repoPath(".research", "kernelsu-release", "reference", "kernelsu_patched_20260921_180715.img");
+
+export const hasKernelsuReference = existsSync(KERNELSU_REFERENCE_PATH);
+
+export function readKernelsuReference(): Uint8Array {
+  return new Uint8Array(readFileSync(KERNELSU_REFERENCE_PATH));
+}
+
+/**
  * An image produced by Magisk's own app for the same source image. It is the reference the
  * Magisk provider is compared against, and it is never committed.
  */

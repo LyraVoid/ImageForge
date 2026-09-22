@@ -36,11 +36,15 @@ Deliberately honest limits:
   modules are built from KernelSU's kernel directory, which is GPL-2.0-only, so they are
   redistributed unmodified as separate programs with their own licence record
   (`THIRD_PARTY_LICENSES/kernelsu/`) rather than being linked into this AGPL-3.0-or-later project.
+  The archive layout is ksud's, so the produced ramdisk is **byte for byte the one the KernelSU app
+  writes** for the same image.
 * **Magisk is the third provider.** It replaces the ramdisk `init` with `magiskinit`, writes its
   payloads to `overlay.d/sbin`, keeps its configuration in `.backup/.magisk`, patches fstab entries
   the way `magiskboot` does, and keeps the stock init inside the ramdisk as `.backup/init.xz` so
-  Magisk's app can restore the image by itself. Its payloads are bundled from the pinned release,
-  which is GPL-3.0 throughout.
+  Magisk's app can restore the image by itself. Its payloads are bundled uncompressed from the
+  pinned release (GPL-3.0 throughout) and compressed at patch time with magiskboot's codec, settings
+  and declared dictionary; together with magiskboot's archive layout that makes the produced ramdisk
+  **byte for byte the one the official app writes**, which the real-material test asserts.
 * **A KernelPatch core image can also be supplied by hand.** Picking the custom flavour lets you
   attach your own `kpimg`: it is checked for the KernelPatch magic before kptools runs, the plan
   pins the file name, and the result reports the digest and the version kptools read from it.

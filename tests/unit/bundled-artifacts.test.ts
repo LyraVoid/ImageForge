@@ -64,7 +64,7 @@ describe("bundled artifacts", () => {
     const release = registry.resolve({ providerId: "magisk", artifactId: "magisk-magiskinit" }).release;
     expect(release.release).toBe("v30.7");
     expect(release.artifacts.map((artifact) => artifact.id).sort()).toEqual(
-      ["magisk-init-ld-xz", "magisk-magisk-xz", "magisk-magiskinit", "magisk-stub-xz"].sort(),
+      ["magisk-init-ld", "magisk-magisk", "magisk-magiskinit", "magisk-stub"].sort(),
     );
 
     for (const artifact of release.artifacts) {

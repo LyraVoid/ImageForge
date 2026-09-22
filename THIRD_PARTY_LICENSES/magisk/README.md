@@ -16,28 +16,36 @@ be redistributed with this AGPL-3.0-or-later project as separate, unmodified pro
 
 ## What is bundled, and where each file comes from
 
-| APK entry | Bundled as | Written into the ramdisk as | Mode |
-| --- | --- | --- | --- |
-| `lib/arm64-v8a/libmagiskinit.so` | `public/artifacts/magisk/magiskinit` | `init` | 0750 |
-| `lib/arm64-v8a/libmagisk.so` | `public/artifacts/magisk/magisk.xz` | `overlay.d/sbin/magisk.xz` | 0644 |
-| `assets/stub.apk` | `public/artifacts/magisk/stub.xz` | `overlay.d/sbin/stub.xz` | 0644 |
-| `lib/arm64-v8a/libinit-ld.so` | `public/artifacts/magisk/init-ld.xz` | `overlay.d/sbin/init-ld.xz` | 0644 |
+| APK entry | Bundled as | Digest (sha256) | Written into the ramdisk as | Mode |
+| --- | --- | --- | --- | --- |
+| `lib/arm64-v8a/libmagiskinit.so` | `public/artifacts/magisk/magiskinit` | `383670a7…6b468` | `init` | 0750 |
+| `lib/arm64-v8a/libmagisk.so` | `public/artifacts/magisk/magisk` | `2d841901…e694e` | `overlay.d/sbin/magisk.xz` | 0644 |
+| `assets/stub.apk` | `public/artifacts/magisk/stub` | `f0230e08…81eb0` | `overlay.d/sbin/stub.xz` | 0644 |
+| `lib/arm64-v8a/libinit-ld.so` | `public/artifacts/magisk/init-ld` | `c71e6978…417f0` | `overlay.d/sbin/init-ld.xz` | 0644 |
 
-Only the arm64 payloads are bundled, because every provider here targets arm64.
+Exact digests are in `src/core/artifacts/catalog.ts`, release `v30.7` of provider `magisk`. Only the
+arm64 payloads are bundled, because every provider here targets arm64.
 
-## Why the payloads are shipped compressed
+To reproduce: unzip the four APK entries listed above and rename them to `magiskinit`, `magisk`,
+`stub` and `init-ld` (the APK's `assets/stub.apk`).
 
-Magisk's patcher compresses them itself, at patch time
-(`scripts/boot_patch.sh`: `magiskboot compress=xz magisk magisk.xz`), and a browser cannot run
-magiskboot. The streams here were produced ahead of time with the same settings magiskboot uses
-(`native/src/boot/compress.rs:228`: `XzOptions::with_preset(6)` and `CheckType::Crc32`, which is
-`xz --check=crc32 -6`), and each one was validated with the reference `xz` tool (`xz -t` and a
-`xz -dc | cmp` round trip against the uncompressed input).
+## The payloads are bundled uncompressed, on purpose
 
-To reproduce: unzip the four APK entries listed above, rename them to `magiskinit`, `magisk`,
-`stub.apk` and `init-ld`, then run `xz --check=crc32 -6 -c <file> > <file>.xz` for the last three
-(`stub.apk` becomes `stub.xz`). Exact digests are in `src/core/artifacts/catalog.ts`, release
-`v30.7` of provider `magisk`.
+They are exactly the files Magisk's own patcher feeds to `magiskboot compress=xz`
+(`scripts/boot_patch.sh:176`), and ImageForge compresses them at patch time with the same codec and
+settings, so the streams it writes are the streams the official patcher writes:
+
+* the codec is `lzma-rust2` 0.21.0, the crate magiskboot links (`native/src/boot/Cargo.toml:38`),
+  at preset 6 with a CRC32 check (`native/src/boot/compress.rs:228`);
+* the dictionary the stream *declares* is the one the official streams carry, 64 MiB — `xz --list
+  --verbose --verbose` on the `overlay.d/sbin/*.xz` and `.backup/init.xz` of a device image reports
+  `--lzma2=dict=64MiB`. The property byte only tells a decoder how much window to reserve, and the
+  data is identical because nothing in these payloads lies further back than their own length, so
+  the header is reproduced without allocating a 64 MiB match finder
+  (`src/core/image/xz.ts`).
+
+`tests/integration/magisk.test.ts` checks the result against an image the official app produced for
+the same source image: the ramdisk section matches byte for byte.
 
 ## Note on restoring
 
