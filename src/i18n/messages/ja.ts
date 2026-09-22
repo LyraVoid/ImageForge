@@ -64,6 +64,7 @@ export const ja: Messages = {
   "reason.tool.planned": "このビルドでは未実装です。",
 
   "extract.openHint": "OTA の payload.bin かベンダーのイメージアーカイブをここにドロップしてください。",
+  "extract.from": "{container} から",
   "extract.entries": "中身",
   "extract.hint": "payload はパーティション名を自分で宣言します。実際に何なのかは取り出した後に判定します。",
   "extract.reading": "パッケージを読んでいます…",

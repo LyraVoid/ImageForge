@@ -70,25 +70,43 @@ tool shown, disabled, and saying why.
 
 ## Packages
 
-Two container formats deliver an Android image, and `src/core/package/` reads both:
+Two container formats deliver an Android image, and `src/core/package/` reads both. A real OTA
+package is **8 GiB**, so nothing here works on a buffer: everything takes a {@link ByteSource}
+(`source.ts`) — a size plus `read(offset, length)` — and reads the ranges it needs.
 
-* **zip** (`zip.ts`): the end-of-central-directory record, the central directory and the local
-  headers. Stored and deflated entries are supported and every entry's CRC32 is checked; zip64 is
-  refused, because the sizes it moves into an extra field are the ones that decide where an entry's
-  data is. Deflate is expanded with `DecompressionStream("deflate-raw")`.
-* **OTA payload** (`payload.ts`): the `CrAU` header, the protobuf manifest and the blob area, with
-  the field numbers taken from magiskboot's own `update_metadata.proto` and its reader
+* **Reading in ranges** (`source.ts`). `bytesSource` wraps a buffer (tests, small entries),
+  `blobSource` wraps a `Blob`/`File` and reads through `slice().arrayBuffer()` — in the browser a file
+  input hands over a *handle*, not a buffer — and `subSource` is a window onto another source. The
+  last one is how a payload inside an OTA zip is read in place. The worker holds the handle
+  (`openSource` accepts an `ArrayBuffer` or a `Blob`) and detection reads an 8 KiB prefix: headers,
+  magics and superblocks all live there, so nothing large is ever loaded to classify it.
+* **zip** (`zip.ts`): the end record (32 and **64 bit**), the central directory and the local headers.
+  Zip64 sizes and offsets live in the `0x0001` extra field, and vendor packages append a signature
+  after the end record, so the tail window is wider than the format's own limit. Stored entries are
+  opened in place (`storedEntrySource`); deflated ones are expanded with
+  `DecompressionStream("deflate-raw")` and have to fit in memory. Every entry's CRC32 is checked.
+* **OTA payload** (`payload.ts`): the `CrAU` header, the protobuf manifest and the blob area, with the
+  field numbers taken from magiskboot's own `update_metadata.proto` and its reader
   (`native/src/boot/payload.rs`). The manifest is parsed by a hand written wire reader
   (`protobuf.ts`), so no protobuf runtime joins the bundle. Partitions are rebuilt from their
-  operations in blob order; `REPLACE`, `REPLACE_XZ` and `ZERO`/`DISCARD` are implemented, every
-  blob is verified against `data_sha256_hash` and the rebuilt partition against its
-  `new_partition_info.hash`. A delta payload (`minor_version != 0`) is refused: it describes changes
-  against an image this tool does not have.
+  operations in blob order, each blob read as its own range; `REPLACE`, `REPLACE_XZ`,
+  `REPLACE_BZ` and `ZERO`/`DISCARD` are implemented, every blob is verified against
+  `data_sha256_hash` and the rebuilt partition against its `new_partition_info.hash`. The declared
+  `minor_version` is recorded but **not** used to decide anything: vendor full packages in the wild
+  declare a non-zero one (a CPH2723 full OTA says 9) while every operation still carries its own
+  data. What decides is per partition: an operation that reads the source image (`SOURCE_COPY`,
+  the diff formats) marks that partition `requiresSource` and it is refused by name.
+
+A payload inside an OTA zip is **descended into, not extracted**: its partitions are listed as
+entries of the package (`payload.bin::init_boot`), because handing out an 8 GiB file is not something
+a browser can do.
 
 What an entry *is* never comes from its name: extraction produces bytes, and `detectArtifact`
 classifies them, which is why an `init_boot` pulled out of an OTA is offered to the patcher
 immediately. The blobs stay in the worker throughout: extraction registers a workspace artifact, and
-the patcher reads that artifact where it already is (`analyzeArtifact`).
+the patcher reads that artifact where it already is (`analyzeArtifact`). What extraction *does*
+hold in memory is the entry it returns, so it refuses anything above a documented limit instead of
+silently trying.
 
 ## Hard rules
 

@@ -18,7 +18,13 @@ export { KNOWN_KMIS, kmiFromRelease, readKernelRelease } from "./kernelrelease";
 export { machineName, readElfObject, readModuleInfo } from "./elf";
 export type { ElfObject, ModuleInfo } from "./elf";
 export type { ImageReport, ReportField, ReportGroup } from "./report";
-export { detectImageFormat, parseImage, tryParseImage, assertBootImage } from "./bootimage/parser";
+export {
+  detectImageFormat,
+  formatFromBootHeader,
+  parseImage,
+  tryParseImage,
+  assertBootImage,
+} from "./bootimage/parser";
 export type { ParseOptions } from "./bootimage/parser";
 export { repackBootImage } from "./bootimage/repacker";
 export type { RepackBootImageRequest, RepackLayoutEntry, RepackOutcome } from "./bootimage/repacker";

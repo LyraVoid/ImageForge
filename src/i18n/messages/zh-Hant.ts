@@ -64,6 +64,7 @@ export const zhHant: Messages = {
   "reason.tool.planned": "這個建置尚未實作。",
 
   "extract.openHint": "把 OTA 的 payload.bin 或廠商映像包拖到這裡。",
+  "extract.from": "來自 {container}",
   "extract.entries": "包裡的內容",
   "extract.hint": "payload 會宣告自己的分割區名稱；項目到底是什麼，要取出之後再識別。",
   "extract.reading": "正在讀取安裝包…",

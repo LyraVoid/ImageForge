@@ -11,7 +11,7 @@ Comlink.expose({
     session.patch(request, onProgress),
   cancel: () => session.cancel(),
   reset: () => session.reset(),
-  openSource: (file: ArrayBuffer, name?: string) => session.openSource(file, name),
+  openSource: (file: ArrayBuffer | Blob, name?: string) => session.openSource(file, name),
   analyzeSource: (sourceId: string) => session.analyzeSource(sourceId),
   workspace: () => session.workspace(),
   readArtifact: (id: string, offset?: number, length?: number) => session.readArtifact(id, offset, length),

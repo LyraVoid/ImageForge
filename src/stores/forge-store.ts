@@ -145,7 +145,9 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       cancelRequested: false,
     });
     try {
-      const source = await active.openSource(await file.arrayBuffer(), file.name);
+      // The File itself is handed over: it is a handle to disk, so a multi gigabyte package is
+      // never read into the main thread's heap.
+      const source = await active.openSource(file, file.name);
       set({ source });
       if (source.kind !== "boot-container") {
         set({ stage: "empty", isBusy: false });

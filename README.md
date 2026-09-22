@@ -29,10 +29,16 @@ produces, and the page offers the tools that match whatever the user opened.
 
 **Packages are read in the browser too.** The extract tool opens a vendor zip archive (central
 directory, stored and deflated entries, CRC32 checked) or an OTA `payload.bin` (the CrAU header, the
-protobuf manifest and its partition streams: REPLACE, REPLACE_XZ, ZERO) and pulls a partition out of
-it. Every blob is checked against the digest the manifest declares, and whatever comes out is
-detected like any other file — so an `init_boot` extracted from an OTA goes straight into the
-patcher. Zip64 archives, delta payloads and BZip2 streams are refused by name rather than guessed at.
+protobuf manifest and its partition streams: REPLACE, REPLACE_XZ, REPLACE_BZ, ZERO) and pulls a
+partition out of it. Every blob is checked against the digest the manifest declares, and whatever
+comes out is detected like any other file — so an `init_boot` extracted from an OTA goes straight
+into the patcher.
+
+It is built for the real thing: an **8 GiB zip64 OTA** is opened as a file handle and read in ranges,
+never loaded, and a payload stored inside it is descended into rather than extracted
+(`payload.bin::init_boot`). Entries that cannot be handed over honestly — a deflated entry that only
+exists compressed, an entry past the in-memory limit, a partition stored as a delta that needs the
+source image — are refused by name instead of guessed at.
 
 **The workspace knows what you dropped.** Every file is classified by its magic into a container
 (zip, OTA payload, sparse image, a compressed stream …) and a content (boot image, ext4, erofs, device

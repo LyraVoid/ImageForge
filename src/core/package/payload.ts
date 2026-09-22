@@ -2,6 +2,7 @@ import { PackageError } from "../errors";
 import { sha256Hex } from "../hash";
 import { decodeXz } from "../image/xz";
 import { ProtoReader, WIRE_LENGTH_DELIMITED, WIRE_VARINT } from "./protobuf";
+import type { ByteSource } from "./source";
 
 /**
  * The Android OTA payload format, as magiskboot reads it
@@ -9,8 +10,10 @@ import { ProtoReader, WIRE_LENGTH_DELIMITED, WIRE_VARINT } from "./protobuf";
  *
  *     "CrAU" | version u64 | manifest size u64 | manifest signature size u32 | manifest | signature | blobs
  *
- * Only full payloads are interesting here: a delta payload describes operations against a source
- * image the user would have to provide, so it is refused rather than half applied.
+ * Everything is read through a {@link ByteSource}, so a payload inside an 8 GiB OTA zip is listed and
+ * picked apart in place. A partition is extractable when its operations carry their own data: the
+ * declared minor version is *not* used to decide that, because vendor full packages in the wild
+ * declare a non-zero one.
  */
 export const PAYLOAD_MAGIC = "CrAU";
 
@@ -32,6 +35,14 @@ export const OPERATION_TYPE: Record<number, string> = {
   13: "LZ4DIFF_PUFFDIFF",
 };
 
+/** `InstallOperation.Type` values that read the partition being replaced. */
+const SOURCE_OPERATION_TYPES = new Set([2, 3, 4, 5, 9, 10, 11, 12, 13]);
+
+const OPERATION_REPLACE = 0;
+const OPERATION_ZERO = 6;
+const OPERATION_DISCARD = 7;
+const OPERATION_REPLACE_XZ = 8;
+
 export interface PayloadExtent {
   startBlock: number;
   numBlocks: number;
@@ -51,18 +62,13 @@ export interface PayloadPartition {
   sizeBytes: number;
   declaredSha256: Uint8Array | null;
   operations: PayloadOperation[];
-  /**
-   * True when an operation reads the source image (SOURCE_COPY, the diff formats), which means this
-   * partition cannot be rebuilt from the payload alone.
-   */
+  /** True when an operation reads the source image, so this partition cannot be rebuilt alone. */
   requiresSource: boolean;
 }
 
-/** `InstallOperation.Type` values that read the partition being replaced (update_metadata.proto:136). */
-const SOURCE_OPERATION_TYPES = new Set([2, 3, 4, 5, 9, 10, 11, 12, 13]);
-
 export interface ParsedPayload {
   version: number;
+  /** The declared delta version. Recorded, not trusted to decide what can be read. */
   minorVersion: number;
   blockSize: number;
   manifestSize: number;
@@ -176,41 +182,40 @@ function parsePartition(bytes: Uint8Array): PayloadPartition {
   return partition;
 }
 
-export function parsePayload(bytes: Uint8Array): ParsedPayload {
-  if (bytes.length < 24) {
+export async function parsePayload(source: ByteSource): Promise<ParsedPayload> {
+  if (source.size < 24) {
     throw new PackageError(
-      "A payload header is 24 bytes; this file is " + bytes.length + ".",
+      "A payload header is 24 bytes; this file is " + source.size + ".",
       "This file is too short to be an Android OTA payload.",
     );
   }
-  const magic = new TextDecoder().decode(bytes.subarray(0, 4));
+  const header = await source.read(0, 24);
+  const magic = new TextDecoder().decode(header.subarray(0, 4));
   if (magic !== PAYLOAD_MAGIC) {
     throw new PackageError(
       'The file starts with "' + magic + '", not "' + PAYLOAD_MAGIC + '".',
       "This is not an Android OTA payload file.",
     );
   }
-  const version = Number(readBigEndianU64(bytes, 4));
+  const version = Number(readBigEndianU64(header, 4));
   if (version !== 2) {
     throw new PackageError(
       "Payload version " + version + " is not supported.",
       "This build reads Android OTA payloads of version 2.",
     );
   }
-  const manifestSize = Number(readBigEndianU64(bytes, 12));
-  const manifestSignatureSize = readBigEndianU32(bytes, 20);
+  const manifestSize = Number(readBigEndianU64(header, 12));
+  const manifestSignatureSize = readBigEndianU32(header, 20);
   if (manifestSize === 0) {
     throw new PackageError("The manifest length field is zero.", "This payload has no manifest.");
   }
-  const manifestStart = 24;
-  const manifestEnd = manifestStart + manifestSize;
-  if (manifestEnd > bytes.length) {
+  const manifestEnd = 24 + manifestSize;
+  if (manifestEnd > source.size) {
     throw new PackageError(
-      "The manifest claims " + manifestSize + " bytes but only " + (bytes.length - manifestStart) + " remain.",
+      "The manifest claims " + manifestSize + " bytes but the payload is " + source.size + ".",
       "This payload is truncated.",
     );
   }
-  const manifest = bytes.subarray(manifestStart, manifestEnd);
 
   const payload: ParsedPayload = {
     version,
@@ -222,6 +227,7 @@ export function parsePayload(bytes: Uint8Array): ParsedPayload {
     partitions: [],
   };
 
+  const manifest = await source.read(24, manifestSize);
   const reader = new ProtoReader(manifest);
   while (!reader.done) {
     const tag = reader.readTag();
@@ -239,9 +245,6 @@ export function parsePayload(bytes: Uint8Array): ParsedPayload {
     reader.skip(tag.wire);
   }
 
-  // The declared minor version is *not* used to decide whether a payload can be read: vendor full
-  // packages in the wild declare a non-zero one (a CPH2723 full OTA says 9) while every operation
-  // still carries its own data. What matters is per partition, and that is `requiresSource`.
   if (payload.partitions.length === 0) {
     throw new PackageError("The manifest lists no partitions.", "This payload describes no partitions.");
   }
@@ -297,12 +300,17 @@ function writeExtents(
   }
 }
 
+export function extentsCapacity(operation: PayloadOperation, blockSize: number): number {
+  return operation.dstExtents.reduce((sum, extent) => sum + extent.numBlocks * blockSize, 0);
+}
+
 /**
- * Rebuilds one partition. Operations are applied in blob order, which is how the payload stores
- * them, and every blob is checked against the digest the manifest declares for it.
+ * Rebuilds one partition. Operations are applied in blob order and each blob is read as a range of
+ * the payload, so extracting an 8 MiB partition out of an 8 GiB package reads only its own bytes.
+ * Every blob is checked against the digest the manifest declares for it.
  */
 export async function extractPayloadPartition(
-  bytes: Uint8Array,
+  source: ByteSource,
   payload: ParsedPayload,
   partitionName: string,
 ): Promise<Uint8Array> {
@@ -321,9 +329,9 @@ export async function extractPayloadPartition(
   const operations = [...partition.operations].sort((left, right) => left.dataOffset - right.dataOffset);
 
   for (const operation of operations) {
-    if (operation.type === 6 || operation.type === 7) continue; // ZERO / DISCARD: the buffer is zeroed
+    if (operation.type === OPERATION_ZERO || operation.type === OPERATION_DISCARD) continue;
     const start = payload.dataOffset + operation.dataOffset;
-    const blob = bytes.subarray(start, start + operation.dataLength);
+    const blob = await source.read(start, operation.dataLength);
     if (blob.length !== operation.dataLength) {
       throw new PackageError(
         "Operation " +
@@ -334,7 +342,7 @@ export async function extractPayloadPartition(
           start +
           " but only " +
           blob.length +
-          " remain.",
+          " were read.",
         "This payload is truncated.",
       );
     }
@@ -355,11 +363,11 @@ export async function extractPayloadPartition(
       }
     }
 
-    if (operation.type === 0) {
+    if (operation.type === OPERATION_REPLACE) {
       writeExtents(output, operation.dstExtents, blob, payload.blockSize, operation);
       continue;
     }
-    if (operation.type === 8) {
+    if (operation.type === OPERATION_REPLACE_XZ) {
       let expanded: Uint8Array;
       try {
         expanded = await decodeXz(blob);

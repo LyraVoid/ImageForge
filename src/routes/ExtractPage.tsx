@@ -97,6 +97,11 @@ export function ExtractPage() {
                     <li key={entry.id} className="flex flex-wrap items-center gap-2 py-2 first:pt-0 last:pb-0">
                       <span className="min-w-0 flex-1 truncate font-mono text-[11px] text-foreground">
                         {entry.name}
+                        {entry.container === null ? null : (
+                          <span className="ml-2 text-muted-foreground">
+                            {t("extract.from", { container: entry.container })}
+                          </span>
+                        )}
                       </span>
                       <span className="font-mono text-[11px] text-muted-foreground">
                         {formatBytes(entry.sizeBytes)}

@@ -1,15 +1,29 @@
 import { PackageError } from "../errors";
 import { loadWasmModule } from "../../wasm/loader";
+import { bytesSource, readPrefix } from "./source";
+import type { ByteSource } from "./source";
 
 /**
- * Just enough of the zip format to read a vendor image archive or an OTA package: the central
- * directory, the local headers, stored and deflated entries. Zip64 is refused instead of guessed at,
- * because the sizes it moves into an extra field are the ones that decide where an entry's data is.
+ * Enough of the zip format to read a vendor image archive or an OTA package: the end record (zip32
+ * and zip64), the central directory, the local headers, stored and deflated entries. Deflated
+ * entries are expanded with `DecompressionStream("deflate-raw")`; everything is read as ranges, so a
+ * package larger than memory can still be listed and picked apart.
  */
 const LOCAL_HEADER = 0x04034b50;
 const CENTRAL_HEADER = 0x02014b50;
 const END_OF_CENTRAL_DIRECTORY = 0x06054b50;
+const ZIP64_END_OF_CENTRAL_DIRECTORY = 0x06064b50;
+const ZIP64_LOCATOR = 0x07064b50;
+const ZIP64_EXTRA_FIELD = 0x0001;
 const ZIP64_SENTINEL = 0xffffffff;
+const ZIP64_SENTINEL_16 = 0xffff;
+
+/**
+ * How much of the tail is read to find the end record. The format allows a 65,535 byte comment
+ * after it, and vendor packages (SignApk in-place signing) append their own trailer on top, so the
+ * window is twice that.
+ */
+const END_RECORD_WINDOW = 0xffff + 22 + 76 + 0xffff;
 
 export const ZIP_METHOD_STORE = 0;
 export const ZIP_METHOD_DEFLATE = 8;
@@ -20,7 +34,8 @@ export interface ZipEntry {
   crc32: number;
   compressedSize: number;
   uncompressedSize: number;
-  localHeaderOffset: number;
+  /** Where the entry's data starts, in the archive. */
+  dataOffset: number;
 }
 
 function readU16(bytes: Uint8Array, offset: number): number {
@@ -31,73 +46,156 @@ function readU32(bytes: Uint8Array, offset: number): number {
   return (bytes[offset] | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16) | (bytes[offset + 3] << 24)) >>> 0;
 }
 
-function findEndOfCentralDirectory(bytes: Uint8Array): number {
-  const minimum = Math.max(0, bytes.length - (0xffff + 22));
-  for (let offset = bytes.length - 22; offset >= minimum; offset -= 1) {
-    if (readU32(bytes, offset) === END_OF_CENTRAL_DIRECTORY) return offset;
+function readU64(bytes: Uint8Array, offset: number): number {
+  const view = new DataView(bytes.buffer, bytes.byteOffset + offset, 8);
+  const value = view.getBigUint64(0, true);
+  if (value > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new PackageError("A zip64 field is larger than this build can address.");
   }
-  throw new PackageError(
-    "No end-of-central-directory record was found in the last " + Math.min(bytes.length, 0xffff + 22) + " bytes.",
-    "This file is not a zip archive.",
-  );
+  return Number(value);
 }
 
-export function listZip(bytes: Uint8Array): ZipEntry[] {
-  if (bytes.length < 22) {
+interface EndRecord {
+  entryCount: number;
+  centralSize: number;
+  centralOffset: number;
+}
+
+async function readEndRecord(source: ByteSource): Promise<EndRecord> {
+  const windowLength = Math.min(END_RECORD_WINDOW, source.size);
+  const tail = await source.read(source.size - windowLength, windowLength);
+  let eocd = -1;
+  for (let index = tail.length - 22; index >= 0; index -= 1) {
+    if (readU32(tail, index) === END_OF_CENTRAL_DIRECTORY) {
+      eocd = index;
+      break;
+    }
+  }
+  if (eocd < 0) {
     throw new PackageError(
-      "A zip needs at least 22 bytes; this file is " + bytes.length + ".",
-      "This file is too short to be a zip archive.",
+      "No end-of-central-directory record was found in the last " + windowLength + " bytes.",
+      "This file is not a zip archive.",
     );
   }
-  const end = findEndOfCentralDirectory(bytes);
-  const entryCount = readU16(bytes, end + 10);
-  let cursor = readU32(bytes, end + 16);
-  const entries: ZipEntry[] = [];
 
-  for (let index = 0; index < entryCount; index += 1) {
-    if (cursor + 46 > bytes.length || readU32(bytes, cursor) !== CENTRAL_HEADER) {
+  const record: EndRecord = {
+    entryCount: readU16(tail, eocd + 10),
+    centralSize: readU32(tail, eocd + 12),
+    centralOffset: readU32(tail, eocd + 16),
+  };
+
+  // zip64: the locator sits right before the end record and points at the real record
+  const locator = eocd - 20;
+  if (locator >= 0 && readU32(tail, locator) === ZIP64_LOCATOR) {
+    const eocd64Offset = readU64(tail, locator + 8);
+    const record64 = await source.read(eocd64Offset, 56);
+    if (record64.length < 56 || readU32(record64, 0) !== ZIP64_END_OF_CENTRAL_DIRECTORY) {
       throw new PackageError(
-        "Central directory entry " + (index + 1) + " of " + entryCount + " is damaged.",
+        "The zip64 locator points at " + eocd64Offset + ", which holds no zip64 end record.",
         "This zip archive is damaged.",
       );
     }
-    const method = readU16(bytes, cursor + 10);
-    const crc32 = readU32(bytes, cursor + 16);
-    const compressedSize = readU32(bytes, cursor + 20);
-    const uncompressedSize = readU32(bytes, cursor + 24);
-    const nameLength = readU16(bytes, cursor + 28);
-    const extraLength = readU16(bytes, cursor + 30);
-    const commentLength = readU16(bytes, cursor + 32);
-    const localHeaderOffset = readU32(bytes, cursor + 42);
-    const name = new TextDecoder().decode(bytes.subarray(cursor + 46, cursor + 46 + nameLength));
+    record.entryCount = readU64(record64, 32);
+    record.centralSize = readU64(record64, 40);
+    record.centralOffset = readU64(record64, 48);
+  } else if (record.entryCount === ZIP64_SENTINEL_16 || record.centralOffset === ZIP64_SENTINEL) {
+    throw new PackageError(
+      "The end record uses zip64 sentinels but there is no zip64 locator.",
+      "This zip archive is damaged.",
+    );
+  }
+  return record;
+}
 
-    if (
-      compressedSize === ZIP64_SENTINEL ||
-      uncompressedSize === ZIP64_SENTINEL ||
-      localHeaderOffset === ZIP64_SENTINEL
-    ) {
+export async function listZip(source: ByteSource): Promise<ZipEntry[]> {
+  if (source.size < 22) {
+    throw new PackageError(
+      "A zip needs at least 22 bytes; this file is " + source.size + ".",
+      "This file is too short to be a zip archive.",
+    );
+  }
+  const end = await readEndRecord(source);
+  const central = await source.read(end.centralOffset, end.centralSize);
+  if (central.length !== end.centralSize) {
+    throw new PackageError(
+      "The central directory claims " + end.centralSize + " bytes but only " + central.length + " were read.",
+      "This zip archive is truncated.",
+    );
+  }
+
+  const entries: ZipEntry[] = [];
+  let cursor = 0;
+  for (let index = 0; index < end.entryCount; index += 1) {
+    if (cursor + 46 > central.length || readU32(central, cursor) !== CENTRAL_HEADER) {
       throw new PackageError(
-        "Entry " + name + " keeps its sizes or offset in a zip64 extra field.",
-        "Zip64 archives are not supported.",
+        "Central directory entry " + (index + 1) + " of " + end.entryCount + " is damaged.",
+        "This zip archive is damaged.",
       );
     }
+    const method = readU16(central, cursor + 10);
+    const crc32 = readU32(central, cursor + 16);
+    let compressedSize = readU32(central, cursor + 20);
+    let uncompressedSize = readU32(central, cursor + 24);
+    const nameLength = readU16(central, cursor + 28);
+    const extraLength = readU16(central, cursor + 30);
+    const commentLength = readU16(central, cursor + 32);
+    let localHeaderOffset = readU32(central, cursor + 42);
+    const name = new TextDecoder().decode(central.subarray(cursor + 46, cursor + 46 + nameLength));
 
-    entries.push({ name, method, crc32, compressedSize, uncompressedSize, localHeaderOffset });
+    // zip64 extra field: the values replace the sentinel fields, in this order
+    let extra = cursor + 46 + nameLength;
+    const extraEnd = extra + extraLength;
+    while (extra + 4 <= extraEnd) {
+      const id = readU16(central, extra);
+      const length = readU16(central, extra + 2);
+      if (id === ZIP64_EXTRA_FIELD) {
+        let field = extra + 4;
+        if (uncompressedSize === ZIP64_SENTINEL) {
+          uncompressedSize = readU64(central, field);
+          field += 8;
+        }
+        if (compressedSize === ZIP64_SENTINEL) {
+          compressedSize = readU64(central, field);
+          field += 8;
+        }
+        if (localHeaderOffset === ZIP64_SENTINEL) {
+          localHeaderOffset = readU64(central, field);
+        }
+      }
+      extra += 4 + length;
+    }
+
+    const header = await source.read(localHeaderOffset, 30);
+    if (header.length < 30 || readU32(header, 0) !== LOCAL_HEADER) {
+      throw new PackageError(
+        "The local header of " + name + " at " + localHeaderOffset + " is not a local file header.",
+        "This zip archive is damaged.",
+      );
+    }
+    // The local header repeats the name and extra lengths, and they can differ from the directory's.
+    const dataOffset = localHeaderOffset + 30 + readU16(header, 26) + readU16(header, 28);
+
+    entries.push({ name, method, crc32, compressedSize, uncompressedSize, dataOffset });
     cursor += 46 + nameLength + extraLength + commentLength;
   }
   return entries;
 }
 
-function entryDataOffset(bytes: Uint8Array, entry: ZipEntry): number {
-  const cursor = entry.localHeaderOffset;
-  if (cursor + 30 > bytes.length || readU32(bytes, cursor) !== LOCAL_HEADER) {
+/**
+ * The bytes of a stored entry, as a source of their own. This is how a payload inside an OTA zip is
+ * read in place: no part of the 8 GiB file is copied.
+ */
+export function storedEntrySource(source: ByteSource, entry: ZipEntry): ByteSource {
+  if (entry.method !== ZIP_METHOD_STORE) {
     throw new PackageError(
-      "The local header at " + cursor + " is not a local file header.",
-      "This zip archive is damaged.",
+      entry.name + " is deflated, so it can only be read whole.",
+      "This zip entry is compressed and cannot be opened in place.",
     );
   }
-  // The local header repeats the name and extra lengths, and they can differ from the directory's.
-  return cursor + 30 + readU16(bytes, cursor + 26) + readU16(bytes, cursor + 28);
+  return {
+    size: entry.uncompressedSize,
+    read: (offset, length) => source.read(entry.dataOffset + offset, length),
+  };
 }
 
 async function inflateRaw(data: Uint8Array): Promise<Uint8Array> {
@@ -113,12 +211,29 @@ async function inflateRaw(data: Uint8Array): Promise<Uint8Array> {
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
-export async function readZipEntry(bytes: Uint8Array, entry: ZipEntry): Promise<Uint8Array> {
-  const start = entryDataOffset(bytes, entry);
-  const stored = bytes.subarray(start, start + entry.compressedSize);
+/** Reads one entry out. Refuses an entry too large to hold, so a caller is not surprised by 8 GiB. */
+export async function readZipEntry(
+  source: ByteSource,
+  entry: ZipEntry,
+  limit = 256 * 1024 * 1024,
+): Promise<Uint8Array> {
+  if (entry.uncompressedSize > limit) {
+    throw new PackageError(
+      entry.name + " expands to " + entry.uncompressedSize + " bytes, above the " + limit + " byte limit.",
+      "This entry is too large to read into memory; open it as a package instead of extracting it.",
+    );
+  }
+  const stored = await source.read(entry.dataOffset, entry.compressedSize);
   if (stored.length !== entry.compressedSize) {
     throw new PackageError(
-      entry.name + " claims " + entry.compressedSize + " bytes at " + start + " but only " + stored.length + " remain.",
+      entry.name +
+        " claims " +
+        entry.compressedSize +
+        " bytes at " +
+        entry.dataOffset +
+        " but only " +
+        stored.length +
+        " were read.",
       "This zip archive is truncated.",
     );
   }
@@ -149,3 +264,10 @@ export async function readZipEntry(bytes: Uint8Array, entry: ZipEntry): Promise<
   }
   return data;
 }
+
+/** A source over bytes that are already in memory, for the tests and for small entries. */
+export function memorySource(bytes: Uint8Array): ByteSource {
+  return bytesSource(bytes);
+}
+
+export { readPrefix };

@@ -1,6 +1,6 @@
-import { detectCompression } from "../image";
+import { detectCompression, formatFromBootHeader } from "../image";
 import { BOOT_MAGIC, VENDOR_BOOT_MAGIC } from "../image/bootimage/constants";
-import { tryParseImage } from "../image/bootimage/parser";
+import { decodeBootHeader, decodeVendorBootHeader } from "../image/bootimage/header";
 import type { ArtifactKind } from "./kinds";
 
 /** How the bytes are framed. */
@@ -115,29 +115,30 @@ export function detectArtifact(bytes: Uint8Array): DetectedArtifact {
   const compression = detectCompression(bytes);
 
   if (textMatches(bytes, 0, BOOT_MAGIC) || textMatches(bytes, 0, VENDOR_BOOT_MAGIC)) {
-    // The parser already classifies boot, init_boot (a v4 image without a kernel) and vendor_boot,
-    // so detection asks it instead of repeating the rule. A header that cannot be read still counts
-    // as a boot image of its magic's kind: the tool that handles it will report why it stopped.
-    const parsed = tryParseImage(bytes);
-    if ("image" in parsed) {
-      const format = parsed.image.format;
-      return {
-        container: "raw",
-        content: format,
-        kind: "boot-container",
-        label: CONTENT_LABEL[format],
-        packed: false,
-        headerVersion: parsed.image.headerVersion,
-      };
-    }
+    // Only the header is decoded, never the whole file, so this works on a prefix of an 8 GiB image
+    // as well as on a buffer. A header that cannot be read still counts as a boot image of its
+    // magic's kind; the tool that handles it reports why it stopped.
     const vendor = textMatches(bytes, 0, VENDOR_BOOT_MAGIC);
-    const content: ContentFormat = vendor ? "vendor_boot" : "boot";
+    let content: ContentFormat = vendor ? "vendor_boot" : "boot";
+    let headerVersion: number | undefined;
+    try {
+      if (vendor) {
+        headerVersion = decodeVendorBootHeader(bytes).headerVersion;
+      } else {
+        const header = decodeBootHeader(bytes);
+        content = formatFromBootHeader(header);
+        headerVersion = header.headerVersion;
+      }
+    } catch {
+      // keep the verdict the magic gave
+    }
     return {
       container: "raw",
       content,
       kind: "boot-container",
       label: CONTENT_LABEL[content],
       packed: false,
+      ...(headerVersion === undefined ? {} : { headerVersion }),
     };
   }
 

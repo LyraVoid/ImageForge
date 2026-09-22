@@ -5,8 +5,15 @@ import type { ParsedImage } from "../core/image";
 import { buildImageReport } from "../core/image/report";
 import { createPatchEngine } from "../core/patch/engine";
 import type { PatchEngine } from "../core/patch/engine";
-import { extractPackageEntry as extractEntryFrom, openPackage } from "../core/package";
-import type { OpenedPackage } from "../core/package";
+import {
+  blobSource,
+  bytesSource,
+  extractPackageEntry as extractEntryFrom,
+  openPackage,
+  readAll,
+  readPrefix,
+} from "../core/package";
+import type { ByteSource, OpenedPackage } from "../core/package";
 import {
   addArtifact,
   addSource,
@@ -33,6 +40,9 @@ import type {
 
 export const PATCH_WORKER_VERSION = "1.0.0";
 
+/** Analyzing an image means parsing and hashing it, so it has to fit in memory. */
+const MAX_ANALYZABLE_BYTES = 512 * 1024 * 1024;
+
 interface SessionState {
   sourceId: string;
   bytes: Uint8Array;
@@ -43,7 +53,8 @@ interface SessionState {
 
 interface HeldSource {
   record: WorkspaceSourceRecord;
-  bytes: Uint8Array;
+  /** Ranged access to the file the user opened. An 8 GiB package stays on disk. */
+  source: ByteSource;
 }
 
 interface HeldArtifact {
@@ -90,27 +101,34 @@ export class PatchWorkerSession implements PatchWorkerApi {
     return PATCH_WORKER_VERSION;
   }
 
-  async openSource(file: ArrayBuffer, name = "image"): Promise<WorkspaceSourceRecord> {
-    const bytes = new Uint8Array(file);
-    if (bytes.length === 0) {
+  /**
+   * Opens a file into the workspace. A `Blob` (what a file input hands over) is kept as a handle and
+   * read in ranges; bytes are accepted too, which is what the tests and the inline path use.
+   */
+  async openSource(file: ArrayBuffer | Blob, name = "image"): Promise<WorkspaceSourceRecord> {
+    const source = file instanceof Blob ? blobSource(file) : bytesSource(new Uint8Array(file));
+    if (source.size === 0) {
       throw new WorkerError("The opened file is empty.", "Choose a file that is not empty.");
     }
+    // Detection only ever needs a prefix: headers, magics and filesystem superblocks live there.
+    const detected = detectArtifact(await readPrefix(source, 8192));
     const record: WorkspaceSourceRecord = {
       id: "source-" + String(this.nextSourceId),
       name,
-      sizeBytes: bytes.length,
-      kind: detectArtifact(bytes).kind,
-      detected: detectArtifact(bytes),
+      sizeBytes: source.size,
+      kind: detected.kind,
+      detected,
     };
     this.nextSourceId += 1;
-    this.sources.set(record.id, { record, bytes });
+    this.sources.set(record.id, { record, source });
     this.workspaceState = addSource(this.workspaceState, record);
     return record;
   }
 
   async analyzeSource(sourceId: string): Promise<AnalyzeResponse> {
     const source = this.requireSource(sourceId);
-    const bytes = source.bytes;
+    // Only boot containers are analyzed, and those have to be in memory to be parsed and hashed.
+    const bytes = await readAll(source.source, MAX_ANALYZABLE_BYTES);
     const wasm = await loadWasmModule();
     const image = parseImage(bytes);
     const sha256 = await sha256Hex(bytes);
@@ -147,6 +165,13 @@ export class PatchWorkerSession implements PatchWorkerApi {
   }
 
   async readArtifact(id: string, offset = 0, length?: number): Promise<ArrayBuffer> {
+    const held = this.sources.get(id);
+    if (held) {
+      const size = held.source.size;
+      const start = Math.max(0, Math.min(offset, size));
+      const take = length === undefined ? size - start : Math.max(0, length);
+      return toStandaloneBuffer(await held.source.read(start, take));
+    }
     const bytes = this.bytesOf(id);
     const start = Math.max(0, Math.min(offset, bytes.length));
     const end = length === undefined ? bytes.length : Math.max(start, Math.min(start + length, bytes.length));
@@ -180,16 +205,19 @@ export class PatchWorkerSession implements PatchWorkerApi {
   }
 
   async digestArtifact(id: string): Promise<string> {
+    // A source is digested by reading it; only images are ever digested this way.
+    const held = this.sources.get(id);
+    if (held) return sha256Hex(await readAll(held.source, MAX_ANALYZABLE_BYTES));
     return sha256Hex(this.bytesOf(id));
   }
 
   async listPackage(sourceId: string): Promise<OpenedPackage> {
-    return openPackage(this.requireSource(sourceId).bytes);
+    return openPackage(this.requireSource(sourceId).source);
   }
 
   async extractPackageEntry(sourceId: string, entryId: string): Promise<WorkspaceArtifact> {
     const source = this.requireSource(sourceId);
-    const opened = openPackage(source.bytes);
+    const opened = await openPackage(source.source);
     const entry = opened.entries.find((candidate) => candidate.id === entryId);
     if (!entry) {
       throw new WorkerError(
@@ -197,7 +225,7 @@ export class PatchWorkerSession implements PatchWorkerApi {
         "Pick an entry from the listing.",
       );
     }
-    const bytes = await extractEntryFrom(source.bytes, entryId);
+    const bytes = await extractEntryFrom(source.source, entryId);
     return this.registerArtifact({
       sourceId,
       parentId: sourceId,
@@ -260,8 +288,6 @@ export class PatchWorkerSession implements PatchWorkerApi {
   }
 
   private bytesOf(id: string): Uint8Array {
-    const source = this.sources.get(id);
-    if (source) return source.bytes;
     const artifact = this.artifacts.get(id);
     if (artifact) return artifact.bytes;
     throw new WorkerError("Nothing in the workspace has the id " + id + ".", "Open the file again.");

@@ -180,8 +180,7 @@ function assembleBootImage(
   const kernel = sections.find((section) => section.name === "kernel");
   const guess = detectKernelArchitecture(kernel?.data);
   if (guess.confidence === "none") warnings.push(guess.reason);
-  const format: ParsedBootImage["format"] =
-    header.headerVersion >= 4 && header.kernelSize === 0 && header.ramdiskSize > 0 ? "init_boot" : "boot";
+  const format = formatFromBootHeader(header);
 
   return {
     format,
@@ -257,6 +256,21 @@ function parseVendorBootImage(
     warnings,
     source: bytes,
   };
+}
+
+/**
+ * The format a boot header describes. `init_boot` is a v4 boot header without a kernel, which is
+ * what Android 13+ ships the generic ramdisk in; a prefix of a file is enough to decide this, which
+ * is what the workspace detection relies on.
+ */
+export function formatFromBootHeader(header: {
+  headerVersion: number;
+  kernelSize: number;
+  ramdiskSize: number;
+}): "boot" | "init_boot" {
+  return header.headerVersion >= 4 && header.kernelSize === 0 && header.ramdiskSize > 0
+    ? "init_boot"
+    : "boot";
 }
 
 export function detectImageFormat(bytes: Uint8Array): ParsedImage["format"] | "unknown" {

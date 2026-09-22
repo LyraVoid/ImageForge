@@ -25,8 +25,8 @@ export interface PatchWorkerClient {
   patch(request: PatchRequest, onProgress?: ProgressSink): Promise<PatchResponse>;
   cancel(): Promise<void>;
   reset(): Promise<void>;
-  /** Opens a file into the workspace and reports what it is. */
-  openSource(file: ArrayBuffer, name?: string): Promise<WorkspaceSourceRecord>;
+  /** Opens a file into the workspace and reports what it is. A Blob is kept as a handle. */
+  openSource(file: ArrayBuffer | Blob, name?: string): Promise<WorkspaceSourceRecord>;
   analyzeSource(sourceId: string): Promise<AnalyzeResponse>;
   workspace(): Promise<WorkspaceSnapshot>;
   readArtifact(id: string, offset?: number, length?: number): Promise<ArrayBuffer>;
@@ -55,7 +55,11 @@ function createWorkerBackedClient(worker: Worker): PatchWorkerClient {
     },
     cancel: () => remote.cancel(),
     reset: () => remote.reset(),
-    openSource: (file, name) => remote.openSource(Comlink.transfer(file, [file]), name),
+    // A Blob is a handle to a file on disk: it is cloned, never copied through the boundary.
+    openSource: (file, name) =>
+      file instanceof ArrayBuffer
+        ? remote.openSource(Comlink.transfer(file, [file]), name)
+        : remote.openSource(file, name),
     analyzeSource: (sourceId) => remote.analyzeSource(sourceId),
     workspace: () => remote.workspace(),
     readArtifact: (id, offset, length) => remote.readArtifact(id, offset, length),

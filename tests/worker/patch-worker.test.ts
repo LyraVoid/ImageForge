@@ -155,6 +155,7 @@ describe("PatchWorkerSession", () => {
         sizeBytes: image.length,
         suggestedKind: "boot-container",
         requiresSource: false,
+        container: null,
       },
     ]);
 

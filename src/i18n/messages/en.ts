@@ -67,6 +67,7 @@ export const en = {
   "reason.tool.planned": "Not implemented in this build yet.",
 
   "extract.openHint": "Drop an OTA payload.bin or a vendor image archive here.",
+  "extract.from": "from {container}",
   "extract.entries": "What is inside",
   "extract.hint": "A payload names its own partitions; what an entry really is gets detected after it is extracted.",
   "extract.reading": "Reading the package…",

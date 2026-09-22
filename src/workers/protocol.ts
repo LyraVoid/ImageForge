@@ -112,8 +112,8 @@ export interface PatchWorkerApi {
   patch(request: PatchRequest, onProgress?: ProgressSink): Promise<PatchResponse>;
   cancel(): Promise<void>;
   reset(): Promise<void>;
-  /** Opens a file into the workspace and reports what it is. */
-  openSource(file: ArrayBuffer, name?: string): Promise<WorkspaceSourceRecord>;
+  /** Opens a file into the workspace and reports what it is. A Blob is kept as a handle. */
+  openSource(file: ArrayBuffer | Blob, name?: string): Promise<WorkspaceSourceRecord>;
   /** Analyzes a source that is already open, which is how the patcher starts from the workspace. */
   analyzeSource(sourceId: string): Promise<AnalyzeResponse>;
   workspace(): Promise<WorkspaceSnapshot>;
