@@ -25,6 +25,8 @@ revision and SHA-256 digest in THIRD_PARTY_LICENSES/:
   * KernelPatch (GPL-2.0-or-later) - public/wasm/kptools.wasm, compiled from
     revision 72a904c412754e25f54353c30f31f5c884ed0673
   * APatch (GPL-3.0-or-later) - public/artifacts/apatch/kpimg, taken from release 11224
+  * liblz4 1.10.0 (BSD-2-Clause) - public/wasm/lz4.wasm, the reference LZ4 codec
+  * bzip2 1.0.8 (BSD-like) - public/wasm/bzip2.wasm, the reference bzip2 decompressor
 
 Our own WebAssembly module (public/wasm/imageforge.wasm) is compiled from crates/imageforge-wasm
 and links two permissively licensed Rust crates:

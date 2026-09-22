@@ -162,6 +162,31 @@ The shape of a real device shows in what gets used: on a CPH2723 (Android 16) th
 partitions where `system`, `vendor`, `product`, `system_ext`, `odm` and `my_stock` are erofs and
 `vendor_dlkm` is ext4, so erofs is what a listing has to understand first.
 
+## Splash images
+
+OPPO / Realme / OnePlus devices on Qualcomm keep their boot screen in a `splash` partition whose
+format this project's own FolkSplash tool established (same author, same licence; its Dart sources
+are kept in `.research/folksplash/` while this port is written). Offsets in bytes:
+
+    0x0000  optional DDPH block (magic "DDPH", one flag)
+    0x4000  "SPLASH LOGO!"
+    0x400C  three 0x40 byte blocks the format keeps verbatim
+    0x40CC  0x40 zero bytes
+    0x410C  imgnumber, unknow, width, height, special
+    0x4120  one 0x80 byte entry per frame: offset, real size, compressed size, name[0x74]
+    0x8000  the frames, back to back: a gzip stream each, holding a 24 bit BMP
+
+Two things about it are load bearing. The frames are stored back to back, so a repack that touches
+one frame can copy every other frame's bytes verbatim — a repack that changes nothing is byte for
+byte the input. And the header's width and height are **not** a bound on the frames: the device this
+was read from declares 1080x1920 while its frames are up to 1440x3168, so resizing to the header
+would shrink the images the panel really shows.
+
+bzip2 streams come out of OTA payloads (`REPLACE_BZ`), and a hand written decoder disagreed with one
+of them, so the reference implementation decodes them: `public/wasm/bzip2.wasm` is bzip2 1.0.8
+compiled by `scripts/build-bzip2-wasm.sh`, the same pattern as `lz4.wasm`, and its output was
+checked digest for digest against `bunzip2`.
+
 ## Hard rules
 
 1. **Providers never parse boot images.** A provider receives the normalized object

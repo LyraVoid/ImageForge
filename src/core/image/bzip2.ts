@@ -11,6 +11,15 @@ import { loadWasmModule } from "../../wasm/loader";
  */
 export async function decodeBzip2(input: Uint8Array, capacityHint?: number): Promise<Uint8Array> {
   if (input.length === 0) return new Uint8Array(0);
+
+  // The reference implementation first: it is the one that reads every vendor stream the same way
+  // the vendor's own tooling does.
+  const { loadBzip2Codec } = await import("../../wasm/bzip2-codec");
+  const codec = await loadBzip2Codec();
+  if (codec) return codec.decompress(input, capacityHint);
+
+  // Fallback: the pure Rust decoder in the project module. It handles many streams but not all, and
+  // says so rather than returning wrong bytes.
   const wasm = await loadWasmModule();
   return wasm.bzip2Decompress(input, capacityHint);
 }
