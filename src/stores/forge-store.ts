@@ -9,6 +9,8 @@ import type {
   PatchProgressEvent,
   PatchVerificationResult,
 } from "@/core";
+import type { OpenedPackage } from "@/core/package";
+import type { WorkspaceArtifact } from "@/core/workspace";
 import type { WorkspaceSourceRecord } from "@/workers/protocol";
 import { mergePlanOptions } from "./plan-options";
 import { createPatchWorkerClient } from "@/workers/client";
@@ -75,6 +77,10 @@ interface ForgeState {
   file: File | null;
   /** What the worker found the opened file to be; the patcher only continues for a boot image. */
   source: WorkspaceSourceRecord | null;
+  /** What a package holds, once it has been asked; the extract tool lists from this. */
+  packageListing: OpenedPackage | null;
+  /** Everything tools derived from the current source, in the order it was produced. */
+  artifacts: WorkspaceArtifact[];
   analysis: AnalyzeResponse | null;
   selectedProviderId: string | null;
   planResponse: PlanResponse | null;
@@ -84,6 +90,11 @@ interface ForgeState {
   output: ForgeOutput | null;
   error: ImageForgeErrorJson | null;
   analyzeFile: (file: File) => Promise<AnalyzeResponse | null>;
+  loadPackage: () => Promise<OpenedPackage | null>;
+  extractEntry: (entryId: string) => Promise<WorkspaceArtifact | null>;
+  /** Hands an artifact to the patcher; named without a leading "use" so it is not mistaken for a hook. */
+  sendToPatcher: (artifactId: string) => Promise<AnalyzeResponse | null>;
+  readArtifactBytes: (artifactId: string) => Promise<Uint8Array | null>;
   selectProvider: (providerId: string, options?: PatchOptions) => Promise<PatchPlan | null>;
   runPatch: () => Promise<boolean>;
   cancelPatch: () => Promise<void>;
@@ -99,6 +110,8 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
   cancelRequested: false,
   file: null,
   source: null,
+  packageListing: null,
+  artifacts: [],
   analysis: null,
   selectedProviderId: null,
   planResponse: null,
@@ -122,6 +135,8 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       error: null,
       file,
       source: null,
+      packageListing: null,
+      artifacts: [],
       analysis: null,
       selectedProviderId: null,
       planResponse: null,
@@ -141,6 +156,54 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       return analysis;
     } catch (error) {
       set({ error: toImageForgeError(error).toJSON(), stage: "error", isBusy: false });
+      return null;
+    }
+  },
+
+  /** Lists what the current source holds; only a package has anything to list. */
+  loadPackage: async () => {
+    const state = get();
+    if (!state.source) return null;
+    try {
+      const listing = await getClient().listPackage(state.source.id);
+      set({ packageListing: listing, error: null });
+      return listing;
+    } catch (error) {
+      set({ error: toImageForgeError(error).toJSON() });
+      return null;
+    }
+  },
+
+  extractEntry: async (entryId) => {
+    const state = get();
+    if (!state.source) return null;
+    try {
+      const artifact = await getClient().extractPackageEntry(state.source.id, entryId);
+      set({ artifacts: [...get().artifacts, artifact], error: null });
+      return artifact;
+    } catch (error) {
+      set({ error: toImageForgeError(error).toJSON() });
+      return null;
+    }
+  },
+
+  /** Hands an extracted artifact to the patcher; the bytes stay where they are. */
+  sendToPatcher: async (artifactId) => {
+    try {
+      const analysis = await getClient().analyzeArtifact(artifactId);
+      set({ analysis, stage: "analyzed", error: null });
+      return analysis;
+    } catch (error) {
+      set({ error: toImageForgeError(error).toJSON() });
+      return null;
+    }
+  },
+
+  readArtifactBytes: async (artifactId) => {
+    try {
+      return new Uint8Array(await getClient().readArtifact(artifactId));
+    } catch (error) {
+      set({ error: toImageForgeError(error).toJSON() });
       return null;
     }
   },
@@ -258,6 +321,8 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       cancelRequested: false,
       file: null,
       source: null,
+      packageListing: null,
+      artifacts: [],
       analysis: null,
       selectedProviderId: null,
       planResponse: null,

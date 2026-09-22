@@ -5,6 +5,8 @@ import type { ParsedImage } from "../core/image";
 import { buildImageReport } from "../core/image/report";
 import { createPatchEngine } from "../core/patch/engine";
 import type { PatchEngine } from "../core/patch/engine";
+import { extractPackageEntry as extractEntryFrom, openPackage } from "../core/package";
+import type { OpenedPackage } from "../core/package";
 import {
   addArtifact,
   addSource,
@@ -179,6 +181,64 @@ export class PatchWorkerSession implements PatchWorkerApi {
 
   async digestArtifact(id: string): Promise<string> {
     return sha256Hex(this.bytesOf(id));
+  }
+
+  async listPackage(sourceId: string): Promise<OpenedPackage> {
+    return openPackage(this.requireSource(sourceId).bytes);
+  }
+
+  async extractPackageEntry(sourceId: string, entryId: string): Promise<WorkspaceArtifact> {
+    const source = this.requireSource(sourceId);
+    const opened = openPackage(source.bytes);
+    const entry = opened.entries.find((candidate) => candidate.id === entryId);
+    if (!entry) {
+      throw new WorkerError(
+        "The package has no entry " + entryId + ".",
+        "Pick an entry from the listing.",
+      );
+    }
+    const bytes = await extractEntryFrom(source.bytes, entryId);
+    return this.registerArtifact({
+      sourceId,
+      parentId: sourceId,
+      tool: "extract",
+      name: entry.name,
+      params: { entry: entryId },
+      bytes: toStandaloneBuffer(bytes),
+    });
+  }
+
+  async analyzeArtifact(artifactId: string): Promise<AnalyzeResponse> {
+    const artifact = this.artifacts.get(artifactId);
+    if (!artifact) {
+      throw new WorkerError("Artifact " + artifactId + " is not in this workspace.", "Extract it first.");
+    }
+    const bytes = artifact.bytes;
+    const wasm = await loadWasmModule();
+    const image = parseImage(bytes);
+    const sha256 = await sha256Hex(bytes);
+    this.state = {
+      sourceId: artifact.record.sourceId,
+      bytes,
+      image,
+      sha256,
+      name: artifact.record.name,
+    };
+    this.controller = null;
+    const report = await buildImageReport(image, {
+      sourceName: artifact.record.name,
+      sourceSize: bytes.length,
+    });
+    return {
+      summary: toImageSummary(image),
+      ...(report.existingPatch === undefined ? {} : { existingPatch: report.existingPatch }),
+      report,
+      compatibility: this.engine.compatibility(image),
+      sha256,
+      crc32: wasm.crc32(bytes).toString(16).padStart(8, "0"),
+      providers: this.engine.providers.descriptors(),
+      wasm: wasm.status,
+    };
   }
 
   async closeSource(sourceId: string): Promise<void> {

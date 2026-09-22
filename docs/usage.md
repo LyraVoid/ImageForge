@@ -22,13 +22,16 @@ You need one of these, for the exact build that is running on the device:
 | `init_boot.img` | the generic ramdisk only (GKI, Android 13+) | KernelSU and Magisk |
 | `vendor_boot.img` | the vendor ramdisk fragment, the dtb and the bootconfig | KernelSU and Magisk |
 
-Ways to get one:
+The easiest way is this site itself: open your OTA package or vendor archive in **Extract from a
+package**, and take the partition you need out of it. Otherwise, the usual ways are:
 
 * **Dump it from the device you are patching** (root or an unlocked bootloader, using your own
   tools). Take the partition the file belongs to, for example
   `dd if=/dev/block/by-name/init_boot of=/sdcard/init_boot.img` from a root shell, then pull it.
-* **Take it from your device's factory image or OTA** and extract the partition you need from
-  `payload.bin` or from the vendor's image archive.
+* **Take it from your device's factory image or OTA**: drop the archive on the tools page and the
+  site says what it is, lists what is inside it (for an OTA `payload.bin`, every partition it
+  carries) and extracts the one you pick. What comes out is identified again, so an `init_boot` can
+  go straight into the patcher.
 
 Keep a stock copy of the file you are about to patch somewhere safe. Restoring a device means
 writing that image back, and ImageForge cannot reconstruct it for you.

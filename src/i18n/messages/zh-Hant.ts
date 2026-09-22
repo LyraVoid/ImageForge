@@ -63,6 +63,16 @@ export const zhHant: Messages = {
   "reason.tool.wrongKind": "這個工具處理：{accepts}。",
   "reason.tool.planned": "這個建置尚未實作。",
 
+  "extract.openHint": "把 OTA 的 payload.bin 或廠商映像包拖到這裡。",
+  "extract.entries": "包裡的內容",
+  "extract.hint": "payload 會宣告自己的分割區名稱；項目到底是什麼，要取出之後再識別。",
+  "extract.reading": "正在讀取安裝包…",
+  "extract.extract": "取出",
+  "extract.extracted": "已取出的檔案",
+  "extract.empty": "還沒有取出任何內容，先在上方選一個項目。",
+  "extract.useInPatcher": "用它開始修補",
+  "extract.download": "下載",
+
   "dropzone.title": "把 Android 映像拖到這裡",
   "dropzone.hint": "或點擊選擇檔案",
   "dropzone.busy": "正在分析映像",

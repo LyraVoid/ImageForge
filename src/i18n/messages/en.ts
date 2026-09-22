@@ -66,6 +66,16 @@ export const en = {
   "reason.tool.wrongKind": "This tool works on {accepts}.",
   "reason.tool.planned": "Not implemented in this build yet.",
 
+  "extract.openHint": "Drop an OTA payload.bin or a vendor image archive here.",
+  "extract.entries": "What is inside",
+  "extract.hint": "A payload names its own partitions; what an entry really is gets detected after it is extracted.",
+  "extract.reading": "Reading the package…",
+  "extract.extract": "Extract",
+  "extract.extracted": "Extracted files",
+  "extract.empty": "Nothing extracted yet. Pick an entry above.",
+  "extract.useInPatcher": "Use in the patcher",
+  "extract.download": "Download",
+
   "dropzone.title": "Drop an Android image here",
   "dropzone.hint": "or click to browse files",
   "dropzone.busy": "Analyzing image",

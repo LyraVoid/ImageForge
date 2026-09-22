@@ -18,7 +18,7 @@ The start page is a set of tools; the patcher is the first one, and the only one
 | Tool | State |
 | --- | --- |
 | **Patch an image** — analyze, plan, patch, verify, download (`/tools/patch/*`) | available |
-| **Extract from a package** — OTA `payload.bin` and vendor archives (`/tools/extract`) | planned |
+| **Extract from a package** — OTA `payload.bin` and vendor archives (`/tools/extract`) | available |
 | **Unpack partitions** — `super.img` and sparse images, logical partitions, export (`/tools/unpack`) | planned |
 | **Boot logo (first screen)** — read, view and replace the splash images (`/tools/logo`) | planned |
 | **Inspect an image** — read-only look at a boot image (`/tools/inspect`) | planned |
@@ -26,6 +26,13 @@ The start page is a set of tools; the patcher is the first one, and the only one
 Adding one is a data change (`src/app/tools.ts`) plus its own route; the tools page, the header and
 the routing table all render from that list. A tool also declares the artifact kinds it accepts and
 produces, and the page offers the tools that match whatever the user opened.
+
+**Packages are read in the browser too.** The extract tool opens a vendor zip archive (central
+directory, stored and deflated entries, CRC32 checked) or an OTA `payload.bin` (the CrAU header, the
+protobuf manifest and its partition streams: REPLACE, REPLACE_XZ, ZERO) and pulls a partition out of
+it. Every blob is checked against the digest the manifest declares, and whatever comes out is
+detected like any other file — so an `init_boot` extracted from an OTA goes straight into the
+patcher. Zip64 archives, delta payloads and BZip2 streams are refused by name rather than guessed at.
 
 **The workspace knows what you dropped.** Every file is classified by its magic into a container
 (zip, OTA payload, sparse image, a compressed stream …) and a content (boot image, ext4, erofs, device

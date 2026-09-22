@@ -63,6 +63,16 @@ export const zhHans: Messages = {
   "reason.tool.wrongKind": "这个工具处理：{accepts}。",
   "reason.tool.planned": "这个构建里尚未实现。",
 
+  "extract.openHint": "把 OTA 的 payload.bin 或厂商镜像包拖到这里。",
+  "extract.entries": "包里的内容",
+  "extract.hint": "payload 会声明自己的分区名；条目到底是什么，要提取之后再识别。",
+  "extract.reading": "正在读取安装包…",
+  "extract.extract": "提取",
+  "extract.extracted": "已提取的文件",
+  "extract.empty": "还没有提取任何内容，先在上方选一个条目。",
+  "extract.useInPatcher": "用它开始修补",
+  "extract.download": "下载",
+
   "dropzone.title": "把 Android 镜像拖到这里",
   "dropzone.hint": "或点击选择文件",
   "dropzone.busy": "正在分析镜像",

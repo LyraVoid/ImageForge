@@ -1,4 +1,5 @@
 import type { ArtifactKind, DetectedArtifact, WorkspaceArtifact } from "../core/workspace";
+import type { OpenedPackage } from "../core/package";
 import type {
   BootImageHeaderFields,
   CompatibilityResult,
@@ -119,6 +120,12 @@ export interface PatchWorkerApi {
   /** Reads a range of a source or an artifact, so a caller can look inside something big. */
   readArtifact(id: string, offset?: number, length?: number): Promise<ArrayBuffer>;
   registerArtifact(request: RegisterArtifactRequest): Promise<WorkspaceArtifact>;
+  /** Lists what a package holds (zip entries or payload partitions) without extracting anything. */
+  listPackage(sourceId: string): Promise<OpenedPackage>;
+  /** Extracts one entry and keeps it in the workspace as an artifact. */
+  extractPackageEntry(sourceId: string, entryId: string): Promise<WorkspaceArtifact>;
+  /** Hands an artifact to the patcher, which reads its bytes where they already are. */
+  analyzeArtifact(artifactId: string): Promise<AnalyzeResponse>;
   digestArtifact(id: string): Promise<string>;
   /** Closes a source and everything that was derived from it. */
   closeSource(sourceId: string): Promise<void>;

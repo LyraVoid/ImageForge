@@ -53,7 +53,7 @@ export const TOOLS: ToolDefinition[] = [
     path: "/tools/extract",
     titleKey: "tool.extract.title",
     descriptionKey: "tool.extract.description",
-    status: "planned",
+    status: "available",
     flow: "single",
     accepts: ["package"],
     produces: ["partition-image"],

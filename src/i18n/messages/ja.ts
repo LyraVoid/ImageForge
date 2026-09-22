@@ -63,6 +63,16 @@ export const ja: Messages = {
   "reason.tool.wrongKind": "このツールが扱うもの: {accepts}。",
   "reason.tool.planned": "このビルドでは未実装です。",
 
+  "extract.openHint": "OTA の payload.bin かベンダーのイメージアーカイブをここにドロップしてください。",
+  "extract.entries": "中身",
+  "extract.hint": "payload はパーティション名を自分で宣言します。実際に何なのかは取り出した後に判定します。",
+  "extract.reading": "パッケージを読んでいます…",
+  "extract.extract": "取り出す",
+  "extract.extracted": "取り出したファイル",
+  "extract.empty": "まだ何も取り出していません。上の一覧から選んでください。",
+  "extract.useInPatcher": "これでパッチする",
+  "extract.download": "ダウンロード",
+
   "dropzone.title": "Android イメージをここにドロップ",
   "dropzone.hint": "またはクリックしてファイルを選択",
   "dropzone.busy": "イメージを分析しています",

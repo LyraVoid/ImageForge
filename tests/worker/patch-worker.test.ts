@@ -4,6 +4,8 @@ import { sha256Hex } from "@/core/hash";
 import { createPatchWorkerClient } from "@/workers/client";
 import { PatchWorkerSession } from "@/workers/session";
 import { buildBootImage } from "../fixtures/bootimg";
+import { buildPayload } from "../fixtures/payload";
+import { buildZip } from "../fixtures/zip";
 
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   const copy = new Uint8Array(bytes.length);
@@ -135,6 +137,61 @@ describe("PatchWorkerSession", () => {
     await expect(session.openSource(new ArrayBuffer(0), "empty")).rejects.toThrowError(WorkerError);
     await expect(session.readArtifact("source-404")).rejects.toThrowError(WorkerError);
     await expect(session.closeSource("source-404")).rejects.toThrowError(WorkerError);
+  });
+
+  it("lists an OTA payload and extracts one partition into the workspace", async () => {
+    const session = new PatchWorkerSession();
+    const image = await buildBootImage({ kernel: null });
+    const payload = await buildPayload([{ name: "init_boot", data: image }]);
+    const source = await session.openSource(toArrayBuffer(payload), "ota-payload.bin");
+
+    expect(source.kind).toBe("package");
+    const listing = await session.listPackage(source.id);
+    expect(listing.kind).toBe("ota-payload");
+    expect(listing.entries).toEqual([
+      { id: "init_boot", name: "init_boot.img", sizeBytes: image.length, suggestedKind: "boot-container" },
+    ]);
+
+    const artifact = await session.extractPackageEntry(source.id, "init_boot");
+    expect(artifact).toMatchObject({
+      id: "source-1:extract:init_boot.img",
+      kind: "boot-container",
+      tool: "extract",
+      params: { entry: "init_boot" },
+    });
+    expect(await session.digestArtifact(artifact.id)).toBe(await sha256Hex(image));
+
+    // the artifact goes straight into the patcher, without the bytes crossing the boundary
+    const analysis = await session.analyzeArtifact(artifact.id);
+    expect(analysis.summary.format).toBe("init_boot");
+    const planned = await session.plan({ providerId: "mock" });
+    expect(planned.plan.target).toBe("init_boot");
+  });
+
+  it("lists a zip archive and extracts a stored entry", async () => {
+    const session = new PatchWorkerSession();
+    const image = await buildBootImage({});
+    const zip = await buildZip([{ name: "images/boot.img", data: image, deflate: true }]);
+    const source = await session.openSource(toArrayBuffer(zip), "vendor.zip");
+
+    const listing = await session.listPackage(source.id);
+    expect(listing.kind).toBe("zip");
+    expect(listing.entries[0]).toMatchObject({ id: "images/boot.img", name: "boot.img" });
+
+    const artifact = await session.extractPackageEntry(source.id, "images/boot.img");
+    expect(artifact.name).toBe("boot.img");
+    expect(artifact.sizeBytes).toBe(image.length);
+    expect(await session.digestArtifact(artifact.id)).toBe(await sha256Hex(image));
+  });
+
+  it("refuses to extract something the package does not have", async () => {
+    const session = new PatchWorkerSession();
+    const source = await session.openSource(
+      toArrayBuffer(await buildZip([{ name: "boot.img", data: new Uint8Array(16) }])),
+      "vendor.zip",
+    );
+
+    await expect(session.extractPackageEntry(source.id, "system.img")).rejects.toThrowError(WorkerError);
   });
 
   it("goes through the same workspace when the client falls back to the inline session", async () => {

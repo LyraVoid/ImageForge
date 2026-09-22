@@ -9,6 +9,9 @@ const ToolsPage = lazy(() => import("@/routes/ToolsPage").then((module) => ({ de
 const PatchImagePage = lazy(() =>
   import("@/routes/PatchImagePage").then((module) => ({ default: module.PatchImagePage })),
 );
+const ExtractPage = lazy(() =>
+  import("@/routes/ExtractPage").then((module) => ({ default: module.ExtractPage })),
+);
 const AnalyzePage = lazy(() => import("@/routes/AnalyzePage").then((module) => ({ default: module.AnalyzePage })));
 const PatchPage = lazy(() => import("@/routes/PatchPage").then((module) => ({ default: module.PatchPage })));
 const ProcessingPage = lazy(() =>
@@ -42,6 +45,7 @@ export const router = createBrowserRouter([
       { path: "tools/patch/plan", element: lazyRoute(<PatchPage />) },
       { path: "tools/patch/run", element: lazyRoute(<ProcessingPage />) },
       { path: "tools/patch/result", element: lazyRoute(<ResultPage />) },
+      { path: "tools/extract", element: lazyRoute(<ExtractPage />) },
       { path: "settings", element: lazyRoute(<SettingsPage />) },
       { path: "analyze", element: <Navigate to={PATCH_ROUTES.analyze} replace /> },
       { path: "patch", element: <Navigate to={PATCH_ROUTES.plan} replace /> },

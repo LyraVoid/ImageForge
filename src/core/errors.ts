@@ -8,6 +8,7 @@ export type ImageForgeErrorCode =
   | "REPACK_ERROR"
   | "VERIFICATION_ERROR"
   | "WORKER_ERROR"
+  | "PACKAGE_ERROR"
   | "ABORTED";
 
 export interface ImageForgeErrorJson {
@@ -86,6 +87,12 @@ export class RepackError extends CodedError {
 export class VerificationError extends CodedError {
   constructor(technical: string, message = "The produced image failed verification.") {
     super("VERIFICATION_ERROR", "VerificationError", message, technical);
+  }
+}
+
+export class PackageError extends CodedError {
+  constructor(technical: string, message = "This package could not be read.") {
+    super("PACKAGE_ERROR", "PackageError", message, technical);
   }
 }
 

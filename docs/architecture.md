@@ -68,6 +68,28 @@ The entry point follows from that: opening a file puts it in the workspace, repo
 either continues into the patcher (a boot image) or names the tools that accept it — with a planned
 tool shown, disabled, and saying why.
 
+## Packages
+
+Two container formats deliver an Android image, and `src/core/package/` reads both:
+
+* **zip** (`zip.ts`): the end-of-central-directory record, the central directory and the local
+  headers. Stored and deflated entries are supported and every entry's CRC32 is checked; zip64 is
+  refused, because the sizes it moves into an extra field are the ones that decide where an entry's
+  data is. Deflate is expanded with `DecompressionStream("deflate-raw")`.
+* **OTA payload** (`payload.ts`): the `CrAU` header, the protobuf manifest and the blob area, with
+  the field numbers taken from magiskboot's own `update_metadata.proto` and its reader
+  (`native/src/boot/payload.rs`). The manifest is parsed by a hand written wire reader
+  (`protobuf.ts`), so no protobuf runtime joins the bundle. Partitions are rebuilt from their
+  operations in blob order; `REPLACE`, `REPLACE_XZ` and `ZERO`/`DISCARD` are implemented, every
+  blob is verified against `data_sha256_hash` and the rebuilt partition against its
+  `new_partition_info.hash`. A delta payload (`minor_version != 0`) is refused: it describes changes
+  against an image this tool does not have.
+
+What an entry *is* never comes from its name: extraction produces bytes, and `detectArtifact`
+classifies them, which is why an `init_boot` pulled out of an OTA is offered to the patcher
+immediately. The blobs stay in the worker throughout: extraction registers a workspace artifact, and
+the patcher reads that artifact where it already is (`analyzeArtifact`).
+
 ## Hard rules
 
 1. **Providers never parse boot images.** A provider receives the normalized object

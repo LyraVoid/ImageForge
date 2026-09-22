@@ -1,5 +1,6 @@
 import * as Comlink from "comlink";
 import type { PatchWorkerSession } from "./session";
+import type { OpenedPackage } from "@/core/package";
 import type { WorkspaceArtifact } from "@/core/workspace";
 import type {
   AnalyzeResponse,
@@ -31,6 +32,9 @@ export interface PatchWorkerClient {
   readArtifact(id: string, offset?: number, length?: number): Promise<ArrayBuffer>;
   registerArtifact(request: RegisterArtifactRequest): Promise<WorkspaceArtifact>;
   digestArtifact(id: string): Promise<string>;
+  listPackage(sourceId: string): Promise<OpenedPackage>;
+  extractPackageEntry(sourceId: string, entryId: string): Promise<WorkspaceArtifact>;
+  analyzeArtifact(artifactId: string): Promise<AnalyzeResponse>;
   closeSource(sourceId: string): Promise<void>;
   terminate(): void;
 }
@@ -58,6 +62,9 @@ function createWorkerBackedClient(worker: Worker): PatchWorkerClient {
     registerArtifact: (request) =>
       remote.registerArtifact(Comlink.transfer(request, [request.bytes])),
     digestArtifact: (id) => remote.digestArtifact(id),
+    listPackage: (sourceId) => remote.listPackage(sourceId),
+    extractPackageEntry: (sourceId, entryId) => remote.extractPackageEntry(sourceId, entryId),
+    analyzeArtifact: (artifactId) => remote.analyzeArtifact(artifactId),
     closeSource: (sourceId) => remote.closeSource(sourceId),
     terminate: () => worker.terminate(),
   };
@@ -95,6 +102,9 @@ function createInlineClient(): PatchWorkerClient {
     readArtifact: async (id, offset, length) => (await load()).readArtifact(id, offset, length),
     registerArtifact: async (request) => (await load()).registerArtifact(request),
     digestArtifact: async (id) => (await load()).digestArtifact(id),
+    listPackage: async (sourceId) => (await load()).listPackage(sourceId),
+    extractPackageEntry: async (sourceId, entryId) => (await load()).extractPackageEntry(sourceId, entryId),
+    analyzeArtifact: async (artifactId) => (await load()).analyzeArtifact(artifactId),
     closeSource: async (sourceId) => {
       if (session) await session.closeSource(sourceId);
     },

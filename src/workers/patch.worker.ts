@@ -17,5 +17,9 @@ Comlink.expose({
   readArtifact: (id: string, offset?: number, length?: number) => session.readArtifact(id, offset, length),
   registerArtifact: (request: Parameters<typeof session.registerArtifact>[0]) => session.registerArtifact(request),
   digestArtifact: (id: string) => session.digestArtifact(id),
+  listPackage: (sourceId: string) => session.listPackage(sourceId),
+  extractPackageEntry: (sourceId: string, entryId: string) =>
+    session.extractPackageEntry(sourceId, entryId),
+  analyzeArtifact: (artifactId: string) => session.analyzeArtifact(artifactId),
   closeSource: (sourceId: string) => session.closeSource(sourceId),
 });
