@@ -9,7 +9,8 @@ third-party component that ImageForge links, embeds, bundles or downloads at run
     ├── magisk/
     ├── kernelsu/
     ├── apatch/
-    └── kernelpatch/
+    ├── kernelpatch/
+    └── lz4/
 
 Each subdirectory must contain, for the exact revision that ImageForge integrates:
 
@@ -28,6 +29,16 @@ Each subdirectory must contain, for the exact revision that ImageForge integrate
 
 ## Current status
 
-ImageForge v0.1 does not bundle any upstream root solution code or artifact. The
-subdirectories document integration policy only, so that adding a real provider is a
-reviewable, license-aware change.
+Bundled third-party components, each with its own directory, pinned revision and digest:
+
+| Component | Kind | License |
+| --- | --- | --- |
+| KernelPatch `kptools` (`public/wasm/kptools.wasm`) | bundled tool | GPL-2.0-or-later |
+| KernelPatch core images (`public/artifacts/apatch/*`) | bundled artifact | GPL-2.0-or-later / GPL-3.0-or-later |
+| KernelSU `ksuinit` and the loadable modules | separate, unmodified programs | GPL-3.0-or-later / GPL-2.0-only |
+| Magisk payloads (`public/artifacts/magisk/*`) | bundled artifact | GPL-3.0 |
+| lz4 (`public/wasm/lz4.wasm`) | bundled codec | BSD-2-Clause |
+
+`src/core/artifacts/catalog.ts` holds the digests that are verified before any of these payloads is
+used, and `tests/unit/third-party-registry.test.ts` refuses a bundled provider artifact that has no
+record here.

@@ -141,13 +141,20 @@ Real images shaped two decisions:
 * The kernel payload is handed to providers as raw section bytes together with its detected
   compression, so a provider can refuse an unsupported format instead of corrupting it.
 
-Compression support: gzip is expanded through `DecompressionStream`; the LZ4 block encoder in
-the WebAssembly module searches hash chains with lazy matching and backward extension, the way the
-reference HC encoder does, which is what keeps a re-compressed ramdisk close to the size the source
-image had; LZ4 legacy and LZ4
-frame payloads are expanded by the WebAssembly codec, which also keeps a 64 KiB window so
-frames with dependent blocks decode correctly; xz goes through the same module, which holds an
-LZMA2 codec built from the crate magiskboot uses. LZMA, BZip2 and Zstandard are detected and
+Compression support: gzip is expanded through `DecompressionStream`; LZ4 legacy and LZ4 frame
+payloads are expanded by the Rust WebAssembly codec, which keeps a 64 KiB window so frames with
+dependent blocks decode correctly; xz goes through the same module, which holds an LZMA2 codec built
+from the crate magiskboot uses.
+
+LZ4 *compression* is not a reimplementation: `public/wasm/lz4.wasm` is upstream liblz4 1.10.0,
+compiled from the pinned tarball by `scripts/build-lz4-wasm.sh` — the revision magiskboot links
+(`lz4-sys 1.11.1+lz4-1.10.0` in Magisk v30.7) and the one the stock tools used. Blocks are
+compressed at `LZ4HC_CLEVEL_MAX` (12), exactly what `magiskboot` passes, so a device ramdisk
+re-encodes to the bytes the stock image shipped, byte for byte (`tests/unit/lz4.test.ts`). The hand
+written encoder in the Rust module stays as the fallback for environments where the reference module
+cannot be loaded; it produces valid but about 3% larger blocks. Level 12 is the slow setting: a
+5 MB `init_boot` ramdisk takes about 0.4 s, while the 63 MB vendor ramdisk of a device image takes
+about 13 s inside the patch worker (the same setting costs the official patchers the same work). LZMA, BZip2 and Zstandard are detected and
 reported but cannot be expanded. "unknown" means no container magic matched, which is
 what a plain arm64 `Image` looks like, so those payloads are passed through unchanged.
 
@@ -246,6 +253,7 @@ layout of the image itself is unchanged, and the AVB signature is dropped either
 | --- | --- |
 | `public/wasm/imageforge.wasm` | Rust crate: CRC32, LZ4 block decoding (windowed) and LZ4 block compression, with an identical TypeScript fallback |
 | `public/wasm/kptools.wasm` | Upstream KernelPatch kptools compiled to `wasm32-wasip1` |
+| `public/wasm/lz4.wasm` | Upstream liblz4 1.10.0 (BSD-2-Clause) compiled to `wasm32-wasip1` in reactor mode: the reference block codec, so container bytes match the official patchers |
 
 `kptools.wasm` is driven by `src/wasm/wasi-runner.ts` on top of
 `@bjorn3/browser_wasi_shim`, which provides an in-memory file system. Upstream sources are

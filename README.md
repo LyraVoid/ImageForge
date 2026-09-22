@@ -47,6 +47,10 @@ Deliberately honest limits:
   Whatever manager that image was built to trust is the one the device needs.
 * **A KernelSU or Magisk module supplied by the user overrides the bundled one**, and both are
   checked the same way (its `.modinfo` and the kernel version it was built for).
+* **LZ4 is compressed by the reference implementation, not a reimplementation.** `lz4.wasm` is
+  upstream liblz4 1.10.0 (BSD-2-Clause) pinned and digest verified, driven at HC level 12, the setting
+  magiskboot uses; a stock device ramdisk comes back out byte for byte identical, which
+  `tests/unit/lz4.test.ts` asserts against the real image.
 * **APatch patches arm64 kernels in uncompressed, gzip, LZ4 or xz containers.** The kernel is
   expanded, patched and written back into the same container (LZ4 frames with dependent
   blocks included). LZMA, BZip2 and Zstandard kernels are refused with a structured
@@ -87,6 +91,7 @@ Deliberately honest limits:
     pnpm lint         # eslint
     pnpm wasm:build          # rebuild public/wasm/imageforge.wasm from the Rust crate
     pnpm wasm:build:kptools  # rebuild public/wasm/kptools.wasm from the pinned KernelPatch revision
+    pnpm wasm:build:lz4      # rebuild public/wasm/lz4.wasm from the pinned liblz4 release
 
 Requirements: Node 20+, pnpm 9+. Rebuilding the Rust module needs a Rust toolchain with
 the `wasm32-unknown-unknown` target; rebuilding kptools downloads wasi-sdk, zlib and the
@@ -173,7 +178,7 @@ and a real device `init_boot` image is used to enforce that
 | Kernel architecture detection | arm64, arm (zImage), x86_64 (bzImage) heuristics |
 | Compression detection | gzip, LZ4 (legacy and frame), XZ, LZMA, BZip2, Zstandard, CPIO |
 | Compression expansion | gzip, LZ4 legacy and LZ4 frame (including dependent blocks), xz |
-| Compression re-encoding | gzip and LZ4 (reproducing the original block size, checksums, content size and dictionary id, with an HC style match search that lands within about 3% of magiskboot's LZ4 HC output) and xz (magiskboot's settings: preset 6, CRC32) |
+| Compression re-encoding | gzip and LZ4 (the **reference liblz4 1.10.0 codec** compiled to WebAssembly at HC level 12, the same revision and setting magiskboot uses, so a device ramdisk re-encodes to the bytes the stock image shipped) and xz (magiskboot's settings: preset 6, CRC32) |
 | AVB signature | detected, dropped on repack with a warning |
 
 ## Verification model

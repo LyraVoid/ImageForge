@@ -1,3 +1,4 @@
+import { LZ4_HC_MAX_LEVEL, loadLz4Codec } from "@/wasm/lz4-codec";
 import { loadWasmModule } from "@/wasm/loader";
 import type { WasmImageModule } from "@/wasm/abi";
 
@@ -223,24 +224,44 @@ function decodeFrame(bytes: Uint8Array, settings: Lz4FrameSettings, wasm: WasmIm
   return content;
 }
 
-export async function encodeLz4(raw: Uint8Array, settings: Lz4Settings): Promise<Uint8Array> {
+/**
+ * The reference liblz4 codec when it can be loaded, and our own encoder otherwise. The two produce
+ * different (both valid) block bytes: liblz4 matches the official patchers byte for byte, the
+ * fallback is a few percent larger.
+ */
+async function pickBlockCompressor(): Promise<(block: Uint8Array) => Uint8Array> {
+  const codec = await loadLz4Codec();
+  if (codec) return (block) => codec.compressBlockHC(block, LZ4_HC_MAX_LEVEL);
   const wasm = await loadWasmModule();
-  return settings.kind === "lz4-legacy"
-    ? encodeLegacy(raw, settings, wasm)
-    : encodeFrame(raw, settings, wasm);
+  return (block) => wasm.lz4CompressBlock(block);
 }
 
-function compressBlocks(raw: Uint8Array, blockMaxSize: number, wasm: WasmImageModule): Uint8Array[] {
+export async function encodeLz4(raw: Uint8Array, settings: Lz4Settings): Promise<Uint8Array> {
+  const compress = await pickBlockCompressor();
+  return settings.kind === "lz4-legacy"
+    ? encodeLegacy(raw, settings, compress)
+    : encodeFrame(raw, settings, compress);
+}
+
+function compressBlocks(
+  raw: Uint8Array,
+  blockMaxSize: number,
+  compress: (block: Uint8Array) => Uint8Array,
+): Uint8Array[] {
   if (raw.length === 0) return [];
   const blocks: Uint8Array[] = [];
   for (let offset = 0; offset < raw.length; offset += blockMaxSize) {
-    blocks.push(wasm.lz4CompressBlock(raw.subarray(offset, Math.min(offset + blockMaxSize, raw.length))));
+    blocks.push(compress(raw.subarray(offset, Math.min(offset + blockMaxSize, raw.length))));
   }
   return blocks;
 }
 
-function encodeLegacy(raw: Uint8Array, settings: Lz4LegacySettings, wasm: WasmImageModule): Uint8Array {
-  const blocks = compressBlocks(raw, settings.blockMaxSize, wasm);
+function encodeLegacy(
+  raw: Uint8Array,
+  settings: Lz4LegacySettings,
+  compress: (block: Uint8Array) => Uint8Array,
+): Uint8Array {
+  const blocks = compressBlocks(raw, settings.blockMaxSize, compress);
   // The legacy stream is only the magic followed by [size][block] pairs: the reference tool and the
   // images devices ship agree on that, and a reader simply consumes the whole input. Some patchers
   // (magiskboot) append the uncompressed size as well; a decoder can do without it, so it is not
@@ -259,8 +280,12 @@ function encodeLegacy(raw: Uint8Array, settings: Lz4LegacySettings, wasm: WasmIm
   return out;
 }
 
-function encodeFrame(raw: Uint8Array, settings: Lz4FrameSettings, wasm: WasmImageModule): Uint8Array {
-  const blocks = compressBlocks(raw, settings.blockMaxSize, wasm);
+function encodeFrame(
+  raw: Uint8Array,
+  settings: Lz4FrameSettings,
+  compress: (block: Uint8Array) => Uint8Array,
+): Uint8Array {
+  const blocks = compressBlocks(raw, settings.blockMaxSize, compress);
   const header = headerLength(settings);
 
   // Materialise every block first so the allocation is exact: trailing bytes would

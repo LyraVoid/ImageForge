@@ -2,6 +2,12 @@
 //!
 //! The module exposes a plain C ABI so the browser can instantiate it directly with
 //! WebAssembly.instantiate, without wasm-bindgen or any third-party crate.
+//!
+//! The LZ4 *compressor* in here is a fallback, not the codec the pipeline prefers:
+//! `public/wasm/lz4.wasm` is upstream liblz4 itself (see `third_party/lz4-wasm/`), which is what
+//! makes the container bytes of a patched image identical to what magiskboot writes. This encoder is
+//! used when that module cannot be loaded, and produces valid blocks about 3% larger. LZ4 and XZ
+//! *decompression*, CRC32 and the block size bound are only implemented here.
 
 use std::alloc::{alloc as rust_alloc, dealloc as rust_dealloc, Layout};
 
@@ -213,9 +219,9 @@ pub unsafe extern "C" fn imageforge_lz4_compress_block(
     }
 }
 
-/// How many chain candidates one position may inspect. magiskboot compresses with LZ4 HC at its
-/// highest level; a bounded search with the same early rejection is what makes that affordable
-/// inside WebAssembly.
+/// How many chain candidates one position may inspect. This mirrors the reference encoder's
+/// high-compression search; it is a bounded subset of it, which is why the reference codec in
+/// `lz4.wasm` is what the pipeline actually compresses with.
 const LZ4_HC_ATTEMPTS: usize = 128;
 
 /// Matches shorter than this also search the next position, which is the lazy matching LZ4 HC does.
