@@ -34,8 +34,14 @@
   --shadow-raised: var(--shadow-raised);
   --shadow-overlay: var(--shadow-overlay);
 
+  /* The CJK families come after the Latin ones on purpose: Latin text keeps the platform UI font
+     and a CJK glyph falls through to a family that actually has it (and to the right regional
+     variant, which is what distinguishes the two Chinese catalogues visually). */
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
-    "Noto Sans", sans-serif;
+    "Noto Sans", "Noto Sans CJK SC", "Noto Sans CJK TC", "Noto Sans JP", "Source Han Sans SC",
+    "Source Han Sans TC", "Source Han Sans JP", "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+    "Yu Gothic UI", "Meiryo", "PingFang SC", "PingFang TC", "Microsoft YaHei", "Microsoft JhengHei",
+    "Malgun Gothic", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, "Liberation Mono",
     monospace;
 }

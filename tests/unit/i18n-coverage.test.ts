@@ -82,7 +82,43 @@ async function collectedProse(): Promise<Set<string>> {
   return used;
 }
 
+/** Field names the providers write into a result's metadata block. */
+function metadataKeysFromSources(directory: string): string[] {
+  const found = new Set<string>();
+  for (const file of readdirSync(directory)) {
+    if (!file.endsWith("-provider.ts")) continue;
+    const source = readFileSync(join(directory, file), "utf8");
+    for (const match of source.matchAll(/metadata: \{/g)) {
+      const open = source.indexOf("{", match.index);
+      let depth = 0;
+      let end = open;
+      for (; end < source.length; end += 1) {
+        if (source[end] === "{") depth += 1;
+        else if (source[end] === "}") {
+          depth -= 1;
+          if (depth === 0) break;
+        }
+      }
+      for (const key of source.slice(open + 1, end).matchAll(/^ {8}([A-Za-z][A-Za-z0-9_]*):/gm)) {
+        found.add(key[1]);
+      }
+    }
+  }
+  return [...found].sort();
+}
+
 describe("engine prose coverage", () => {
+  it("labels every metadata field a provider records", () => {
+    const keys = metadataKeysFromSources(join(process.cwd(), "src", "core", "patch", "providers"));
+    expect(keys.length).toBeGreaterThan(50);
+
+    for (const locale of RECORD_LOCALES) {
+      const table = RECORD_MESSAGES[locale];
+      const missing = keys.filter((key) => table[key] === undefined);
+      expect(missing, locale + " is missing: " + missing.join(" | ")).toEqual([]);
+    }
+  });
+
   it("translates every report label, provider sentence, stage label and progress line", async () => {
     const used = await collectedProse();
     expect(used.size).toBeGreaterThan(100);
