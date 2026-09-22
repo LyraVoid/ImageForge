@@ -16,6 +16,11 @@ export const VENDOR_HEADER_V3_SIZE = 2112;
 export const VENDOR_HEADER_V4_SIZE = 2128;
 export const VENDOR_RAMDISK_ENTRY_SIZE = 108;
 
+/** A table entry is size, offset, type, a 32 byte name and sixteen board id words (108 bytes). */
+export const VENDOR_RAMDISK_NAME_SIZE = 32;
+
+export const VENDOR_RAMDISK_BOARD_ID_SIZE = 16;
+
 export const MODERN_PAGE_SIZE = 4096;
 export const MAX_HEADER_VERSION = 4;
 
