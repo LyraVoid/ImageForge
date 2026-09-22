@@ -143,6 +143,8 @@ interface ForgeState {
   setSplashMode: (mode: SplashResolutionMode, custom?: { width?: number; height?: number }) => void;
   /** Packs the image with every replacement in place, and keeps the result as an artifact. */
   packSplash: () => Promise<WorkspaceArtifact | null>;
+  /** Exports every frame as the BMP the device stores, plus a manifest, in one archive. */
+  exportSplashFrames: () => Promise<WorkspaceArtifact | null>;
   unpackSparse: () => Promise<WorkspaceArtifact | null>;
   extractLogicalPartition: (partitionName: string) => Promise<WorkspaceArtifact | null>;
   browseFilesystem: (path: string) => Promise<FilesystemListing | null>;
@@ -462,6 +464,49 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
         state.insideEntry ?? undefined,
         replacements,
       );
+      set({ artifacts: [...get().artifacts, artifact], error: null });
+      return artifact;
+    } catch (error) {
+      set({ error: toImageForgeError(error).toJSON() });
+      return null;
+    }
+  },
+
+  exportSplashFrames: async () => {
+    const state = get();
+    if (!state.source || !state.splash) return null;
+    try {
+      const files: { name: string; data: ArrayBuffer }[] = [];
+      for (const frame of state.splash.frames) {
+        const bmp = await getClient().readSplashFrameBmp(
+          state.source.id,
+          state.insideEntry ?? undefined,
+          frame.index,
+        );
+        const safe = frame.name.trim().replace(/[^A-Za-z0-9._-]+/g, "_") || String(frame.index);
+        files.push({ name: "frames/" + safe + ".bmp", data: bmp });
+      }
+      const manifest = {
+        format: state.splash.format,
+        headerWidth: state.splash.headerWidth,
+        headerHeight: state.splash.headerHeight,
+        sizeBytes: state.splash.sizeBytes,
+        frames: state.splash.frames.map((frame) => ({
+          index: frame.index,
+          name: frame.name.trim(),
+          width: frame.width,
+          height: frame.height,
+          realSize: frame.realSize,
+          compressedSize: frame.compressedSize,
+        })),
+      };
+      files.push({
+        name: "manifest.json",
+        data: new TextEncoder().encode(JSON.stringify(manifest, null, 2) + "\n")
+          .buffer as ArrayBuffer,
+      });
+      const base = (state.source.name || "splash.img").replace(/\.img$/, "");
+      const artifact = await getClient().exportFilesAsZip(state.source.id, base + "-frames.zip", files);
       set({ artifacts: [...get().artifacts, artifact], error: null });
       return artifact;
     } catch (error) {

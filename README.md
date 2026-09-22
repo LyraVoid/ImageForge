@@ -43,7 +43,8 @@ source image — are refused by name instead of guessed at.
 **The boot screen is editable too.** A splash image's frames are listed with thumbnails, any frame
 can be replaced with a picture of your own (kept as it is, cropped or stretched to the frame, or a
 size you name), and the image is packed again: frames you did not touch keep their exact bytes, and
-repacking without changes reproduces the partition byte for byte. The result is a download, never a
+repacking without changes reproduces the partition byte for byte — which the page checks and says so
+— and the frames can be exported as one archive with a manifest. The result is a download, never a
 flash.
 
 **And they are read where they lie.** A partition inside an OTA payload is a range source: browsing

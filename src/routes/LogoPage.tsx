@@ -36,6 +36,7 @@ export function LogoPage() {
   const clearSplashReplacement = useForgeStore((state) => state.clearSplashReplacement);
   const setSplashMode = useForgeStore((state) => state.setSplashMode);
   const packSplash = useForgeStore((state) => state.packSplash);
+  const exportSplashFrames = useForgeStore((state) => state.exportSplashFrames);
   const readArtifactBytes = useForgeStore((state) => state.readArtifactBytes);
   const [target, setTarget] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
@@ -96,7 +97,7 @@ export function LogoPage() {
     [target, replaceSplashFrame],
   );
 
-  const packed = artifacts.filter((artifact) => artifact.tool === "logo");
+  const packed = artifacts.filter((artifact) => artifact.tool === "logo" || artifact.tool === "export");
   const last = packed.at(-1);
 
   return (
@@ -132,7 +133,9 @@ export function LogoPage() {
                     size: formatBytes(splash.sizeBytes),
                   })}
                 </CardTitle>
-                <CardDescription>{t("logo.headerNote")}</CardDescription>
+                <CardDescription>
+                  {t(("logo.format." + splash.format) as never)} · {t("logo.headerNote")}
+                </CardDescription>
               </div>
             </CardHeader>
           </Card>
@@ -246,20 +249,34 @@ export function LogoPage() {
               <CardTitle>{t("logo.pack")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button
-                variant="primary"
-                size="sm"
-                disabled={busy}
-                onClick={async () => {
-                  setBusy(true);
-                  await packSplash();
-                  setBusy(false);
-                }}
-              >
-                {busy ? <LoaderCircle className="animate-spin" /> : null}
-                {t("logo.pack")}
-                <ArrowRight />
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    await packSplash();
+                    setBusy(false);
+                  }}
+                >
+                  {busy ? <LoaderCircle className="animate-spin" /> : null}
+                  {t("logo.pack")}
+                  <ArrowRight />
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    await exportSplashFrames();
+                    setBusy(false);
+                  }}
+                >
+                  {t("logo.export")}
+                </Button>
+              </div>
               {last ? (
                 <p
                   className={cn(
@@ -270,7 +287,12 @@ export function LogoPage() {
                   {t("logo.packed", { count: last.params?.replaced ?? "0" })}{" "}
                   {Number(last.params?.sizeDelta ?? "0") > 0
                     ? t("logo.grows", { size: formatBytes(Number(last.params?.sizeDelta ?? "0")) })
-                    : t("logo.same")}
+                    : t("logo.same")}{" "}
+                  {last.params?.verified === "identical"
+                    ? t("logo.verified.identical")
+                    : last.params?.verified === "frames-intact"
+                      ? t("logo.verified.framesIntact")
+                      : t("logo.verified.different")}
                 </p>
               ) : null}
               {packed.length > 0 ? (

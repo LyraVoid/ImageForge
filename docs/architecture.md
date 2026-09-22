@@ -191,6 +191,12 @@ be tested without a browser, and the four adaptation modes (direct, follow the o
 auto adapt, custom) size against **the frame being replaced** — never against the header, whose
 1080x1920 on a real device is smaller than the 1440x3168 frames it actually shows.
 
+The formats themselves are a table (`src/core/logo/formats.ts`): the OPPO/Qualcomm container is the
+one implemented and verified against a real partition, and a second vendor's container becomes a new
+entry plus its own parser rather than a rewrite of the tool. Exporting uses the project's own zip
+writer (`src/core/image/zip-write.ts`, stored entries, fixed timestamps so the archive is
+reproducible), which the system `unzip` reads back entry for entry.
+
 Repacking follows the rule the rest of the project uses: the packer starts from the image's own bytes
 and writes only the metadata entries and the frame streams, so a repack of an unmodified image is
 byte for byte the input (verified against a real 15 MB partition, frames included), a replaced frame

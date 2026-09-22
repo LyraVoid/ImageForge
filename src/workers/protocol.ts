@@ -129,6 +129,8 @@ export interface SplashFrameSummary {
 }
 
 export interface SplashSummary {
+  /** Which container this is, as the format table names it. */
+  format: string;
   frames: SplashFrameSummary[];
   /** The header's own screen size, which is *not* a bound on the frames. */
   headerWidth: number;
@@ -212,12 +214,20 @@ export interface PatchWorkerApi {
    */
   /** Lists the frames of an OPPO/Realme/OnePlus splash image, with the size of each BMP. */
   inspectSplash(sourceId: string, inside?: string): Promise<SplashSummary>;
+  /** One frame's BMP, which is what an export hands out and what a replacement is measured against. */
+  readSplashFrameBmp(sourceId: string, inside: string | undefined, index: number): Promise<ArrayBuffer>;
   /** A frame as a small RGBA preview, so the editor never holds a ten megabyte image in the page. */
   readSplashFramePreview(
     sourceId: string,
     inside: string | undefined,
     index: number,
   ): Promise<SplashPreview>;
+  /** Zips files a tool built in the page and keeps the archive as an artifact. */
+  exportFilesAsZip(
+    sourceId: string,
+    name: string,
+    files: { name: string; data: ArrayBuffer }[],
+  ): Promise<WorkspaceArtifact>;
   /** Packs the image again with the given frames replaced, and keeps the result as an artifact. */
   packSplashImage(
     sourceId: string,

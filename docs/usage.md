@@ -150,8 +150,13 @@ choose how your picture should be adapted (as it is, fitted to the frame by crop
 stretching, or a size you name) and replace it; the preview shows the adapted result before anything
 is packed.
 
+**Export all frames** writes them into one zip (each frame as the BMP the device stores, plus a
+`manifest.json` naming every frame and its size), which is handy for keeping a record before editing.
+
 Packing keeps every frame you did not touch as the exact bytes it had, and repacking without changes
-gets the image back byte for byte. If your picture needs more room than the frame had, the result
+gets the image back byte for byte. The page says which of the two it checked: the result is read back
+through the same parser, and either every untouched frame's bytes are compared with the original or,
+when nothing was replaced, the whole image is. If your picture needs more room than the frame had, the result
 grows and the page says by how much: a device partition has a fixed size, so a larger image needs a
 partition at least that big. The tool never flashes anything — you get the `splash.img` to download.
 

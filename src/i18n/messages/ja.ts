@@ -126,6 +126,12 @@ export const ja: Messages = {
   "logo.grows": "結果は {size} 大きくなります。端末のパーティションは固定なので、少なくともその大きさが必要です。",
   "logo.same": "結果は開いたイメージと同じ大きさです。",
 
+  "logo.format.oppo-qualcomm": "OPPO / Realme / OnePlus splash（Qualcomm）",
+  "logo.export": "全フレームを書き出す（.zip）",
+  "logo.verified.identical": "確認済み: 結果は開いたイメージとバイト単位で同一です。",
+  "logo.verified.framesIntact": "確認済み: 触っていないフレームはバイト単位でそのままです。",
+  "logo.verified.different": "注意: 結果は開いたイメージと異なります。",
+
   "dropzone.title": "Android イメージをここにドロップ",
   "dropzone.hint": "またはクリックしてファイルを選択",
   "dropzone.busy": "イメージを分析しています",

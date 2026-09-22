@@ -1,6 +1,6 @@
 import { WorkerError } from "../core/errors";
 import { sha256Hex } from "../core/hash";
-import { parseImage } from "../core/image";
+import { buildZip, parseImage } from "../core/image";
 import type { ParsedImage } from "../core/image";
 import { buildImageReport } from "../core/image/report";
 import { createPatchEngine } from "../core/patch/engine";
@@ -39,11 +39,13 @@ import {
 } from "../core/partition";
 import {
   decodeBmp,
+  detectLogoFormat,
   fitRgba,
   packSplash,
   parseSplash,
   readBmpInfo,
   readSplashFrameBmp,
+  readSplashFrameCompressed,
 } from "../core/logo";
 
 /** The longest side of a frame preview the editor asks for. */
@@ -394,13 +396,25 @@ export class PatchWorkerSession implements PatchWorkerApi {
         trailingBytes: Math.max(0, bmp.length - (54 + rowSize * info.height)),
       });
     }
+    const format = await detectLogoFormat(source);
     return {
+      format: format?.id ?? "unknown",
       frames,
       headerWidth: parsed.width,
       headerHeight: parsed.height,
       hasDdph: parsed.hasDdph,
       sizeBytes: source.size,
     };
+  }
+
+  async readSplashFrameBmp(sourceId: string, inside: string | undefined, index: number): Promise<ArrayBuffer> {
+    const { source } = await this.viewSource(sourceId, inside);
+    const parsed = await parseSplash(source);
+    const frame = parsed.frames[index];
+    if (!frame) {
+      throw new WorkerError("This splash image has no frame " + index + ".", "Pick a frame from the list.");
+    }
+    return toStandaloneBuffer(await readSplashFrameBmp(source, frame));
   }
 
   async readSplashFramePreview(
@@ -459,6 +473,27 @@ export class PatchWorkerSession implements PatchWorkerApi {
           } as const);
     });
     const packed = await packSplash(source, parsed, entries);
+
+    // Check what the packer claims instead of trusting it, reading the result back through the same
+    // parser the editor used: every frame the user left alone has to come back byte for byte, and a
+    // pack with no replacements at all has to reproduce the whole image.
+    const check = bytesSource(packed.bytes);
+    const repacked = await parseSplash(check);
+    let untouchedIntact = true;
+    for (const frame of parsed.frames) {
+      if (byIndex.has(frame.index)) continue;
+      const before = await readSplashFrameCompressed(source, frame);
+      const after = await readSplashFrameCompressed(check, repacked.frames[frame.index]);
+      if (before.length !== after.length || !before.every((byte, index) => byte === after[index])) {
+        untouchedIntact = false;
+        break;
+      }
+    }
+    const identical =
+      packed.replaced === 0 &&
+      packed.bytes.length === source.size &&
+      (await sha256Hex(packed.bytes)) === (await sha256Hex(await readAll(source)));
+
     const name =
       (this.sources.get(sourceId)?.record.name ?? "splash.img").replace(/\.img$/, "") + "-patched.img";
     return this.registerArtifact({
@@ -466,8 +501,31 @@ export class PatchWorkerSession implements PatchWorkerApi {
       parentId: sourceId,
       tool: "logo",
       name,
-      params: { replaced: String(packed.replaced), sizeDelta: String(packed.sizeDelta) },
+      params: {
+        replaced: String(packed.replaced),
+        sizeDelta: String(packed.sizeDelta),
+        verified: identical ? "identical" : untouchedIntact ? "frames-intact" : "different",
+      },
       bytes: toStandaloneBuffer(packed.bytes),
+    });
+  }
+
+  /** Zips files a tool built in the page (pictures, a manifest) and keeps the archive as an artifact. */
+  async exportFilesAsZip(
+    sourceId: string,
+    name: string,
+    files: { name: string; data: ArrayBuffer }[],
+  ): Promise<WorkspaceArtifact> {
+    const archive = await buildZip(
+      files.map((file) => ({ name: file.name, data: new Uint8Array(file.data) })),
+    );
+    return this.registerArtifact({
+      sourceId,
+      parentId: sourceId,
+      tool: "export",
+      name,
+      params: { entries: String(files.length) },
+      bytes: toStandaloneBuffer(archive),
     });
   }
 

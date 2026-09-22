@@ -52,6 +52,8 @@ describe("the splash editor page", () => {
     expect(store().artifacts).toHaveLength(1);
     expect(store().artifacts[0].sizeBytes).toBe(image.length);
     expect(store().artifacts[0].name).toBe("splash-patched.img");
+    // the frames can also leave as one archive, which needs no canvas and so works here too
+    expect(screen.getByRole("button", { name: /Export all frames/ })).toBeInTheDocument();
   }, 60000);
 
   it("offers the adaptation modes and a size field only for the custom one", async () => {

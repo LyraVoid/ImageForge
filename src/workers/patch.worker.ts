@@ -26,8 +26,15 @@ Comlink.expose({
   extractLogicalPartition: (sourceId: string, partitionName: string) =>
     session.extractLogicalPartition(sourceId, partitionName),
   inspectSplash: (sourceId: string, inside?: string) => session.inspectSplash(sourceId, inside),
+  readSplashFrameBmp: (sourceId: string, inside: string | undefined, index: number) =>
+    session.readSplashFrameBmp(sourceId, inside, index),
   readSplashFramePreview: (sourceId: string, inside: string | undefined, index: number) =>
     session.readSplashFramePreview(sourceId, inside, index),
+  exportFilesAsZip: (
+    sourceId: string,
+    name: string,
+    files: { name: string; data: ArrayBuffer }[],
+  ) => session.exportFilesAsZip(sourceId, name, files),
   packSplashImage: (
     sourceId: string,
     inside: string | undefined,

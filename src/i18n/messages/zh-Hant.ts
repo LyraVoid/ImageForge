@@ -126,6 +126,12 @@ export const zhHant: Messages = {
   "logo.grows": "結果大了 {size}；裝置分割區大小是固定的，需要至少這麼大的分割區。",
   "logo.same": "結果與你開啟的映像一樣大。",
 
+  "logo.format.oppo-qualcomm": "歐加（OPPO/Realme/一加）splash（高通）",
+  "logo.export": "匯出全部幀（.zip）",
+  "logo.verified.identical": "已驗證：結果與你開啟的映像逐位元組相同。",
+  "logo.verified.framesIntact": "已驗證：未改動的幀位元組未變。",
+  "logo.verified.different": "注意：結果與你開啟的映像不同。",
+
   "dropzone.title": "把 Android 映像拖到這裡",
   "dropzone.hint": "或點擊選擇檔案",
   "dropzone.busy": "正在分析映像",

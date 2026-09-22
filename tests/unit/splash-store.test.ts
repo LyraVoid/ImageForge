@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { bytesSource } from "@/core/package";
-import { decodeBmp, parseSplash, readSplashFrameBmp } from "@/core/logo";
+import { bytesSource, listZip, readZipEntry } from "@/core/package";
+import { decodeBmp, detectLogoFormat, parseSplash, readSplashFrameBmp } from "@/core/logo";
+import { sha256Hex } from "@/core/hash";
 import { useForgeStore } from "@/stores/forge-store";
 import { toFile } from "../fixtures/bootimg";
 import { buildSplash } from "../fixtures/splash";
@@ -99,6 +100,62 @@ describe("the splash editor's data path", () => {
     const artifact = await store().packSplash();
     expect(Number(artifact?.params?.sizeDelta)).toBeGreaterThan(0);
     expect(artifact?.sizeBytes).toBeGreaterThan(image.length);
+  });
+
+  it("verifies what it packed: untouched frames intact, and identical when nothing changed", async () => {
+    const image = await buildSplash([
+      { name: "boot", width: 8, height: 4, color: [200, 0, 0] },
+      { name: "at", width: 4, height: 2, color: [0, 0, 200] },
+    ]);
+    await store().analyzeFile(toFile(image, "splash.img"));
+    await store().loadSplash();
+
+    const unchanged = await store().packSplash();
+    expect(unchanged?.params?.verified).toBe("identical");
+    expect(unchanged?.params?.replaced).toBe("0");
+
+    store().setSplashMode("direct");
+    store().replaceSplashFrame(1, { name: "x.png", rgba: solid(4, 2, [1, 2, 3]), width: 4, height: 2 });
+    const patched = await store().packSplash();
+    expect(patched?.params?.verified).toBe("frames-intact");
+    expect(patched?.params?.sizeDelta).toBe("0");
+  });
+
+  it("exports every frame as a BMP plus a manifest, in one archive", async () => {
+    const image = await buildSplash([
+      { name: "boot", width: 8, height: 4, color: [200, 0, 0] },
+      { name: "at", width: 4, height: 2, color: [0, 0, 200] },
+    ]);
+    await store().analyzeFile(toFile(image, "splash.img"));
+    await store().loadSplash();
+
+    const artifact = await store().exportSplashFrames();
+    expect(artifact?.name).toBe("splash-frames.zip");
+
+    const archive = await store().readArtifactBytes(artifact?.id as string);
+    const source = bytesSource(archive as Uint8Array);
+    const names = (await listZip(source)).map((entry) => entry.name);
+    expect(names).toEqual(["frames/boot.bmp", "frames/at.bmp", "manifest.json"]);
+
+    // the exported BMP is the frame as the image holds it
+    const parsed = await parseSplash(bytesSource(image));
+    const exported = await readZipEntry(source, (await listZip(source))[0]);
+    expect(await sha256Hex(exported)).toBe(await sha256Hex(await readSplashFrameBmp(bytesSource(image), parsed.frames[0])));
+
+    const manifest = JSON.parse(
+      new TextDecoder().decode(await readZipEntry(source, (await listZip(source))[2])),
+    ) as { frames: { name: string; width: number }[]; sizeBytes: number };
+    expect(manifest.sizeBytes).toBe(image.length);
+    expect(manifest.frames.map((frame) => frame.name)).toEqual(["boot", "at"]);
+    expect(manifest.frames[0].width).toBe(8);
+  });
+
+  it("names the container it recognised", async () => {
+    const image = await buildSplash([{ name: "boot", width: 4, height: 4, color: [9, 9, 9] }]);
+    await store().analyzeFile(toFile(image, "splash.img"));
+    expect((await store().loadSplash())?.format).toBe("oppo-qualcomm");
+    expect(await detectLogoFormat(bytesSource(image))).not.toBeNull();
+    expect(await detectLogoFormat(bytesSource(new Uint8Array(0x5000)))).toBeNull();
   });
 
   it("clears a replacement again", async () => {

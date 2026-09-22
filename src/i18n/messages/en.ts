@@ -129,6 +129,12 @@ export const en = {
   "logo.grows": "The result is {size} larger; a device partition is fixed, so it needs one at least that big.",
   "logo.same": "The result is the same size as the image you opened.",
 
+  "logo.format.oppo-qualcomm": "OPPO / Realme / OnePlus splash (Qualcomm)",
+  "logo.export": "Export all frames (.zip)",
+  "logo.verified.identical": "Checked: the result is byte for byte the image you opened.",
+  "logo.verified.framesIntact": "Checked: every frame you left alone kept its bytes.",
+  "logo.verified.different": "Warning: the result differs from the image you opened.",
+
   "dropzone.title": "Drop an Android image here",
   "dropzone.hint": "or click to browse files",
   "dropzone.busy": "Analyzing image",

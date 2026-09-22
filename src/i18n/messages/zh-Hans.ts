@@ -126,6 +126,12 @@ export const zhHans: Messages = {
   "logo.grows": "结果大了 {size}；设备分区大小是固定的，需要至少这么大的分区。",
   "logo.same": "结果与你打开的镜像一样大。",
 
+  "logo.format.oppo-qualcomm": "欧加（OPPO/Realme/一加）splash（高通）",
+  "logo.export": "导出全部帧（.zip）",
+  "logo.verified.identical": "已校验：结果与你打开的镜像逐字节相同。",
+  "logo.verified.framesIntact": "已校验：未改动的帧字节未变。",
+  "logo.verified.different": "注意：结果与你打开的镜像不同。",
+
   "dropzone.title": "把 Android 镜像拖到这里",
   "dropzone.hint": "或点击选择文件",
   "dropzone.busy": "正在分析镜像",
