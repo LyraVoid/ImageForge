@@ -111,6 +111,49 @@ export type PartitionView =
   | { kind: "ext4"; superblock: Ext4Superblock }
   | { kind: "unsupported"; detected: DetectedArtifact };
 
+/** A frame of a splash image, as the editor lists it. */
+export interface SplashFrameSummary {
+  index: number;
+  name: string;
+  /** Size of the decompressed BMP. */
+  realSize: number;
+  /** Size of the gzip stream it is stored as. */
+  compressedSize: number;
+  width: number;
+  height: number;
+  bitsPerPixel: number;
+  /** The resolution field the vendor's file declares, so a replacement can keep it. */
+  pixelsPerMeter: number;
+  /** Bytes the vendor's file carries after the pixels; their size fields count them. */
+  trailingBytes: number;
+}
+
+export interface SplashSummary {
+  frames: SplashFrameSummary[];
+  /** The header's own screen size, which is *not* a bound on the frames. */
+  headerWidth: number;
+  headerHeight: number;
+  hasDdph: boolean;
+  sizeBytes: number;
+}
+
+/** A frame scaled down for display: the pixels plus the size they should be drawn at. */
+export interface SplashPreview {
+  width: number;
+  height: number;
+  /** The full frame's size, so the interface can show it next to the preview. */
+  fullWidth: number;
+  fullHeight: number;
+  rgba: ArrayBuffer;
+}
+
+export interface SplashReplacementRequest {
+  index: number;
+  /** The replacement frame, already a BMP the format accepts. */
+  bmp: ArrayBuffer;
+  name?: string;
+}
+
 /** One directory of a filesystem image, whichever kind it is. */
 export interface FilesystemListing {
   path: string;
@@ -167,6 +210,20 @@ export interface PatchWorkerApi {
    * opened file — a zip entry, or a payload partition like `payload.bin::system` — which is read in
    * ranges instead of being extracted first.
    */
+  /** Lists the frames of an OPPO/Realme/OnePlus splash image, with the size of each BMP. */
+  inspectSplash(sourceId: string, inside?: string): Promise<SplashSummary>;
+  /** A frame as a small RGBA preview, so the editor never holds a ten megabyte image in the page. */
+  readSplashFramePreview(
+    sourceId: string,
+    inside: string | undefined,
+    index: number,
+  ): Promise<SplashPreview>;
+  /** Packs the image again with the given frames replaced, and keeps the result as an artifact. */
+  packSplashImage(
+    sourceId: string,
+    inside: string | undefined,
+    replacements: SplashReplacementRequest[],
+  ): Promise<WorkspaceArtifact>;
   browseFilesystem(sourceId: string, path: string, inside?: string): Promise<FilesystemListing>;
   /** Reads one file out of a filesystem image. */
   readFilesystemFile(sourceId: string, path: string, inside?: string): Promise<Uint8Array>;

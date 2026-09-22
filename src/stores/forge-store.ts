@@ -11,7 +11,24 @@ import type {
 } from "@/core";
 import type { OpenedPackage } from "@/core/package";
 import type { WorkspaceArtifact } from "@/core/workspace";
-import type { FilesystemListing, PartitionView, WorkspaceSourceRecord } from "@/workers/protocol";
+import type { FilesystemListing, PartitionView, SplashSummary, WorkspaceSourceRecord } from "@/workers/protocol";
+import { adaptImage, encodeBmp, fitRgba } from "@/core/logo";
+import type { SplashResolutionMode } from "@/core/logo";
+
+/** A frame the user replaced: adapted, encoded, and previewed at display size. */
+export interface SplashReplacement {
+  /** The BMP that goes into the image. */
+  bmp: Uint8Array;
+  /** The adapted pixels, scaled down for display. */
+  preview: { width: number; height: number; rgba: Uint8Array };
+  mode: SplashResolutionMode;
+  fit: string;
+  target: { width: number; height: number };
+  sourceName: string;
+}
+
+/** The longest side of a preview the editor builds in the page. */
+const SPLASH_PREVIEW_MAX = 240;
 import { mergePlanOptions } from "./plan-options";
 import { createPatchWorkerClient } from "@/workers/client";
 import type { PatchWorkerClient, WorkerMode } from "@/workers/client";
@@ -87,6 +104,15 @@ interface ForgeState {
   filesystemListing: FilesystemListing | null;
   /** The entry inside the opened package a tool is looking at, when it is not the file itself. */
   insideEntry: string | null;
+  /** The splash image the logo tool has open, once its frames have been read. */
+  splash: SplashSummary | null;
+  /** Small previews of the original frames, by frame index. */
+  splashPreviews: Record<number, { width: number; height: number; rgba: Uint8Array }>;
+  /** Replacements the user prepared, by frame index. */
+  splashReplacements: Record<number, SplashReplacement>;
+  splashMode: SplashResolutionMode;
+  splashCustomWidth: number | null;
+  splashCustomHeight: number | null;
   analysis: AnalyzeResponse | null;
   selectedProviderId: string | null;
   planResponse: PlanResponse | null;
@@ -104,6 +130,19 @@ interface ForgeState {
   /** Points the tools at one entry inside the opened package, or at the file itself (null). */
   openInside: (entryId: string | null) => void;
   inspectPartition: () => Promise<PartitionView | null>;
+  /** Reads the open image as a splash image and lists its frames. */
+  loadSplash: () => Promise<SplashSummary | null>;
+  /** A frame's small preview, read once and kept. */
+  readSplashFramePreview: (index: number) => Promise<{ width: number; height: number; rgba: Uint8Array } | null>;
+  /** Adapts and encodes an image for one frame, so the packer only has to place it. */
+  replaceSplashFrame: (
+    index: number,
+    source: { name: string; rgba: Uint8Array; width: number; height: number },
+  ) => SplashReplacement | null;
+  clearSplashReplacement: (index: number) => void;
+  setSplashMode: (mode: SplashResolutionMode, custom?: { width?: number; height?: number }) => void;
+  /** Packs the image with every replacement in place, and keeps the result as an artifact. */
+  packSplash: () => Promise<WorkspaceArtifact | null>;
   unpackSparse: () => Promise<WorkspaceArtifact | null>;
   extractLogicalPartition: (partitionName: string) => Promise<WorkspaceArtifact | null>;
   browseFilesystem: (path: string) => Promise<FilesystemListing | null>;
@@ -128,6 +167,12 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
   partitionView: null,
   filesystemListing: null,
   insideEntry: null,
+  splash: null,
+  splashPreviews: {},
+  splashReplacements: {},
+  splashMode: "followOriginal",
+  splashCustomWidth: null,
+  splashCustomHeight: null,
   analysis: null,
   selectedProviderId: null,
   planResponse: null,
@@ -300,6 +345,131 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     }
   },
 
+  loadSplash: async () => {
+    const state = get();
+    if (!state.source) return null;
+    try {
+      const summary = await getClient().inspectSplash(state.source.id, state.insideEntry ?? undefined);
+      set({ splash: summary, splashPreviews: {}, splashReplacements: {}, error: null });
+      return summary;
+    } catch (error) {
+      set({ splash: null, error: toImageForgeError(error).toJSON() });
+      return null;
+    }
+  },
+
+  readSplashFramePreview: async (index) => {
+    const state = get();
+    if (!state.source) return null;
+    const cached = state.splashPreviews[index];
+    if (cached) return cached;
+    try {
+      const preview = await getClient().readSplashFramePreview(
+        state.source.id,
+        state.insideEntry ?? undefined,
+        index,
+      );
+      const value = {
+        width: preview.width,
+        height: preview.height,
+        rgba: new Uint8Array(preview.rgba),
+      };
+      set({ splashPreviews: { ...get().splashPreviews, [index]: value } });
+      return value;
+    } catch (error) {
+      set({ error: toImageForgeError(error).toJSON() });
+      return null;
+    }
+  },
+
+  replaceSplashFrame: (index, source) => {
+    const state = get();
+    const frame = state.splash?.frames[index];
+    if (!frame) return null;
+    try {
+      const adapted = adaptImage(source.rgba, source.width, source.height, {
+        mode: state.splashMode,
+        frame: {
+          index: frame.index,
+          name: frame.name,
+          offset: 0,
+          realSize: frame.realSize,
+          compressedSize: frame.compressedSize,
+        },
+        image: { width: source.width, height: source.height },
+        originalWidth: frame.width,
+        originalHeight: frame.height,
+        customWidth: state.splashCustomWidth ?? undefined,
+        customHeight: state.splashCustomHeight ?? undefined,
+      });
+      const bmp = encodeBmp(adapted.rgba, adapted.width, adapted.height, {
+        // keep the vendor's own header details: the resolution field and any trailing bytes
+        pixelsPerMeter: frame.pixelsPerMeter,
+        trailingBytes: frame.trailingBytes,
+      });
+      const scale = Math.min(1, SPLASH_PREVIEW_MAX / Math.max(adapted.width, adapted.height));
+      const preview = fitRgba(
+        adapted.rgba,
+        adapted.width,
+        adapted.height,
+        Math.max(1, Math.round(adapted.width * scale)),
+        Math.max(1, Math.round(adapted.height * scale)),
+        "stretch",
+      );
+      const replacement: SplashReplacement = {
+        bmp,
+        preview: { width: preview.width, height: preview.height, rgba: preview.rgba },
+        mode: state.splashMode,
+        fit: adapted.fit,
+        target: adapted.target,
+        sourceName: source.name,
+      };
+      set({ splashReplacements: { ...get().splashReplacements, [index]: replacement }, error: null });
+      return replacement;
+    } catch (error) {
+      set({ error: toImageForgeError(error).toJSON() });
+      return null;
+    }
+  },
+
+  clearSplashReplacement: (index) => {
+    const next = { ...get().splashReplacements };
+    delete next[index];
+    set({ splashReplacements: next });
+  },
+
+  setSplashMode: (mode, custom) => {
+    set({
+      splashMode: mode,
+      splashCustomWidth: custom?.width ?? get().splashCustomWidth,
+      splashCustomHeight: custom?.height ?? get().splashCustomHeight,
+    });
+  },
+
+  packSplash: async () => {
+    const state = get();
+    if (!state.source || !state.splash) return null;
+    try {
+      const replacements = Object.entries(state.splashReplacements).map(([index, replacement]) => ({
+        index: Number(index),
+        bmp: replacement.bmp.buffer.slice(
+          replacement.bmp.byteOffset,
+          replacement.bmp.byteOffset + replacement.bmp.byteLength,
+        ) as ArrayBuffer,
+      }));
+      const artifact = await getClient().packSplashImage(
+        state.source.id,
+        state.insideEntry ?? undefined,
+        replacements,
+      );
+      set({ artifacts: [...get().artifacts, artifact], error: null });
+      return artifact;
+    } catch (error) {
+      set({ error: toImageForgeError(error).toJSON() });
+      return null;
+    }
+  },
+
   readArtifactBytes: async (artifactId) => {
     try {
       return new Uint8Array(await getClient().readArtifact(artifactId));
@@ -432,6 +602,9 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       planResponse: null,
       providerOptions: null,
       attachments: [],
+      splash: null,
+      splashPreviews: {},
+      splashReplacements: {},
       progress: null,
       output: null,
       error: null,

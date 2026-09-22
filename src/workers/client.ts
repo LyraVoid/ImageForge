@@ -13,6 +13,9 @@ import type {
   FilesystemListing,
   PartitionView,
   RegisterArtifactRequest,
+  SplashPreview,
+  SplashReplacementRequest,
+  SplashSummary,
   WorkspaceSnapshot,
   WorkspaceSourceRecord,
 } from "./protocol";
@@ -40,6 +43,17 @@ export interface PatchWorkerClient {
   inspectPartition(sourceId: string, inside?: string): Promise<PartitionView>;
   unpackSparseSource(sourceId: string): Promise<WorkspaceArtifact>;
   extractLogicalPartition(sourceId: string, partitionName: string): Promise<WorkspaceArtifact>;
+  inspectSplash(sourceId: string, inside?: string): Promise<SplashSummary>;
+  readSplashFramePreview(
+    sourceId: string,
+    inside: string | undefined,
+    index: number,
+  ): Promise<SplashPreview>;
+  packSplashImage(
+    sourceId: string,
+    inside: string | undefined,
+    replacements: SplashReplacementRequest[],
+  ): Promise<WorkspaceArtifact>;
   browseFilesystem(sourceId: string, path: string, inside?: string): Promise<FilesystemListing>;
   readFilesystemFile(sourceId: string, path: string, inside?: string): Promise<Uint8Array>;
   closeSource(sourceId: string): Promise<void>;
@@ -79,6 +93,15 @@ function createWorkerBackedClient(worker: Worker): PatchWorkerClient {
     inspectPartition: (sourceId, inside) => remote.inspectPartition(sourceId, inside),
     unpackSparseSource: (sourceId) => remote.unpackSparseSource(sourceId),
     extractLogicalPartition: (sourceId, name) => remote.extractLogicalPartition(sourceId, name),
+    inspectSplash: (sourceId, inside) => remote.inspectSplash(sourceId, inside),
+    readSplashFramePreview: (sourceId, inside, index) =>
+      remote.readSplashFramePreview(sourceId, inside, index),
+    packSplashImage: (sourceId, inside, replacements) =>
+      remote.packSplashImage(
+        sourceId,
+        inside,
+        replacements.map((entry) => Comlink.transfer(entry, [entry.bmp])),
+      ),
     browseFilesystem: (sourceId, path, inside) => remote.browseFilesystem(sourceId, path, inside),
     readFilesystemFile: (sourceId, path, inside) => remote.readFilesystemFile(sourceId, path, inside),
     closeSource: (sourceId) => remote.closeSource(sourceId),
@@ -124,6 +147,11 @@ function createInlineClient(): PatchWorkerClient {
     inspectPartition: async (sourceId, inside) => (await load()).inspectPartition(sourceId, inside),
     unpackSparseSource: async (sourceId) => (await load()).unpackSparseSource(sourceId),
     extractLogicalPartition: async (sourceId, name) => (await load()).extractLogicalPartition(sourceId, name),
+    inspectSplash: async (sourceId, inside) => (await load()).inspectSplash(sourceId, inside),
+    readSplashFramePreview: async (sourceId, inside, index) =>
+      (await load()).readSplashFramePreview(sourceId, inside, index),
+    packSplashImage: async (sourceId, inside, replacements) =>
+      (await load()).packSplashImage(sourceId, inside, replacements),
     browseFilesystem: async (sourceId, path, inside) => (await load()).browseFilesystem(sourceId, path, inside),
     readFilesystemFile: async (sourceId, path, inside) => (await load()).readFilesystemFile(sourceId, path, inside),
     closeSource: async (sourceId) => {

@@ -38,6 +38,17 @@ import {
   unpackSparse,
 } from "../core/partition";
 import {
+  decodeBmp,
+  fitRgba,
+  packSplash,
+  parseSplash,
+  readBmpInfo,
+  readSplashFrameBmp,
+} from "../core/logo";
+
+/** The longest side of a frame preview the editor asks for. */
+const SPLASH_PREVIEW_MAX = 240;
+import {
   addArtifact,
   addSource,
   detectArtifact,
@@ -58,6 +69,9 @@ import type {
   PartitionView,
   ProgressSink,
   RegisterArtifactRequest,
+  SplashPreview,
+  SplashReplacementRequest,
+  SplashSummary,
   WorkspaceSnapshot,
   WorkspaceSourceRecord,
   FilesystemListing,
@@ -353,6 +367,107 @@ export class PatchWorkerSession implements PatchWorkerApi {
       name: partitionName + ".img",
       params: { partition: partitionName },
       bytes: toStandaloneBuffer(bytes),
+    });
+  }
+
+  // ---------------------------------------------------------------- splash images
+
+  async inspectSplash(sourceId: string, inside?: string): Promise<SplashSummary> {
+    const { source } = await this.viewSource(sourceId, inside);
+    const parsed = await parseSplash(source);
+    const frames: SplashSummary["frames"] = [];
+    for (const frame of parsed.frames) {
+      // One frame at a time: a real splash holds twenty of them at ten megabytes each, and the
+      // listing only needs their size.
+      const bmp = await readSplashFrameBmp(source, frame);
+      const info = readBmpInfo(bmp);
+      const rowSize = Math.ceil((info.width * 3) / 4) * 4;
+      frames.push({
+        index: frame.index,
+        name: frame.name,
+        realSize: frame.realSize,
+        compressedSize: frame.compressedSize,
+        width: info.width,
+        height: info.height,
+        bitsPerPixel: info.bitsPerPixel,
+        pixelsPerMeter: info.pixelsPerMeter,
+        trailingBytes: Math.max(0, bmp.length - (54 + rowSize * info.height)),
+      });
+    }
+    return {
+      frames,
+      headerWidth: parsed.width,
+      headerHeight: parsed.height,
+      hasDdph: parsed.hasDdph,
+      sizeBytes: source.size,
+    };
+  }
+
+  async readSplashFramePreview(
+    sourceId: string,
+    inside: string | undefined,
+    index: number,
+  ): Promise<SplashPreview> {
+    const { source } = await this.viewSource(sourceId, inside);
+    const parsed = await parseSplash(source);
+    const frame = parsed.frames[index];
+    if (!frame) {
+      throw new WorkerError("This splash image has no frame " + index + ".", "Pick a frame from the list.");
+    }
+    const bmp = await readSplashFrameBmp(source, frame);
+    const decoded = decodeBmp(bmp);
+    if (decoded.width <= SPLASH_PREVIEW_MAX && decoded.height <= SPLASH_PREVIEW_MAX) {
+      return {
+        width: decoded.width,
+        height: decoded.height,
+        fullWidth: decoded.width,
+        fullHeight: decoded.height,
+        rgba: toStandaloneBuffer(decoded.rgba),
+      };
+    }
+    // Scale the longest side down to the preview size, keeping the aspect ratio.
+    const scale = SPLASH_PREVIEW_MAX / Math.max(decoded.width, decoded.height);
+    const width = Math.max(1, Math.round(decoded.width * scale));
+    const height = Math.max(1, Math.round(decoded.height * scale));
+    const scaled = fitRgba(decoded.rgba, decoded.width, decoded.height, width, height, "stretch");
+    return {
+      width,
+      height,
+      fullWidth: decoded.width,
+      fullHeight: decoded.height,
+      rgba: toStandaloneBuffer(scaled.rgba),
+    };
+  }
+
+  async packSplashImage(
+    sourceId: string,
+    inside: string | undefined,
+    replacements: SplashReplacementRequest[],
+  ): Promise<WorkspaceArtifact> {
+    const { source } = await this.viewSource(sourceId, inside);
+    const parsed = await parseSplash(source);
+    const byIndex = new Map(replacements.map((entry) => [entry.index, entry]));
+    const entries = parsed.frames.map((frame) => {
+      const replacement = byIndex.get(frame.index);
+      return replacement === undefined
+        ? ({ kind: "keep", frame } as const)
+        : ({
+            kind: "replace",
+            index: frame.index,
+            bmp: new Uint8Array(replacement.bmp),
+            name: replacement.name,
+          } as const);
+    });
+    const packed = await packSplash(source, parsed, entries);
+    const name =
+      (this.sources.get(sourceId)?.record.name ?? "splash.img").replace(/\.img$/, "") + "-patched.img";
+    return this.registerArtifact({
+      sourceId,
+      parentId: sourceId,
+      tool: "logo",
+      name,
+      params: { replaced: String(packed.replaced), sizeDelta: String(packed.sizeDelta) },
+      bytes: toStandaloneBuffer(packed.bytes),
     });
   }
 
