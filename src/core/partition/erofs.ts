@@ -306,30 +306,47 @@ export async function readDirectory(
   return entries;
 }
 
-/** Follows a path from the root, one inode at a time. */
+/**
+ * Follows a path from the root, one inode at a time. Symlinks are followed (Android images use them
+ * heavily: `/system/etc` is one), with a hop limit so a loop cannot hang a browse.
+ */
 export async function resolveErofsPath(
   source: ByteSource,
   superblock: ErofsSuperblock,
   path: string,
+  maxHops = 8,
 ): Promise<ErofsInode> {
-  const parts = path.split("/").filter((part) => part !== "");
+  let parts = path.split("/").filter((part) => part !== "");
   let inode = await readInode(source, superblock, superblock.rootNid);
-  for (const part of parts) {
+  let hops = 0;
+  let index = 0;
+
+  while (index < parts.length) {
     if (!inode.isDirectory) {
-      throw new PackageError(
-        "Inode " + inode.nid + " is not a directory, so it cannot hold " + part + ".",
-        "That path does not exist in this image.",
-      );
+      if (!inode.isSymlink || hops >= maxHops) {
+        throw new PackageError(
+          "Inode " + inode.nid + " is not a directory, so it cannot hold " + parts[index] + ".",
+          "That path does not exist in this image.",
+        );
+      }
+      const target = new TextDecoder().decode(await readInodeData(source, superblock, inode));
+      hops += 1;
+      const prefix = target.startsWith("/") ? [] : parts.slice(0, index);
+      parts = [...prefix, ...target.split("/").filter((part) => part !== ""), ...parts.slice(index + 1)];
+      index = 0;
+      inode = await readInode(source, superblock, superblock.rootNid);
+      continue;
     }
     const entries = await readDirectory(source, superblock, inode);
-    const entry = entries.find((candidate) => candidate.name === part);
+    const entry = entries.find((candidate) => candidate.name === parts[index]);
     if (!entry) {
       throw new PackageError(
-        "Directory inode " + inode.nid + " has no entry named " + part + ".",
+        "Directory inode " + inode.nid + " has no entry named " + parts[index] + ".",
         "That path does not exist in this image.",
       );
     }
     inode = await readInode(source, superblock, entry.nid);
+    index += 1;
   }
   return inode;
 }

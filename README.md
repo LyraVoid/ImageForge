@@ -40,6 +40,11 @@ never loaded, and a payload stored inside it is descended into rather than extra
 exists compressed, an entry past the in-memory limit, a partition stored as a delta that needs the
 source image — are refused by name instead of guessed at.
 
+**And they are read where they lie.** A partition inside an OTA payload is a range source: browsing
+its filesystem decodes only the operations that cover the bytes being looked at, so a 759 MB `system`
+image can be listed and a file taken out of it without ever existing as one buffer — the test that
+does exactly that compares the result with the digest the device reports for the same file.
+
 **Partitions come out of their wrappers too.** The unpack tool turns a sparse image into the image
 it stands for (checking the header's checksum), lists the logical partitions of a `super.img` with
 their extents and extracts one without copying the image, and walks an **erofs** filesystem — the

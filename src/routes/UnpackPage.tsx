@@ -24,6 +24,7 @@ export function UnpackPage() {
   const stage = useForgeStore((state) => state.stage);
   const error = useForgeStore((state) => state.error);
   const view = useForgeStore((state) => state.partitionView);
+  const insideEntry = useForgeStore((state) => state.insideEntry);
   const listing = useForgeStore((state) => state.filesystemListing);
   const artifacts = useForgeStore((state) => state.artifacts);
   const inspectPartition = useForgeStore((state) => state.inspectPartition);
@@ -39,7 +40,7 @@ export function UnpackPage() {
 
   useEffect(() => {
     if (source && !isPackage && stage !== "analyzing" && view === null) void inspectPartition();
-  }, [source, isPackage, stage, view, inspectPartition]);
+  }, [source, isPackage, stage, view, inspectPartition, insideEntry]);
 
   const handleDownload = async (artifactId: string, name: string) => {
     const bytes = await readArtifactBytes(artifactId);
@@ -63,6 +64,11 @@ export function UnpackPage() {
       <div className="space-y-1">
         <h1 className="text-base font-semibold tracking-tight">{t("tool.unpack.title")}</h1>
         <p className="text-xs text-muted-foreground">{t("tool.unpack.description")}</p>
+        {insideEntry === null ? null : (
+          <p className="font-mono text-[11px] text-muted-foreground">
+            {t("unpack.inside", { entry: insideEntry })}
+          </p>
+        )}
       </div>
 
       <ErrorPanel error={error} />

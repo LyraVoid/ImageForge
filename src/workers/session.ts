@@ -9,11 +9,16 @@ import {
   blobSource,
   bytesSource,
   extractPackageEntry as extractEntryFrom,
+  listZip,
   openPackage,
+  parsePayload,
+  payloadPartitionSource,
   readAll,
   readPrefix,
+  storedEntrySource,
 } from "../core/package";
 import type { ByteSource, OpenedPackage } from "../core/package";
+import type { DetectedArtifact } from "../core/workspace";
 import {
   LP_METADATA_GEOMETRY_MAGIC,
   checkExt4Supported,
@@ -258,9 +263,39 @@ export class PatchWorkerSession implements PatchWorkerApi {
 
   // ---------------------------------------------------------------- partition containers
 
-  async inspectPartition(sourceId: string): Promise<PartitionView> {
-    const { source, record } = this.requireSource(sourceId);
-    if (record.detected.container === "sparse") {
+  /**
+   * The bytes a tool should look at: the opened file itself, or one entry inside it. A payload
+   * partition inside an OTA zip becomes a range source, so a 759 MB `system` is browsed without ever
+   * being materialized.
+   */
+  private async viewSource(
+    sourceId: string,
+    inside?: string,
+  ): Promise<{ source: ByteSource; detected: DetectedArtifact }> {
+    const held = this.requireSource(sourceId);
+    if (!inside) return { source: held.source, detected: held.record.detected };
+
+    const separator = inside.indexOf("::");
+    const containerName = separator >= 0 ? inside.slice(0, separator) : inside;
+    const entry = (await listZip(held.source)).find((candidate) => candidate.name === containerName);
+    if (!entry) {
+      throw new WorkerError(
+        "The archive has no entry named " + containerName + ".",
+        "That entry is not in this archive.",
+      );
+    }
+    const containerSource = storedEntrySource(held.source, entry);
+    const nested =
+      separator >= 0
+        ? payloadPartitionSource(containerSource, await parsePayload(containerSource), inside.slice(separator + 2))
+        : containerSource;
+    return { source: nested, detected: detectArtifact(await readPrefix(nested, 8192)) };
+  }
+
+  async inspectPartition(sourceId: string, inside?: string): Promise<PartitionView> {
+    const { source, detected: record } = await this.viewSource(sourceId, inside);
+    const detected = record;
+    if (detected.container === "sparse") {
       const parsed = await parseSparse(source);
       return {
         kind: "sparse",
@@ -270,10 +305,10 @@ export class PatchWorkerSession implements PatchWorkerApi {
         outputBytes: parsed.sizeBytes,
       };
     }
-    if (record.detected.content === "erofs") {
+    if (detected.content === "erofs") {
       return { kind: "erofs", superblock: await parseErofs(source) };
     }
-    if (record.detected.container === "raw" && record.detected.content === "unknown") {
+    if (detected.container === "raw" && detected.content === "unknown") {
       // A super image is raw bytes whose geometry struct sits at offset 0, which detection cannot
       // name; the magic is the only thing that tells it apart from any other raw image.
       const head = await source.read(0, 4);
@@ -289,7 +324,7 @@ export class PatchWorkerSession implements PatchWorkerApi {
         };
       }
     }
-    return { kind: "unsupported", detected: record.detected };
+    return { kind: "unsupported", detected };
   }
 
   async unpackSparseSource(sourceId: string): Promise<WorkspaceArtifact> {
@@ -321,9 +356,9 @@ export class PatchWorkerSession implements PatchWorkerApi {
     });
   }
 
-  async browseFilesystem(sourceId: string, path: string): Promise<FilesystemListing> {
-    const { source, record } = this.requireSource(sourceId);
-    if (record.detected.content === "ext4") {
+  async browseFilesystem(sourceId: string, path: string, inside?: string): Promise<FilesystemListing> {
+    const { source, detected } = await this.viewSource(sourceId, inside);
+    if (detected.content === "ext4") {
       const superblock = await parseExt4(source);
       checkExt4Supported(superblock);
       const inode = await resolveExt4Path(source, superblock, path);
@@ -358,9 +393,9 @@ export class PatchWorkerSession implements PatchWorkerApi {
     return { path, kind: "erofs", superblock, entries: detailed };
   }
 
-  async readFilesystemFile(sourceId: string, path: string): Promise<Uint8Array> {
-    const { source, record } = this.requireSource(sourceId);
-    if (record.detected.content === "ext4") {
+  async readFilesystemFile(sourceId: string, path: string, inside?: string): Promise<Uint8Array> {
+    const { source, detected } = await this.viewSource(sourceId, inside);
+    if (detected.content === "ext4") {
       const superblock = await parseExt4(source);
       checkExt4Supported(superblock);
       const inode = await resolveExt4Path(source, superblock, path);

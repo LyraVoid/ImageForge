@@ -157,15 +157,19 @@ export interface PatchWorkerApi {
   /** Hands an artifact to the patcher, which reads its bytes where they already are. */
   analyzeArtifact(artifactId: string): Promise<AnalyzeResponse>;
   /** What kind of partition container the open source is, and what it holds. */
-  inspectPartition(sourceId: string): Promise<PartitionView>;
+  inspectPartition(sourceId: string, inside?: string): Promise<PartitionView>;
   /** Unpacks a sparse image and keeps the raw image as an artifact. */
   unpackSparseSource(sourceId: string): Promise<WorkspaceArtifact>;
   /** Reads one logical partition out of a super image into an artifact. */
   extractLogicalPartition(sourceId: string, partitionName: string): Promise<WorkspaceArtifact>;
-  /** Lists a directory of a filesystem image (erofs or ext4). */
-  browseFilesystem(sourceId: string, path: string): Promise<FilesystemListing>;
+  /**
+   * Lists a directory of a filesystem image (erofs or ext4). `inside` names an entry within the
+   * opened file — a zip entry, or a payload partition like `payload.bin::system` — which is read in
+   * ranges instead of being extracted first.
+   */
+  browseFilesystem(sourceId: string, path: string, inside?: string): Promise<FilesystemListing>;
   /** Reads one file out of a filesystem image. */
-  readFilesystemFile(sourceId: string, path: string): Promise<Uint8Array>;
+  readFilesystemFile(sourceId: string, path: string, inside?: string): Promise<Uint8Array>;
   digestArtifact(id: string): Promise<string>;
   /** Closes a source and everything that was derived from it. */
   closeSource(sourceId: string): Promise<void>;

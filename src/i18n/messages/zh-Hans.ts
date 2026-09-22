@@ -102,6 +102,9 @@ export const zhHans: Messages = {
   "inspect.package": "这是一个安装包",
   "inspect.readOnly": "这个工具只看不改：不写任何东西，也不产出镜像。",
 
+  "extract.browse": "浏览",
+  "unpack.inside": "正在直接查看 {entry}（未提取）",
+
   "dropzone.title": "把 Android 镜像拖到这里",
   "dropzone.hint": "或点击选择文件",
   "dropzone.busy": "正在分析镜像",

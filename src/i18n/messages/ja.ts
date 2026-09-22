@@ -102,6 +102,9 @@ export const ja: Messages = {
   "inspect.package": "これはパッケージです",
   "inspect.readOnly": "このツールは見るだけです。何も書き込まず、イメージも作りません。",
 
+  "extract.browse": "中を見る",
+  "unpack.inside": "{entry} を展開せずにそのまま見ています",
+
   "dropzone.title": "Android イメージをここにドロップ",
   "dropzone.hint": "またはクリックしてファイルを選択",
   "dropzone.busy": "イメージを分析しています",

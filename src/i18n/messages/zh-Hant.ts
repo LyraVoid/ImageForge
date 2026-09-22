@@ -102,6 +102,9 @@ export const zhHant: Messages = {
   "inspect.package": "這是一個安裝包",
   "inspect.readOnly": "這個工具只看不改：不寫任何東西，也不產出映像。",
 
+  "extract.browse": "瀏覽",
+  "unpack.inside": "正在直接檢視 {entry}（未取出）",
+
   "dropzone.title": "把 Android 映像拖到這裡",
   "dropzone.hint": "或點擊選擇檔案",
   "dropzone.busy": "正在分析映像",

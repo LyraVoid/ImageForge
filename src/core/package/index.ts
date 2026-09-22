@@ -160,5 +160,11 @@ export { listZip, readZipEntry, storedEntrySource } from "./zip";
 export type { ZipEntry } from "./zip";
 export { OPERATION_TYPE, PAYLOAD_MAGIC, extractPayloadPartition, parsePayload } from "./payload";
 export type { ParsedPayload, PayloadOperation, PayloadPartition } from "./payload";
+export {
+  describeOperationTypes,
+  payloadPartitionSource,
+  payloadSupportsOperation,
+} from "./payload-source";
+export type { PayloadPartitionSource } from "./payload-source";
 export { bytesSource, blobSource, readAll, readPrefix, subSource } from "./source";
 export type { ByteSource } from "./source";

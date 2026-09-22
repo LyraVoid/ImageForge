@@ -85,6 +85,8 @@ interface ForgeState {
   partitionView: PartitionView | null;
   /** The directory of a filesystem image the user is looking at. */
   filesystemListing: FilesystemListing | null;
+  /** The entry inside the opened package a tool is looking at, when it is not the file itself. */
+  insideEntry: string | null;
   analysis: AnalyzeResponse | null;
   selectedProviderId: string | null;
   planResponse: PlanResponse | null;
@@ -99,6 +101,8 @@ interface ForgeState {
   /** Hands an artifact to the patcher; named without a leading "use" so it is not mistaken for a hook. */
   sendToPatcher: (artifactId: string) => Promise<AnalyzeResponse | null>;
   readArtifactBytes: (artifactId: string) => Promise<Uint8Array | null>;
+  /** Points the tools at one entry inside the opened package, or at the file itself (null). */
+  openInside: (entryId: string | null) => void;
   inspectPartition: () => Promise<PartitionView | null>;
   unpackSparse: () => Promise<WorkspaceArtifact | null>;
   extractLogicalPartition: (partitionName: string) => Promise<WorkspaceArtifact | null>;
@@ -123,6 +127,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
   artifacts: [],
   partitionView: null,
   filesystemListing: null,
+  insideEntry: null,
   analysis: null,
   selectedProviderId: null,
   planResponse: null,
@@ -150,6 +155,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       artifacts: [],
       partitionView: null,
       filesystemListing: null,
+      insideEntry: null,
       analysis: null,
       selectedProviderId: null,
       planResponse: null,
@@ -214,11 +220,16 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     }
   },
 
+  openInside: (entryId) => {
+    // A different thing to look at: the views below are rebuilt from scratch.
+    set({ insideEntry: entryId, partitionView: null, filesystemListing: null, error: null });
+  },
+
   inspectPartition: async () => {
     const state = get();
     if (!state.source) return null;
     try {
-      const view = await getClient().inspectPartition(state.source.id);
+      const view = await getClient().inspectPartition(state.source.id, state.insideEntry ?? undefined);
       set({ partitionView: view, filesystemListing: null, error: null });
       if (view.kind === "erofs" || view.kind === "ext4") await get().browseFilesystem("/");
       return view;
@@ -258,7 +269,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     const state = get();
     if (!state.source) return null;
     try {
-      const listing = await getClient().browseFilesystem(state.source.id, path);
+      const listing = await getClient().browseFilesystem(state.source.id, path, state.insideEntry ?? undefined);
       set({ filesystemListing: listing, error: null });
       return listing;
     } catch (error) {
@@ -271,7 +282,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     const state = get();
     if (!state.source) return null;
     try {
-      const bytes = await getClient().readFilesystemFile(state.source.id, path);
+      const bytes = await getClient().readFilesystemFile(state.source.id, path, state.insideEntry ?? undefined);
       const name = path.split("/").filter((part) => part !== "").pop() ?? "file";
       const artifact = await getClient().registerArtifact({
         sourceId: state.source.id,
@@ -415,6 +426,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       artifacts: [],
       partitionView: null,
       filesystemListing: null,
+      insideEntry: null,
       analysis: null,
       selectedProviderId: null,
       planResponse: null,

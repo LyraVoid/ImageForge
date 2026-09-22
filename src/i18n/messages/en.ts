@@ -105,6 +105,9 @@ export const en = {
   "inspect.package": "This is a package",
   "inspect.readOnly": "This tool only looks: nothing is written and no image is produced.",
 
+  "extract.browse": "Browse",
+  "unpack.inside": "looking inside {entry} without extracting it",
+
   "dropzone.title": "Drop an Android image here",
   "dropzone.hint": "or click to browse files",
   "dropzone.busy": "Analyzing image",

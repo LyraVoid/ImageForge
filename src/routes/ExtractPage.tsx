@@ -1,4 +1,4 @@
-import { ArrowRight, Download, FileDown, LoaderCircle, PackageOpen } from "lucide-react";
+import { ArrowRight, Download, FileDown, FolderOpen, LoaderCircle, PackageOpen } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { ErrorPanel } from "@/components/app/error-panel";
@@ -7,7 +7,7 @@ import { SourcePanel } from "@/components/app/source-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PATCH_ROUTES } from "@/app/tools";
+import { PATCH_ROUTES, UNPACK_TOOL } from "@/app/tools";
 import { kindLabel } from "@/core/workspace";
 import { PackageError } from "@/core/errors";
 import { useRecordText, useT } from "@/i18n/use-translation";
@@ -31,6 +31,7 @@ export function ExtractPage() {
   const loadPackage = useForgeStore((state) => state.loadPackage);
   const extractEntry = useForgeStore((state) => state.extractEntry);
   const sendToPatcher = useForgeStore((state) => state.sendToPatcher);
+  const openInside = useForgeStore((state) => state.openInside);
   const readArtifactBytes = useForgeStore((state) => state.readArtifactBytes);
   const [busyEntry, setBusyEntry] = useState<string | null>(null);
 
@@ -112,15 +113,29 @@ export function ExtractPage() {
                       {entry.requiresSource ? (
                         <span className="text-[11px] text-muted-foreground">{t("extract.needsSource")}</span>
                       ) : (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          disabled={busyEntry !== null}
-                          onClick={() => void handleExtract(entry.id)}
-                        >
-                          {busyEntry === entry.id ? <LoaderCircle className="animate-spin" /> : null}
-                          {t("extract.extract")}
-                        </Button>
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              // read it where it lies: a payload partition becomes a range source
+                              openInside(entry.id);
+                              navigate(UNPACK_TOOL.path);
+                            }}
+                          >
+                            <FolderOpen />
+                            {t("extract.browse")}
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            disabled={busyEntry !== null}
+                            onClick={() => void handleExtract(entry.id)}
+                          >
+                            {busyEntry === entry.id ? <LoaderCircle className="animate-spin" /> : null}
+                            {t("extract.extract")}
+                          </Button>
+                        </>
                       )}
                     </li>
                   ))}
