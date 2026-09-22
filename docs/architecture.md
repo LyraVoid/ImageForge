@@ -180,13 +180,24 @@ Describing a provider is data, running one is code, and the two travel separatel
   too, so a browser that has a Worker does not carry the Image Engine on the main thread.
 * `package.json` declares the app side-effect free except for CSS, which lets the bundler drop the
   `src/core` re-exports a page never touches.
+* Messages follow the same rule as providers. English (`messages/en.ts`) is bundled because it is
+  the source of truth, the `MessageKey` union and the fallback; the other three languages — the
+  interface catalogue and the engine prose table together — are imported when one is selected
+  (`src/i18n/catalog.ts`). Until the selected catalogue arrives the interface keeps the language it
+  already had, and `<html lang>` is set from the stored preference by the inline script in
+  `index.html`, so the document never claims the wrong language.
 
 Effect on the production build (measured, the numbers are machine specific): the first load went
-from about 725 kB of JavaScript to about 590 kB, the Image Engine and the four providers left the
+from about 725 kB of JavaScript to about 470 kB. The Image Engine and the four providers left the
 initial graph, and each provider became its own chunk — `apatch` 36 kB, `kernelsu` 12 kB,
-`magisk` 10 kB, `mock` 5 kB — fetched when a plan or a patch first needs them. The worker builds
-its own copies of those chunks, which is how Vite bundles a worker entry; the page only downloads
-what it imports.
+`magisk` 10 kB, `mock` 5 kB — fetched when a plan or a patch first needs them. The shared UI chunk
+went from 180 kB to 63 kB because the three non-English catalogues (about 18-24 kB each) became
+chunks of their own. The worker builds its own copies of the provider chunks, which is how Vite
+bundles a worker entry; the page only downloads what it imports.
+
+The icon set was already on demand and needed no change: a lucide icon is its own module, and the
+production source maps show exactly the thirty icons the app imports plus thirteen runtime helpers
+(`createLucideIcon`, `Icon`, the name converters) — no unused icon is in any chunk.
 
 ## Patch providers
 

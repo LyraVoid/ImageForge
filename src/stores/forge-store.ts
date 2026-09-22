@@ -1,8 +1,7 @@
 import { create } from "zustand";
 import { toImageForgeError } from "@/core/errors";
-import { translate } from "@/i18n/translate";
 import type { MessageKey } from "@/i18n";
-import { useLocaleStore } from "./locale-store";
+import { currentTranslator } from "./locale-store";
 import type {
   ImageForgeErrorJson,
   PatchOptions,
@@ -46,7 +45,7 @@ let client: PatchWorkerClient | null = null;
 
 /** Progress lines the store itself reports are read at the moment they are produced. */
 function message(key: MessageKey): string {
-  return translate(useLocaleStore.getState().locale, key);
+  return currentTranslator()(key);
 }
 
 function getClient(): PatchWorkerClient {

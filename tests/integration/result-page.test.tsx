@@ -17,8 +17,9 @@ function renderResult() {
   );
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   useLocaleStore.getState().setLocale("en");
+  await useLocaleStore.getState().ensureLoaded("en");
   useForgeStore.setState({
     output: fakeOutput(),
     analysis: fakeAnalysis(),
@@ -47,11 +48,11 @@ describe("result page readiness checklist", () => {
     expect(screen.getByText("All 2 checks passed. Plan id: " + "1".repeat(32) + ".")).toBeInTheDocument();
   });
 
-  it("follows the interface language", () => {
+  it("follows the interface language", async () => {
     useLocaleStore.getState().setLocale("ja");
     renderResult();
 
-    expect(screen.getByText("デバイスに書き込む前のチェックリスト")).toBeInTheDocument();
+    expect(await screen.findByText("デバイスに書き込む前のチェックリスト")).toBeInTheDocument();
     expect(screen.getByText("対象パーティション")).toBeInTheDocument();
   });
 

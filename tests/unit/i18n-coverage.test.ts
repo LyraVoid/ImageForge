@@ -8,8 +8,16 @@ import {
   createProviderRegistry,
   parseImage,
 } from "@/core";
-import { RECORD_MESSAGES } from "@/i18n/record";
+import { zhHans } from "@/i18n/record/zh-Hans";
+import { zhHant } from "@/i18n/record/zh-Hant";
+import { ja } from "@/i18n/record/ja";
 import type { RecordLocale } from "@/i18n/record";
+
+const RECORD_MESSAGES: Record<RecordLocale, Record<string, string>> = {
+  "zh-Hans": zhHans,
+  "zh-Hant": zhHant,
+  ja,
+};
 import { buildBootImage, buildVendorBootImage, gzipBytes } from "../fixtures/bootimg";
 import { buildRamdisk } from "../fixtures/cpio";
 

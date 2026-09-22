@@ -18,6 +18,12 @@
             (mode === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
           document.documentElement.classList.toggle("dark", dark);
           document.documentElement.dataset.themeMode = mode;
+          // The catalogue loads on demand, so the language of the document is set here to keep
+          // lang correct from the first paint.
+          var locale = localStorage.getItem("imageforge.locale");
+          if (locale === "en" || locale === "zh-Hans" || locale === "zh-Hant" || locale === "ja") {
+            document.documentElement.lang = locale;
+          }
         } catch (error) {
           document.documentElement.classList.add("dark");
         }

@@ -1,11 +1,9 @@
-import { DEFAULT_LOCALE, isLocale } from "./locales";
-import type { Locale } from "./locales";
-import { MESSAGES } from "./catalog";
-import type { MessageKey } from "./messages/en";
+import { en } from "./messages/en";
+import type { MessageKey, Messages } from "./messages/en";
 
 export type MessageParams = Record<string, string | number>;
 
-/** A message lookup bound to one locale. */
+/** A message lookup bound to one language's catalogue. */
 export type Translator = (key: MessageKey, params?: MessageParams) => string;
 
 const PLACEHOLDER = /\{(\w+)\}/g;
@@ -22,21 +20,12 @@ export function interpolate(template: string, params?: MessageParams): string {
   });
 }
 
-export function createTranslator(locale: Locale): Translator {
-  const catalog = MESSAGES[locale];
-  const fallback = MESSAGES[DEFAULT_LOCALE];
-  return (key, params) => {
-    const template = catalog[key] ?? fallback[key];
-    return interpolate(template, params);
-  };
-}
-
-export function translate(locale: Locale, key: MessageKey, params?: MessageParams): string {
-  return createTranslator(locale)(key, params);
-}
-
-export function normalizeLocale(value: unknown): Locale {
-  return isLocale(value) ? value : DEFAULT_LOCALE;
+/**
+ * A catalogue is complete by type, so the English fallback only covers a lookup that is not a
+ * MessageKey at all (a stale key in a running session, for example).
+ */
+export function createTranslator(catalog: Messages): Translator {
+  return (key, params) => interpolate(catalog[key] ?? en[key], params);
 }
 
 /** Every placeholder a message declares, in order. */

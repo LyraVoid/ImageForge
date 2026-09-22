@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_LOCALE, LOCALES, detectLocale, isLocale, localeDefinition, matchLocale } from "@/i18n/locales";
-import { MESSAGES } from "@/i18n/catalog";
+import { ENGLISH_CATALOG, loadLocale } from "@/i18n/catalog";
 import { MESSAGE_KEYS, en } from "@/i18n/messages/en";
-import { interpolate, placeholdersOf, translate } from "@/i18n/translate";
-import { RECORD_MESSAGES } from "@/i18n/record";
+import { createTranslator, interpolate, placeholdersOf } from "@/i18n/translate";
+import { ENGLISH_RECORD, translateRecord } from "@/i18n/record";
+import { zhHans } from "@/i18n/record/zh-Hans";
+import { zhHant } from "@/i18n/record/zh-Hant";
+import { ja } from "@/i18n/record/ja";
 import { CHECK_KEYS, REASON_KEYS, WARNING_KEYS } from "@/i18n/engine-keys";
 
 const LOCALE_IDS = LOCALES.map((entry) => entry.id);
+const RECORD_TABLES = { "zh-Hans": zhHans, "zh-Hant": zhHant, ja };
 /** Messages that are legitimately spelled the same in every language. */
 const IDENTICAL_ALLOWED = 15;
 
@@ -18,30 +22,38 @@ describe("translation catalogues", () => {
     expect(localeDefinition("ja").htmlLang).toBe("ja");
   });
 
-  it("has every message key in every language", () => {
+  it("ships English without importing another language", () => {
+    expect(ENGLISH_CATALOG.messages).toBe(en);
+    // the English record table is the identity: nothing to translate
+    expect(ENGLISH_RECORD).toEqual({});
+    expect(translateRecord(ENGLISH_RECORD, "Kernel")).toBe("Kernel");
+    expect(translateRecord(ja, "Kernel")).toBe("カーネル");
+  });
+
+  it("has every message key in every language", async () => {
     for (const locale of LOCALE_IDS) {
-      const catalog = MESSAGES[locale];
-      expect(Object.keys(catalog).sort()).toEqual([...MESSAGE_KEYS].sort());
+      const { messages } = await loadLocale(locale);
+      expect(Object.keys(messages).sort()).toEqual([...MESSAGE_KEYS].sort());
       for (const key of MESSAGE_KEYS) {
-        const value = catalog[key];
-        expect(typeof value, locale + " " + key).toBe("string");
-        expect(value.trim(), locale + " " + key).not.toBe("");
+        expect(typeof messages[key], locale + " " + key).toBe("string");
+        expect(messages[key].trim(), locale + " " + key).not.toBe("");
       }
     }
   });
 
-  it("keeps the placeholders of a message identical across languages", () => {
-    for (const key of MESSAGE_KEYS) {
-      const expected = placeholdersOf(en[key]);
-      for (const locale of LOCALE_IDS) {
-        expect(placeholdersOf(MESSAGES[locale][key]), locale + " " + key).toEqual(expected);
+  it("keeps the placeholders of a message identical across languages", async () => {
+    for (const locale of LOCALE_IDS) {
+      const { messages } = await loadLocale(locale);
+      for (const key of MESSAGE_KEYS) {
+        expect(placeholdersOf(messages[key]), locale + " " + key).toEqual(placeholdersOf(en[key]));
       }
     }
   });
 
-  it("actually translates rather than copying English", () => {
+  it("actually translates rather than copying English", async () => {
     for (const locale of ["zh-Hans", "zh-Hant", "ja"] as const) {
-      const identical = MESSAGE_KEYS.filter((key) => MESSAGES[locale][key] === en[key]);
+      const { messages } = await loadLocale(locale);
+      const identical = MESSAGE_KEYS.filter((key) => messages[key] === en[key]);
       expect(identical.length, locale + " still English: " + identical.slice(0, 5).join(", ")).toBeLessThan(
         IDENTICAL_ALLOWED,
       );
@@ -54,7 +66,6 @@ describe("translation catalogues", () => {
         expect(MESSAGE_KEYS).toContain(key);
       }
     }
-    // every reason and warning code the compatibility engine can emit has a message
     expect(Object.keys(REASON_KEYS).sort()).toEqual([
       "architecture",
       "format",
@@ -69,7 +80,7 @@ describe("translation catalogues", () => {
 
 describe("engine record tables", () => {
   it("carries the same source keys in every translated language", () => {
-    const [reference, ...others] = Object.values(RECORD_MESSAGES);
+    const [reference, ...others] = Object.values(RECORD_TABLES);
     const keys = Object.keys(reference).sort();
     expect(keys.length).toBeGreaterThan(100);
     for (const table of others) {
@@ -79,8 +90,7 @@ describe("engine record tables", () => {
   });
 
   it("falls back to the English source sentence for prose it does not know", () => {
-    expect(RECORD_MESSAGES.ja["Kernel"]).toBe("カーネル");
-    expect(RECORD_MESSAGES.ja["Repacking the image with 12 bytes"]).toBeUndefined();
+    expect(translateRecord(ja, "Repacking the image with 12 bytes")).toBe("Repacking the image with 12 bytes");
   });
 });
 
@@ -111,15 +121,15 @@ describe("message lookup", () => {
     expect(interpolate("no placeholders", { count: 1 })).toBe("no placeholders");
   });
 
-  it("translates a key per language", () => {
-    expect(translate("en", "step.patch")).toBe("Patch");
-    expect(translate("zh-Hans", "step.patch")).toBe("修补");
-    expect(translate("zh-Hant", "step.patch")).toBe("修補");
-    expect(translate("ja", "step.patch")).toBe("パッチ");
+  it("translates a key per language", async () => {
+    expect(createTranslator(en)("step.patch")).toBe("Patch");
+    expect(createTranslator((await loadLocale("zh-Hans")).messages)("step.patch")).toBe("修补");
+    expect(createTranslator((await loadLocale("zh-Hant")).messages)("step.patch")).toBe("修補");
+    expect(createTranslator((await loadLocale("ja")).messages)("step.patch")).toBe("パッチ");
   });
 
-  it("interpolates through the translator", () => {
-    expect(translate("ja", "patch.field.pageSize")).toBe("ページサイズ");
-    expect(translate("en", "patch.planValue", { value: "none" })).toBe("plan: none");
+  it("interpolates through the translator", async () => {
+    expect(createTranslator((await loadLocale("ja")).messages)("patch.field.pageSize")).toBe("ページサイズ");
+    expect(createTranslator(en)("patch.planValue", { value: "none" })).toBe("plan: none");
   });
 });

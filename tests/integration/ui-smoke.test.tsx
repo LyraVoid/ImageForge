@@ -4,9 +4,12 @@ import { afterEach, describe, expect, it } from "vitest";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { StepIndicator } from "@/components/ui/step-indicator";
 import { WORKFLOW_STEP_KEYS } from "@/app/workflow";
-import { translate } from "@/i18n/translate";
+import { loadLocale } from "@/i18n/catalog";
+import { createTranslator } from "@/i18n/translate";
+import { en } from "@/i18n/messages/en";
 
-const steps = WORKFLOW_STEP_KEYS.map((step) => ({ id: step.id, label: translate("en", step.labelKey) }));
+const english = createTranslator(en);
+const steps = WORKFLOW_STEP_KEYS.map((step) => ({ id: step.id, label: english(step.labelKey) }));
 
 afterEach(cleanup);
 
@@ -18,8 +21,9 @@ describe("workflow UI", () => {
     expect(current).toHaveAttribute("aria-current", "step");
   });
 
-  it("renders the step names of the chosen language", () => {
-    const japanese = WORKFLOW_STEP_KEYS.map((step) => ({ id: step.id, label: translate("ja", step.labelKey) }));
+  it("renders the step names of the chosen language", async () => {
+    const t = createTranslator((await loadLocale("ja")).messages);
+    const japanese = WORKFLOW_STEP_KEYS.map((step) => ({ id: step.id, label: t(step.labelKey) }));
     render(<StepIndicator steps={japanese} currentIndex={2} />);
     expect(screen.getByText("パッチ")).toBeInTheDocument();
     expect(screen.queryByText("Patch")).toBeNull();

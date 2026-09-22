@@ -1,10 +1,11 @@
 export { DEFAULT_LOCALE, LOCALES, detectLocale, isLocale, localeDefinition, matchLocale } from "./locales";
 export type { Locale, LocaleDefinition } from "./locales";
-export { createTranslator, interpolate, translate } from "./translate";
+export { createTranslator, interpolate } from "./translate";
 export type { MessageParams, Translator } from "./translate";
-export { MESSAGES } from "./catalog";
+export { ENGLISH_CATALOG, loadLocale } from "./catalog";
+export type { LoadedLocale } from "./catalog";
 export { MESSAGE_KEYS } from "./messages/en";
 export type { MessageKey, Messages } from "./messages/en";
-export { RECORD_MESSAGES, hasRecordMessage, translateRecord } from "./record";
-export type { RecordLocale } from "./record";
+export { ENGLISH_RECORD, translateRecord } from "./record";
+export type { RecordLocale, RecordTable } from "./record";
 export { CHECK_KEYS, REASON_KEYS, WARNING_KEYS, checkLabel, reasonMessages, warningMessage } from "./engine-keys";

@@ -7,8 +7,8 @@ import type { Locale } from "./locales";
 
 /** The translator of the current language. Components re-render when the language changes. */
 export function useT(): Translator {
-  const locale = useLocaleStore((state) => state.locale);
-  return useMemo(() => createTranslator(locale), [locale]);
+  const catalog = useLocaleStore((state) => state.catalog);
+  return useMemo(() => createTranslator(catalog), [catalog]);
 }
 
 export function useLocale(): Locale {
@@ -17,6 +17,6 @@ export function useLocale(): Locale {
 
 /** Looks up prose the engine produced, falling back to the English source string. */
 export function useRecordText(): (text: string) => string {
-  const locale = useLocaleStore((state) => state.locale);
-  return useMemo(() => (text: string) => translateRecord(locale, text), [locale]);
+  const record = useLocaleStore((state) => state.record);
+  return useMemo(() => (text: string) => translateRecord(record, text), [record]);
 }
