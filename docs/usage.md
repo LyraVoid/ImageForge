@@ -142,8 +142,10 @@ what you are about to stack on top of.
   read-only flags. Extracting one reads only its extents, so a partition comes out of a multi
   gigabyte image without the image being copied;
 * an **erofs** filesystem image (what Android 13+ uses for `system`, `vendor`, `product`, …) can be
-  walked: directories open, and files whose data is stored flat can be read out. Files stored as LZ4
-  clusters are listed but refused, because this build does not unpack erofs compression yet.
+  walked and read: directories open, and files come out whether they are stored flat or as LZ4
+  compressed clusters. What is refused is named instead of guessed: a file that lives in the erofs
+  packed inode (a fragment), one with interlaced or inline pclusters, and one compressed with
+  anything other than LZ4.
 
 Everything is read in ranges from the file you opened, so browsing a 3 GB image does not need 3 GB of
 memory.

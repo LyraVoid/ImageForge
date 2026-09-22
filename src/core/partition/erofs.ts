@@ -83,6 +83,8 @@ export interface ErofsInode {
   inlineBytes: number;
   /** Where that inline data starts: iloc + inode_isize + xattr_isize (inode.c:123-125, 222). */
   inlineOffset: number;
+  /** The inode's inline xattr body size, which the compression map header sits after. */
+  xattrSize: number;
   isDirectory: boolean;
   isSymlink: boolean;
 }
@@ -207,6 +209,7 @@ export async function readInode(
     rawBlock,
     inlineBytes,
     inlineOffset: offset + size + xattrSize,
+    xattrSize,
     isDirectory: (mode & 0xf000) === 0x4000,
     isSymlink: (mode & 0xf000) === 0xa000,
   };
@@ -219,10 +222,11 @@ export async function readInodeData(
   inode: ErofsInode,
 ): Promise<Uint8Array> {
   if (inode.dataLayout === "compressed" || inode.dataLayout === "compressed-compact") {
-    throw new PackageError(
-      "Inode " + inode.nid + " is stored compressed with " + inode.dataLayout + " clusters.",
-      "This file is stored compressed (EROFS LZ4 clusters), which this build cannot unpack yet.",
-    );
+    // Imported on demand: the compacted index decoder and the LZ4 path are only needed for files
+    // that are actually compressed, and the import keeps the two modules from depending on each
+    // other at module scope.
+    const { readCompressedFile } = await import("./erofs-z");
+    return readCompressedFile(source, superblock, inode);
   }
   if (inode.dataLayout === "chunk-based") {
     throw new PackageError(

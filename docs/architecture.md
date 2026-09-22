@@ -128,8 +128,19 @@ ranges rather than loaded.
   the 32 byte compact and the 64 byte extended form, directory entries (12 bytes followed by names,
   with the array ending where the first name begins), and file data for inodes stored flat or with an
   inline tail — the inline bytes start after the inode *and its xattr body* (`inode.c:123-125, 222`).
-  File data stored as LZ4 clusters or in chunks is refused by its datalayout instead of being handed
-  out wrong, because Android system images store most of their bytes that way.
+* **erofs compressed data** (`erofs-z.ts`, from `zmap.c` and `decompressor.c`): a compressed inode
+  carries a map header at `ALIGN(iloc + inode_isize + xattr_isize, 8)` (`zmap.c:603`), then one
+  lcluster index per logical cluster — either the 8 byte form or the packed one, which is 4 bytes
+  until the area is 32 byte aligned and 2 bytes for the aligned run (`decode_compactedbits`,
+  `zmap.c:83`; `unpack_compacted_index`, `zmap.c:118`). A cluster is PLAIN (copied raw, the
+  "shifted" transform of `decompressor.c:320`), the HEAD of an LZ4 pcluster, or a NONHEAD pointing
+  back at its head; how far a pcluster reaches and how long it is come from
+  `z_erofs_get_extent_decompressedlen` (`zmap.c:410`) and `z_erofs_get_extent_compressedlen`
+  (`zmap.c:337`). With the zero-padding feature the LZ4 stream does **not** start at the pcluster's
+  first byte: `z_erofs_fixup_insize` (`decompressor.c:190`) skips leading padding zeros, which is the
+  difference between a decodable block and "invalid LZ4 block".
+  Refused by name, because each is a feature of its own: files in the packed inode (fragments),
+  interlaced pclusters, inline pclusters, and any algorithm other than LZ4.
 
 The shape of a real device shows in what gets used: on a CPH2723 (Android 16) the OTA carries 54
 partitions where `system`, `vendor`, `product`, `system_ext`, `odm` and `my_stock` are erofs and

@@ -160,21 +160,28 @@ describe.skipIf(!hasOtaPackage)("a real erofs partition", () => {
     const etcEntries = await readDirectory(image, superblock, etc);
     expect(etcEntries.length).toBeGreaterThan(0);
 
+    // Both storage forms have to come back with exactly the inode's size: flat files are copied,
+    // compressed ones go through the LZ4 pcluster mapping.
     let flatRead = 0;
-    let compressedRefused = 0;
+    let compressedRead = 0;
     for (const candidate of etcEntries.slice(0, 64)) {
       const inode = await readInode(image, superblock, candidate.nid);
       if (inode.isDirectory) continue;
-      if (inode.dataLayout === "flat" || inode.dataLayout === "flat-inline") {
-        const data = await readInodeData(image, superblock, inode);
-        expect(data.length).toBe(inode.size);
-        flatRead += 1;
-      } else {
-        await expect(readInodeData(image, superblock, inode)).rejects.toThrowError(/compressed|chunks/);
-        compressedRefused += 1;
+      const data = await readInodeData(image, superblock, inode);
+      expect(data.length).toBe(inode.size);
+      if (inode.dataLayout === "flat" || inode.dataLayout === "flat-inline") flatRead += 1;
+      else {
+        compressedRead += 1;
+        // a decoded configuration file has to look like one
+        if (/\.(json|xml|rc|cil|prop|txt|conf)$/.test(candidate.name)) {
+          // tab, newline or printable: a decoded configuration file has to look like text
+          const head = [...data.subarray(0, 32)];
+          expect(head.every((byte) => byte === 9 || byte === 10 || (byte >= 32 && byte < 127))).toBe(true);
+        }
       }
     }
-    expect(flatRead + compressedRefused).toBeGreaterThan(0);
+    expect(flatRead + compressedRead).toBeGreaterThan(0);
+    expect(compressedRead).toBeGreaterThan(0);
 
     await expect(resolveErofsPath(image, superblock, "/definitely-not-here")).rejects.toThrowError(
       /does not exist/,

@@ -43,8 +43,10 @@ source image — are refused by name instead of guessed at.
 **Partitions come out of their wrappers too.** The unpack tool turns a sparse image into the image
 it stands for (checking the header's checksum), lists the logical partitions of a `super.img` with
 their extents and extracts one without copying the image, and walks an **erofs** filesystem — the
-format Android 16 system images use — listing directories, descending, and reading the files whose
-data is not compressed, while saying so plainly for the ones that are.
+format Android 16 system images use — listing directories, descending, and reading files out of it,
+including the ones stored as LZ4 compressed clusters (which is most of an Android system image).
+Files in the packed inode, interlaced or inline pclusters and non-LZ4 compression are refused by
+name.
 
 **The workspace knows what you dropped.** Every file is classified by its magic into a container
 (zip, OTA payload, sparse image, a compressed stream …) and a content (boot image, ext4, erofs, device
