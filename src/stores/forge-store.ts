@@ -11,7 +11,7 @@ import type {
 } from "@/core";
 import type { OpenedPackage } from "@/core/package";
 import type { WorkspaceArtifact } from "@/core/workspace";
-import type { WorkspaceSourceRecord } from "@/workers/protocol";
+import type { ErofsListing, PartitionView, WorkspaceSourceRecord } from "@/workers/protocol";
 import { mergePlanOptions } from "./plan-options";
 import { createPatchWorkerClient } from "@/workers/client";
 import type { PatchWorkerClient, WorkerMode } from "@/workers/client";
@@ -81,6 +81,10 @@ interface ForgeState {
   packageListing: OpenedPackage | null;
   /** Everything tools derived from the current source, in the order it was produced. */
   artifacts: WorkspaceArtifact[];
+  /** What the unpack tool found in the current source, once it has looked. */
+  partitionView: PartitionView | null;
+  /** The directory of an erofs image the user is looking at. */
+  erofsListing: ErofsListing | null;
   analysis: AnalyzeResponse | null;
   selectedProviderId: string | null;
   planResponse: PlanResponse | null;
@@ -95,6 +99,11 @@ interface ForgeState {
   /** Hands an artifact to the patcher; named without a leading "use" so it is not mistaken for a hook. */
   sendToPatcher: (artifactId: string) => Promise<AnalyzeResponse | null>;
   readArtifactBytes: (artifactId: string) => Promise<Uint8Array | null>;
+  inspectPartition: () => Promise<PartitionView | null>;
+  unpackSparse: () => Promise<WorkspaceArtifact | null>;
+  extractLogicalPartition: (partitionName: string) => Promise<WorkspaceArtifact | null>;
+  browseErofs: (path: string) => Promise<ErofsListing | null>;
+  extractErofsFile: (path: string) => Promise<Uint8Array | null>;
   selectProvider: (providerId: string, options?: PatchOptions) => Promise<PatchPlan | null>;
   runPatch: () => Promise<boolean>;
   cancelPatch: () => Promise<void>;
@@ -112,6 +121,8 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
   source: null,
   packageListing: null,
   artifacts: [],
+  partitionView: null,
+  erofsListing: null,
   analysis: null,
   selectedProviderId: null,
   planResponse: null,
@@ -137,6 +148,8 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       source: null,
       packageListing: null,
       artifacts: [],
+      partitionView: null,
+      erofsListing: null,
       analysis: null,
       selectedProviderId: null,
       planResponse: null,
@@ -195,6 +208,81 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       const analysis = await getClient().analyzeArtifact(artifactId);
       set({ analysis, stage: "analyzed", error: null });
       return analysis;
+    } catch (error) {
+      set({ error: toImageForgeError(error).toJSON() });
+      return null;
+    }
+  },
+
+  inspectPartition: async () => {
+    const state = get();
+    if (!state.source) return null;
+    try {
+      const view = await getClient().inspectPartition(state.source.id);
+      set({ partitionView: view, erofsListing: null, error: null });
+      if (view.kind === "erofs") await get().browseErofs("/");
+      return view;
+    } catch (error) {
+      set({ error: toImageForgeError(error).toJSON() });
+      return null;
+    }
+  },
+
+  unpackSparse: async () => {
+    const state = get();
+    if (!state.source) return null;
+    try {
+      const artifact = await getClient().unpackSparseSource(state.source.id);
+      set({ artifacts: [...get().artifacts, artifact], error: null });
+      return artifact;
+    } catch (error) {
+      set({ error: toImageForgeError(error).toJSON() });
+      return null;
+    }
+  },
+
+  extractLogicalPartition: async (partitionName) => {
+    const state = get();
+    if (!state.source) return null;
+    try {
+      const artifact = await getClient().extractLogicalPartition(state.source.id, partitionName);
+      set({ artifacts: [...get().artifacts, artifact], error: null });
+      return artifact;
+    } catch (error) {
+      set({ error: toImageForgeError(error).toJSON() });
+      return null;
+    }
+  },
+
+  browseErofs: async (path) => {
+    const state = get();
+    if (!state.source) return null;
+    try {
+      const listing = await getClient().listErofs(state.source.id, path);
+      set({ erofsListing: listing, error: null });
+      return listing;
+    } catch (error) {
+      set({ error: toImageForgeError(error).toJSON(), erofsListing: null });
+      return null;
+    }
+  },
+
+  extractErofsFile: async (path) => {
+    const state = get();
+    if (!state.source) return null;
+    try {
+      const bytes = await getClient().readErofsFile(state.source.id, path);
+      const name = path.split("/").filter((part) => part !== "").pop() ?? "file";
+      const artifact = await getClient().registerArtifact({
+        sourceId: state.source.id,
+        parentId: state.source.id,
+        tool: "unpack",
+        name,
+        params: { path },
+        bytes: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer,
+      });
+      set({ artifacts: [...get().artifacts, artifact], error: null });
+      return bytes;
     } catch (error) {
       set({ error: toImageForgeError(error).toJSON() });
       return null;
@@ -325,6 +413,8 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       source: null,
       packageListing: null,
       artifacts: [],
+      partitionView: null,
+      erofsListing: null,
       analysis: null,
       selectedProviderId: null,
       planResponse: null,

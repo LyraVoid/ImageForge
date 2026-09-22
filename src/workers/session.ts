@@ -15,6 +15,18 @@ import {
 } from "../core/package";
 import type { ByteSource, OpenedPackage } from "../core/package";
 import {
+  LP_METADATA_GEOMETRY_MAGIC,
+  logicalPartitionSource,
+  parseErofs,
+  parseSparse,
+  parseSuper,
+  readDirectory,
+  readInode,
+  readInodeData,
+  resolveErofsPath,
+  unpackSparse,
+} from "../core/partition";
+import {
   addArtifact,
   addSource,
   detectArtifact,
@@ -32,10 +44,12 @@ import type {
   PatchWorkerApi,
   PlanRequest,
   PlanResponse,
+  PartitionView,
   ProgressSink,
   RegisterArtifactRequest,
   WorkspaceSnapshot,
   WorkspaceSourceRecord,
+  ErofsListing,
 } from "./protocol";
 
 export const PATCH_WORKER_VERSION = "1.0.0";
@@ -234,6 +248,103 @@ export class PatchWorkerSession implements PatchWorkerApi {
       params: { entry: entryId },
       bytes: toStandaloneBuffer(bytes),
     });
+  }
+
+  // ---------------------------------------------------------------- partition containers
+
+  async inspectPartition(sourceId: string): Promise<PartitionView> {
+    const { source, record } = this.requireSource(sourceId);
+    if (record.detected.container === "sparse") {
+      const parsed = await parseSparse(source);
+      return {
+        kind: "sparse",
+        header: parsed.header,
+        sizeBytes: source.size,
+        chunkCount: parsed.chunks.length,
+        outputBytes: parsed.sizeBytes,
+      };
+    }
+    if (record.detected.content === "erofs") {
+      return { kind: "erofs", superblock: await parseErofs(source) };
+    }
+    if (record.detected.container === "raw" && record.detected.content === "unknown") {
+      // A super image is raw bytes whose geometry struct sits at offset 0, which detection cannot
+      // name; the magic is the only thing that tells it apart from any other raw image.
+      const head = await source.read(0, 4);
+      const magic = (head[0] | (head[1] << 8) | (head[2] << 16) | (head[3] << 24)) >>> 0;
+      if (head.length === 4 && magic === LP_METADATA_GEOMETRY_MAGIC) {
+        const parsed = await parseSuper(source);
+        return {
+          kind: "super",
+          slot: parsed.slot,
+          geometry: parsed.geometry,
+          blockDevices: parsed.blockDevices.map((device) => ({ name: device.name, sizeBytes: device.sizeBytes })),
+          partitions: parsed.partitions,
+        };
+      }
+    }
+    return { kind: "unsupported", detected: record.detected };
+  }
+
+  async unpackSparseSource(sourceId: string): Promise<WorkspaceArtifact> {
+    const { source, record } = this.requireSource(sourceId);
+    const parsed = await parseSparse(source);
+    const bytes = await unpackSparse(source, parsed);
+    return this.registerArtifact({
+      sourceId,
+      parentId: sourceId,
+      tool: "unpack",
+      name: record.name.replace(/\.sparse\.img$|\.img$/, "") + "-raw.img",
+      params: { format: "sparse", blocks: String(parsed.header.totalBlocks) },
+      bytes: toStandaloneBuffer(bytes),
+    });
+  }
+
+  async extractLogicalPartition(sourceId: string, partitionName: string): Promise<WorkspaceArtifact> {
+    const { source } = this.requireSource(sourceId);
+    const parsed = await parseSuper(source);
+    const logical = logicalPartitionSource(source, parsed, partitionName);
+    const bytes = await readAll(logical, MAX_ANALYZABLE_BYTES);
+    return this.registerArtifact({
+      sourceId,
+      parentId: sourceId,
+      tool: "unpack",
+      name: partitionName + ".img",
+      params: { partition: partitionName },
+      bytes: toStandaloneBuffer(bytes),
+    });
+  }
+
+  async listErofs(sourceId: string, path: string): Promise<ErofsListing> {
+    const { source } = this.requireSource(sourceId);
+    const superblock = await parseErofs(source);
+    const inode = await resolveErofsPath(source, superblock, path);
+    if (!inode.isDirectory) {
+      throw new WorkerError(
+        "Inode " + inode.nid + " is not a directory.",
+        "That path is not a directory in this image.",
+      );
+    }
+    const entries = await readDirectory(source, superblock, inode);
+    const detailed: ErofsListing["entries"] = [];
+    for (const entry of entries.slice(0, 512)) {
+      const child = await readInode(source, superblock, entry.nid);
+      detailed.push({ ...entry, sizeBytes: child.size, dataLayout: child.dataLayout });
+    }
+    return { path, superblock, entries: detailed };
+  }
+
+  async readErofsFile(sourceId: string, path: string): Promise<Uint8Array> {
+    const { source } = this.requireSource(sourceId);
+    const superblock = await parseErofs(source);
+    const inode = await resolveErofsPath(source, superblock, path);
+    if (inode.isDirectory) {
+      throw new WorkerError(
+        "Inode " + inode.nid + " is a directory.",
+        "A directory is not a file; open it instead.",
+      );
+    }
+    return readInodeData(source, superblock, inode);
   }
 
   async analyzeArtifact(artifactId: string): Promise<AnalyzeResponse> {

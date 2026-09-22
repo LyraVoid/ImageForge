@@ -19,7 +19,7 @@ The start page is a set of tools; the patcher is the first one, and the only one
 | --- | --- |
 | **Patch an image** — analyze, plan, patch, verify, download (`/tools/patch/*`) | available |
 | **Extract from a package** — OTA `payload.bin` and vendor archives (`/tools/extract`) | available |
-| **Unpack partitions** — `super.img` and sparse images, logical partitions, export (`/tools/unpack`) | planned |
+| **Unpack partitions** — sparse images, `super.img` logical partitions, erofs browsing (`/tools/unpack`) | available |
 | **Boot logo (first screen)** — read, view and replace the splash images (`/tools/logo`) | planned |
 | **Inspect an image** — read-only look at a boot image (`/tools/inspect`) | planned |
 
@@ -39,6 +39,12 @@ never loaded, and a payload stored inside it is descended into rather than extra
 (`payload.bin::init_boot`). Entries that cannot be handed over honestly — a deflated entry that only
 exists compressed, an entry past the in-memory limit, a partition stored as a delta that needs the
 source image — are refused by name instead of guessed at.
+
+**Partitions come out of their wrappers too.** The unpack tool turns a sparse image into the image
+it stands for (checking the header's checksum), lists the logical partitions of a `super.img` with
+their extents and extracts one without copying the image, and walks an **erofs** filesystem — the
+format Android 16 system images use — listing directories, descending, and reading the files whose
+data is not compressed, while saying so plainly for the ones that are.
 
 **The workspace knows what you dropped.** Every file is classified by its magic into a container
 (zip, OTA payload, sparse image, a compressed stream …) and a content (boot image, ext4, erofs, device

@@ -132,6 +132,22 @@ what you are about to stack on top of.
 | "This ramdisk looks like it was already modified by another tool." | The ramdisk already carries another root solution; restore a stock image before stacking a second one. |
 | A verification check failed | Read the check's detail, export diagnostics, and do not use the image. |
 
+## Look inside a partition
+
+**Unpack a partition** takes the containers a dump arrives in:
+
+* a **sparse** image (`*.sparse.img` from a device or a factory tool) becomes the raw image it stands
+  for, checksum checked, and can be downloaded or handed to the patcher;
+* a **`super.img`** is listed as the logical partitions it holds, with their sizes, groups and
+  read-only flags. Extracting one reads only its extents, so a partition comes out of a multi
+  gigabyte image without the image being copied;
+* an **erofs** filesystem image (what Android 13+ uses for `system`, `vendor`, `product`, …) can be
+  walked: directories open, and files whose data is stored flat can be read out. Files stored as LZ4
+  clusters are listed but refused, because this build does not unpack erofs compression yet.
+
+Everything is read in ranges from the file you opened, so browsing a 3 GB image does not need 3 GB of
+memory.
+
 ## Running the tests with real material
 
 The test suite skips the checks that need real files and says which variable supplies each one:

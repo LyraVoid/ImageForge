@@ -1,0 +1,316 @@
+import { ArrowRight, ChevronRight, Download, FolderOpen, HardDrive, LoaderCircle, PackageOpen, Undo2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
+import { ErrorPanel } from "@/components/app/error-panel";
+import { ImagePicker } from "@/components/app/image-picker";
+import { SourcePanel } from "@/components/app/source-panel";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { EXTRACT_TOOL, PATCH_ROUTES } from "@/app/tools";
+import { useT } from "@/i18n/use-translation";
+import { formatBytes } from "@/lib/format";
+import { useForgeStore } from "@/stores/forge-store";
+
+/**
+ * The unpack tool: sparse images become raw images, super images give up their logical partitions,
+ * and an erofs image can be walked and its flat files taken out. Everything reads in ranges, so a
+ * multi gigabyte image is browsed without being loaded.
+ */
+export function UnpackPage() {
+  const t = useT();
+  const navigate = useNavigate();
+  const source = useForgeStore((state) => state.source);
+  const stage = useForgeStore((state) => state.stage);
+  const error = useForgeStore((state) => state.error);
+  const view = useForgeStore((state) => state.partitionView);
+  const listing = useForgeStore((state) => state.erofsListing);
+  const artifacts = useForgeStore((state) => state.artifacts);
+  const inspectPartition = useForgeStore((state) => state.inspectPartition);
+  const unpackSparse = useForgeStore((state) => state.unpackSparse);
+  const extractLogicalPartition = useForgeStore((state) => state.extractLogicalPartition);
+  const browseErofs = useForgeStore((state) => state.browseErofs);
+  const extractErofsFile = useForgeStore((state) => state.extractErofsFile);
+  const readArtifactBytes = useForgeStore((state) => state.readArtifactBytes);
+  const sendToPatcher = useForgeStore((state) => state.sendToPatcher);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const isPackage = source !== null && source.kind === "package";
+
+  useEffect(() => {
+    if (source && !isPackage && stage !== "analyzing" && view === null) void inspectPartition();
+  }, [source, isPackage, stage, view, inspectPartition]);
+
+  const handleDownload = async (artifactId: string, name: string) => {
+    const bytes = await readArtifactBytes(artifactId);
+    if (bytes === null) return;
+    download(name, bytes);
+  };
+
+  const handleErofsFile = async (path: string) => {
+    setBusy(path);
+    const bytes = await extractErofsFile(path);
+    setBusy(null);
+    if (bytes) download(path.split("/").pop() ?? "file", bytes);
+  };
+
+  const entries = listing?.entries ?? [];
+  const path = listing?.path ?? "/";
+  const parent = path === "/" ? "/" : path.replace(/\/[^/]+$/, "") || "/";
+
+  return (
+    <div className="mx-auto w-full max-w-3xl space-y-5">
+      <div className="space-y-1">
+        <h1 className="text-base font-semibold tracking-tight">{t("tool.unpack.title")}</h1>
+        <p className="text-xs text-muted-foreground">{t("tool.unpack.description")}</p>
+      </div>
+
+      <ErrorPanel error={error} />
+
+      {source === null ? (
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">{t("unpack.hint")}</p>
+          <ImagePicker showLimit={false} />
+        </div>
+      ) : isPackage ? (
+        <Card>
+          <CardHeader className="flex-row items-center gap-2">
+            <PackageOpen className="size-3.5 text-muted-foreground" aria-hidden />
+            <div>
+              <CardTitle>{t("unpack.packageHint")}</CardTitle>
+              <CardDescription>
+                <Button variant="link" onClick={() => navigate(EXTRACT_TOOL.path)}>
+                  {t(EXTRACT_TOOL.titleKey)}
+                  <ArrowRight />
+                </Button>
+              </CardDescription>
+            </div>
+          </CardHeader>
+        </Card>
+      ) : (
+        <>
+          <SourcePanel source={source} />
+
+          {view === null ? (
+            <p className="flex items-center gap-2 text-xs text-muted-foreground">
+              <LoaderCircle className="size-3.5 animate-spin text-primary" aria-hidden />
+              {t("extract.reading")}
+            </p>
+          ) : view.kind === "sparse" ? (
+            <Card>
+              <CardHeader className="flex-row items-center gap-2">
+                <HardDrive className="size-3.5 text-muted-foreground" aria-hidden />
+                <CardTitle>sparse</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-[11px]">
+                  <Summary label={t("unpack.blockSize")} value={formatBytes(view.header.blockSize)} />
+                  <Summary label={t("unpack.blocks")} value={String(view.header.totalBlocks)} />
+                  <Summary label={t("unpack.chunks")} value={String(view.chunkCount)} />
+                  <Summary label={t("unpack.output")} value={formatBytes(view.outputBytes)} />
+                </dl>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={busy !== null}
+                  onClick={async () => {
+                    setBusy("sparse");
+                    await unpackSparse();
+                    setBusy(null);
+                  }}
+                >
+                  {busy === "sparse" ? <LoaderCircle className="animate-spin" /> : null}
+                  {t("unpack.unpack")}
+                </Button>
+              </CardContent>
+            </Card>
+          ) : view.kind === "super" ? (
+            <Card>
+              <CardHeader className="flex-row items-center gap-2">
+                <HardDrive className="size-3.5 text-muted-foreground" aria-hidden />
+                <div>
+                  <CardTitle>{t("unpack.partitions")}</CardTitle>
+                  <CardDescription>
+                    {t("unpack.metadata", {
+                      size: formatBytes(view.geometry.metadataMaxSize),
+                      slots: String(view.geometry.metadataSlotCount),
+                      block: formatBytes(view.geometry.logicalBlockSize),
+                    })}
+                  </CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <table className="w-full text-[11px]">
+                  <thead className="text-muted-foreground">
+                    <tr>
+                      <th className="text-left font-medium">{t("unpack.name")}</th>
+                      <th className="text-right font-medium">{t("unpack.size")}</th>
+                      <th className="text-left font-medium">{t("unpack.group")}</th>
+                      <th className="text-right font-medium" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {view.partitions.map((partition) => (
+                      <tr key={partition.name} className="border-t border-border">
+                        <td className="py-1.5 font-mono">
+                          {partition.name}
+                          {partition.readOnly ? (
+                            <Badge variant="outline" className="ml-2">
+                              {t("unpack.readonly")}
+                            </Badge>
+                          ) : null}
+                        </td>
+                        <td className="py-1.5 text-right font-mono text-muted-foreground">
+                          {formatBytes(partition.sizeBytes)}
+                        </td>
+                        <td className="py-1.5 text-muted-foreground">{partition.group}</td>
+                        <td className="py-1.5 text-right">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            disabled={busy !== null}
+                            onClick={async () => {
+                              setBusy(partition.name);
+                              await extractLogicalPartition(partition.name);
+                              setBusy(null);
+                            }}
+                          >
+                            {busy === partition.name ? <LoaderCircle className="animate-spin" /> : null}
+                            {t("extract.extract")}
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+          ) : view.kind === "erofs" ? (
+            <Card>
+              <CardHeader className="flex-row items-center gap-2">
+                <FolderOpen className="size-3.5 text-muted-foreground" aria-hidden />
+                <div className="min-w-0 flex-1">
+                  <CardTitle>{t("unpack.browse")}</CardTitle>
+                  <CardDescription className="truncate font-mono">{path}</CardDescription>
+                </div>
+                <Button variant="ghost" size="sm" disabled={path === "/"} onClick={() => void browseErofs(parent)}>
+                  <Undo2 />
+                  {t("unpack.up")}
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <ul className="divide-y divide-border">
+                  {entries.map((entry) => (
+                    <li key={entry.nid + entry.name} className="flex items-center gap-2 py-1.5">
+                      <span className="min-w-0 flex-1 truncate font-mono text-[11px]">{entry.name}</span>
+                      <Badge variant="outline">{entry.fileType}</Badge>
+                      {entry.dataLayout === "compressed" || entry.dataLayout === "compressed-compact" ? (
+                        <Badge variant="neutral">{t("unpack.compressedBadge")}</Badge>
+                      ) : null}
+                      <span className="w-20 text-right font-mono text-[11px] text-muted-foreground">
+                        {entry.fileType === "directory" ? "" : formatBytes(entry.sizeBytes)}
+                      </span>
+                      {entry.fileType === "directory" ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => void browseErofs(path === "/" ? "/" + entry.name : path + "/" + entry.name)}
+                        >
+                          <ChevronRight />
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={busy !== null}
+                          onClick={() => void handleErofsFile(path === "/" ? "/" + entry.name : path + "/" + entry.name)}
+                        >
+                          {busy !== null ? <LoaderCircle className="animate-spin" /> : null}
+                          {t("unpack.readFile")}
+                        </Button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>{t("unpack.incompatible")}</CardTitle>
+                <CardDescription>{view.detected.label}</CardDescription>
+              </CardHeader>
+            </Card>
+          )}
+
+          <Card>
+            <CardHeader className="flex-row items-center gap-2">
+              <Download className="size-3.5 text-muted-foreground" aria-hidden />
+              <CardTitle>{t("extract.extracted")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {artifacts.length === 0 ? (
+                <p className="text-xs text-muted-foreground">{t("extract.empty")}</p>
+              ) : (
+                <ul className="space-y-2">
+                  {artifacts.map((artifact) => (
+                    <li
+                      key={artifact.id}
+                      className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface-muted px-3 py-2"
+                    >
+                      <span className="min-w-0 flex-1 truncate font-mono text-[11px]">{artifact.name}</span>
+                      <span className="font-mono text-[11px] text-muted-foreground">
+                        {formatBytes(artifact.sizeBytes)}
+                      </span>
+                      {artifact.kind === "boot-container" ? (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={async () => {
+                            const analysis = await sendToPatcher(artifact.id);
+                            if (analysis) navigate(PATCH_ROUTES.analyze);
+                          }}
+                        >
+                          {t("extract.useInPatcher")}
+                          <ArrowRight />
+                        </Button>
+                      ) : null}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => void handleDownload(artifact.id, artifact.name)}
+                      >
+                        <Download />
+                        {t("extract.download")}
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
+    </div>
+  );
+}
+
+function Summary({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="font-mono">{value}</dd>
+    </div>
+  );
+}
+
+function download(name: string, bytes: Uint8Array): void {
+  const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/octet-stream" }));
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = name;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}

@@ -21,5 +21,11 @@ Comlink.expose({
   extractPackageEntry: (sourceId: string, entryId: string) =>
     session.extractPackageEntry(sourceId, entryId),
   analyzeArtifact: (artifactId: string) => session.analyzeArtifact(artifactId),
+  inspectPartition: (sourceId: string) => session.inspectPartition(sourceId),
+  unpackSparseSource: (sourceId: string) => session.unpackSparseSource(sourceId),
+  extractLogicalPartition: (sourceId: string, partitionName: string) =>
+    session.extractLogicalPartition(sourceId, partitionName),
+  listErofs: (sourceId: string, path: string) => session.listErofs(sourceId, path),
+  readErofsFile: (sourceId: string, path: string) => session.readErofsFile(sourceId, path),
   closeSource: (sourceId: string) => session.closeSource(sourceId),
 });

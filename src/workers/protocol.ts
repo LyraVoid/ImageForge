@@ -1,5 +1,6 @@
 import type { ArtifactKind, DetectedArtifact, WorkspaceArtifact } from "../core/workspace";
 import type { OpenedPackage } from "../core/package";
+import type { ErofsDirectoryEntry, ErofsSuperblock, LpPartition, SparseHeader } from "../core/partition";
 import type {
   BootImageHeaderFields,
   CompatibilityResult,
@@ -96,6 +97,25 @@ export interface WorkspaceSnapshot {
   artifacts: WorkspaceArtifact[];
 }
 
+/** What the unpack tool found when it looked at an open source. */
+export type PartitionView =
+  | { kind: "sparse"; header: SparseHeader; sizeBytes: number; chunkCount: number; outputBytes: number }
+  | {
+      kind: "super";
+      slot: number;
+      geometry: { metadataMaxSize: number; metadataSlotCount: number; logicalBlockSize: number };
+      blockDevices: { name: string; sizeBytes: number }[];
+      partitions: LpPartition[];
+    }
+  | { kind: "erofs"; superblock: ErofsSuperblock }
+  | { kind: "unsupported"; detected: DetectedArtifact };
+
+export interface ErofsListing {
+  path: string;
+  superblock: ErofsSuperblock;
+  entries: (ErofsDirectoryEntry & { sizeBytes: number; dataLayout: string })[];
+}
+
 export interface RegisterArtifactRequest {
   sourceId: string;
   parentId: string;
@@ -126,6 +146,16 @@ export interface PatchWorkerApi {
   extractPackageEntry(sourceId: string, entryId: string): Promise<WorkspaceArtifact>;
   /** Hands an artifact to the patcher, which reads its bytes where they already are. */
   analyzeArtifact(artifactId: string): Promise<AnalyzeResponse>;
+  /** What kind of partition container the open source is, and what it holds. */
+  inspectPartition(sourceId: string): Promise<PartitionView>;
+  /** Unpacks a sparse image and keeps the raw image as an artifact. */
+  unpackSparseSource(sourceId: string): Promise<WorkspaceArtifact>;
+  /** Reads one logical partition out of a super image into an artifact. */
+  extractLogicalPartition(sourceId: string, partitionName: string): Promise<WorkspaceArtifact>;
+  /** Lists a directory of an erofs image. */
+  listErofs(sourceId: string, path: string): Promise<ErofsListing>;
+  /** Reads one file out of an erofs image, when it is stored flat. */
+  readErofsFile(sourceId: string, path: string): Promise<Uint8Array>;
   digestArtifact(id: string): Promise<string>;
   /** Closes a source and everything that was derived from it. */
   closeSource(sourceId: string): Promise<void>;

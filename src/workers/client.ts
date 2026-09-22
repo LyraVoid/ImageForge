@@ -10,6 +10,8 @@ import type {
   PlanRequest,
   PlanResponse,
   ProgressSink,
+  ErofsListing,
+  PartitionView,
   RegisterArtifactRequest,
   WorkspaceSnapshot,
   WorkspaceSourceRecord,
@@ -35,6 +37,11 @@ export interface PatchWorkerClient {
   listPackage(sourceId: string): Promise<OpenedPackage>;
   extractPackageEntry(sourceId: string, entryId: string): Promise<WorkspaceArtifact>;
   analyzeArtifact(artifactId: string): Promise<AnalyzeResponse>;
+  inspectPartition(sourceId: string): Promise<PartitionView>;
+  unpackSparseSource(sourceId: string): Promise<WorkspaceArtifact>;
+  extractLogicalPartition(sourceId: string, partitionName: string): Promise<WorkspaceArtifact>;
+  listErofs(sourceId: string, path: string): Promise<ErofsListing>;
+  readErofsFile(sourceId: string, path: string): Promise<Uint8Array>;
   closeSource(sourceId: string): Promise<void>;
   terminate(): void;
 }
@@ -69,6 +76,11 @@ function createWorkerBackedClient(worker: Worker): PatchWorkerClient {
     listPackage: (sourceId) => remote.listPackage(sourceId),
     extractPackageEntry: (sourceId, entryId) => remote.extractPackageEntry(sourceId, entryId),
     analyzeArtifact: (artifactId) => remote.analyzeArtifact(artifactId),
+    inspectPartition: (sourceId) => remote.inspectPartition(sourceId),
+    unpackSparseSource: (sourceId) => remote.unpackSparseSource(sourceId),
+    extractLogicalPartition: (sourceId, name) => remote.extractLogicalPartition(sourceId, name),
+    listErofs: (sourceId, path) => remote.listErofs(sourceId, path),
+    readErofsFile: (sourceId, path) => remote.readErofsFile(sourceId, path),
     closeSource: (sourceId) => remote.closeSource(sourceId),
     terminate: () => worker.terminate(),
   };
@@ -109,6 +121,11 @@ function createInlineClient(): PatchWorkerClient {
     listPackage: async (sourceId) => (await load()).listPackage(sourceId),
     extractPackageEntry: async (sourceId, entryId) => (await load()).extractPackageEntry(sourceId, entryId),
     analyzeArtifact: async (artifactId) => (await load()).analyzeArtifact(artifactId),
+    inspectPartition: async (sourceId) => (await load()).inspectPartition(sourceId),
+    unpackSparseSource: async (sourceId) => (await load()).unpackSparseSource(sourceId),
+    extractLogicalPartition: async (sourceId, name) => (await load()).extractLogicalPartition(sourceId, name),
+    listErofs: async (sourceId, path) => (await load()).listErofs(sourceId, path),
+    readErofsFile: async (sourceId, path) => (await load()).readErofsFile(sourceId, path),
     closeSource: async (sourceId) => {
       if (session) await session.closeSource(sourceId);
     },

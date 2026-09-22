@@ -108,6 +108,33 @@ the patcher reads that artifact where it already is (`analyzeArtifact`). What ex
 hold in memory is the entry it returns, so it refuses anything above a documented limit instead of
 silently trying.
 
+## Partition containers
+
+A partition dump is usually not the partition: it is wrapped, or it is a filesystem. Each wrapper has
+its own reader, and all of them work through a `ByteSource` so a multi gigabyte image is read in
+ranges rather than loaded.
+
+* **sparse** (`sparse.ts`, from AOSP's `libsparse/sparse_format.h`): the 28 byte header and its RAW,
+  FILL, DONT_CARE and CRC32 chunks. Unpacking rebuilds the image the sparse file stands for and checks
+  the header's image checksum — don't-care blocks count as zeros, which is what the format says.
+* **super** (`lp.ts`, from `liblp`'s `metadata_format.h` and `utility.cpp:84`): the geometry (its
+  SHA-256 verified), the metadata header and tables (verified too: header checksum over the header
+  with the checksum field zeroed, tables checksum over the tables), the partition, extent, group and
+  block device tables, and `logicalPartitionSource`, which maps a logical partition's extents into a
+  source of its own — that is what lets a partition be read out of a super image without copying the
+  image. An extent that is not a plain linear mapping on block device 0 is refused by name.
+* **erofs** (`erofs.ts`, from the kernel this device runs: Linux v6.6 `fs/erofs`): the superblock at
+  1024, inodes at `meta_blkaddr << blkszbits + nid << 5` (`internal.h:307`, `super.c:390`) in both
+  the 32 byte compact and the 64 byte extended form, directory entries (12 bytes followed by names,
+  with the array ending where the first name begins), and file data for inodes stored flat or with an
+  inline tail — the inline bytes start after the inode *and its xattr body* (`inode.c:123-125, 222`).
+  File data stored as LZ4 clusters or in chunks is refused by its datalayout instead of being handed
+  out wrong, because Android system images store most of their bytes that way.
+
+The shape of a real device shows in what gets used: on a CPH2723 (Android 16) the OTA carries 54
+partitions where `system`, `vendor`, `product`, `system_ext`, `odm` and `my_stock` are erofs and
+`vendor_dlkm` is ext4, so erofs is what a listing has to understand first.
+
 ## Hard rules
 
 1. **Providers never parse boot images.** A provider receives the normalized object

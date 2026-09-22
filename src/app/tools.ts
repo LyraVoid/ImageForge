@@ -63,7 +63,7 @@ export const TOOLS: ToolDefinition[] = [
     path: "/tools/unpack",
     titleKey: "tool.unpack.title",
     descriptionKey: "tool.unpack.description",
-    status: "planned",
+    status: "available",
     flow: "single",
     accepts: ["partition-image", "package"],
     produces: ["boot-container", "filesystem", "blob"],
@@ -89,6 +89,9 @@ export const TOOLS: ToolDefinition[] = [
     produces: ["report"],
   },
 ];
+
+/** The extract tool, referenced by the unpack page when a package is opened there. */
+export const EXTRACT_TOOL = TOOLS.find((tool) => tool.id === "extract") as ToolDefinition;
 
 export const PRIMARY_TOOL = TOOLS.find((tool) => tool.id === PRIMARY_TOOL_ID) as ToolDefinition;
 
