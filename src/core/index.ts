@@ -36,6 +36,8 @@ export {
   PROVIDER_DESCRIPTORS,
 } from "./patch/providers/descriptors";
 export {
+  APATCH_CUSTOM_FLAVOR,
+  APATCH_CUSTOM_KPIMG_ID,
   APATCH_DEFAULT_FLAVOR,
   APATCH_FLAVORS,
   APATCH_FLAVOR_SETTING,

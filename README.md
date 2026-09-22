@@ -38,6 +38,12 @@ Deliberately honest limits:
   the way `magiskboot` does, and keeps the stock init inside the ramdisk as `.backup/init.xz` so
   Magisk's app can restore the image by itself. Its payloads are bundled from the pinned release,
   which is GPL-3.0 throughout.
+* **A KernelPatch core image can also be supplied by hand.** Picking the custom flavour lets you
+  attach your own `kpimg`: it is checked for the KernelPatch magic before kptools runs, the plan
+  pins the file name, and the result reports the digest and the version kptools read from it.
+  Whatever manager that image was built to trust is the one the device needs.
+* **A KernelSU or Magisk module supplied by the user overrides the bundled one**, and both are
+  checked the same way (its `.modinfo` and the kernel version it was built for).
 * **APatch patches arm64 kernels in uncompressed, gzip, LZ4 or xz containers.** The kernel is
   expanded, patched and written back into the same container (LZ4 frames with dependent
   blocks included). LZMA, BZip2 and Zstandard kernels are refused with a structured

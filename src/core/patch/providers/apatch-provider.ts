@@ -82,8 +82,30 @@ export const APATCH_FLAVORS: ApatchFlavor[] = [
 
 export const APATCH_DEFAULT_FLAVOR = "upstream";
 
-function resolveFlavor(configuration: Record<string, string> | undefined): ApatchFlavor {
+/** A flavour whose core image is supplied with the run instead of coming from the registry. */
+export const APATCH_CUSTOM_FLAVOR = "custom";
+
+export const APATCH_CUSTOM_KPIMG_ID = "custom-kpimg";
+
+export type ApatchFlavorChoice =
+  | { kind: "registered"; flavor: ApatchFlavor }
+  | { kind: "custom"; attachmentName: string };
+
+function resolveFlavor(
+  configuration: Record<string, string> | undefined,
+  attachmentNames: readonly string[],
+): ApatchFlavorChoice {
   const requested = (configuration?.[APATCH_FLAVOR_SETTING] ?? APATCH_DEFAULT_FLAVOR).trim().toLowerCase();
+  if (requested === APATCH_CUSTOM_FLAVOR) {
+    const name = attachmentNames[0];
+    if (name === undefined) {
+      throw new IncompatibleProviderError(
+        "The custom KernelPatch flavour needs a core image attachment.",
+        "Attach the KernelPatch core image (kpimg) you want to inject, then plan again.",
+      );
+    }
+    return { kind: "custom", attachmentName: name };
+  }
   const flavor = APATCH_FLAVORS.find((entry) => entry.id === requested);
   if (!flavor) {
     throw new IncompatibleProviderError(
@@ -91,7 +113,7 @@ function resolveFlavor(configuration: Record<string, string> | undefined): Apatc
       "This KernelPatch flavour is not registered in the artifact registry.",
     );
   }
-  return flavor;
+  return { kind: "registered", flavor };
 }
 
 const KERNEL_FILE = "kernel";
@@ -161,14 +183,59 @@ export class ApatchPatchProvider implements PatchProvider {
     };
   }
 
-  private resolveArtifacts(flavor: ApatchFlavor): {
+  /**
+   * The core image this run has to inject: from the registry for a registered flavour, from the
+   * run's attachments for a custom one. A custom image is checked for the KernelPatch magic before
+   * kptools ever sees it.
+   */
+  private async loadCoreImage(plan: PatchPlan, context: PatchRunContext): Promise<Uint8Array> {
+    const source = plan.artifact.source ?? "";
+    if (!source.startsWith("attachment:")) return this.artifacts.loadVerifiedPayload(plan.artifact);
+
+    const name = source.slice("attachment:".length);
+    const attachment = (context.attachments ?? []).find((entry) => entry.name === name);
+    if (attachment === undefined) {
+      throw new PatchError(
+        "The plan pins the core image " + name + " but this run does not carry it.",
+        "Attach the KernelPatch core image again and plan again.",
+      );
+    }
+    // "KP1158" is the magic every KernelPatch core image starts with.
+    const magic = "KP1158";
+    const matches = magic.split("").every((character, index) => attachment.bytes[index] === character.charCodeAt(0));
+    if (!matches) {
+      throw new PatchError(
+        name + " does not start with the KernelPatch magic " + magic + ".",
+        "That file is not a KernelPatch core image.",
+      );
+    }
+    return attachment.bytes;
+  }
+
+  private kptoolsArtifact(): PatchArtifact {
+    return this.artifacts.resolve({ providerId: this.id, artifactId: APATCH_KPTOOLS_ID }).artifact;
+  }
+
+  private resolveRegisteredArtifacts(flavor: ApatchFlavor): {
     kpimg: PatchArtifact;
-    kptools: PatchArtifact;
     release: string;
   } {
     const kpimg = this.artifacts.resolve({ providerId: this.id, artifactId: flavor.artifactId });
-    const kptools = this.artifacts.resolve({ providerId: this.id, artifactId: APATCH_KPTOOLS_ID });
-    return { kpimg: kpimg.artifact, kptools: kptools.artifact, release: kpimg.release.release };
+    return { kpimg: kpimg.artifact, release: kpimg.release.release };
+  }
+
+  /**
+   * The core image the run carries, described well enough for a plan to pin it. The bytes are
+   * checked when the patch runs, and the digest the provider reads is reported in the result.
+   */
+  private customKpimgArtifact(choice: { attachmentName: string }, image: ParsedImage): PatchArtifact {
+    return {
+      id: APATCH_CUSTOM_KPIMG_ID,
+      version: "custom",
+      type: "kpimg",
+      architecture: image.architecture ?? "unknown",
+      source: "attachment:" + choice.attachmentName,
+    };
   }
 
   /**
@@ -206,8 +273,11 @@ export class ApatchPatchProvider implements PatchProvider {
       );
     }
 
-    const flavor = resolveFlavor(options.configuration);
-    const { kpimg, kptools, release } = this.resolveArtifacts(flavor);
+    const choice = resolveFlavor(options.configuration, planContext?.attachmentNames ?? []);
+    const kptools = this.kptoolsArtifact();
+    const registered = choice.kind === "registered" ? this.resolveRegisteredArtifacts(choice.flavor) : undefined;
+    const kpimg = registered?.kpimg ?? this.customKpimgArtifact(choice as { attachmentName: string }, image);
+    const release = registered?.release ?? APATCH_CUSTOM_FLAVOR;
     const kernel = this.loadKernel(image);
     const rawKernel = await decompressSection(kernel.bytes, kernel.descriptor);
 
@@ -228,12 +298,17 @@ export class ApatchPatchProvider implements PatchProvider {
     }
     const kallsymsAll = flags.stdout.some((line) => line.includes("CONFIG_KALLSYMS_ALL=y"));
 
-    const kpimgBytes = await this.artifacts.loadVerifiedPayload(kpimg);
-    const kpimgInfo = await runWasiTool({
-      module,
-      args: ["-v", "-k", "/" + KPIMG_FILE],
-      files: { [KPIMG_FILE]: kpimgBytes },
-    });
+    // A registered core image can be read here; a custom one only exists once the patch runs.
+    let kpimgVersion = "unverified (read from the attachment when the patch runs)";
+    if (registered !== undefined) {
+      const kpimgBytes = await this.artifacts.loadVerifiedPayload(kpimg);
+      const kpimgInfo = await runWasiTool({
+        module,
+        args: ["-v", "-k", "/" + KPIMG_FILE],
+        files: { [KPIMG_FILE]: kpimgBytes },
+      });
+      kpimgVersion = versionFromStdout(kpimgInfo.stdout, kpimg.version);
+    }
 
     const superkey = readSuperkey(options.configuration);
     const output = outputOptions(options.configuration, undefined);
@@ -257,9 +332,13 @@ export class ApatchPatchProvider implements PatchProvider {
       configuration: {
         ...configurationWithoutSecret,
         kernelPatchMode: "static",
-        kernelPatchFlavor: flavor.id,
-        kernelPatchSource: flavor.source,
-        requiredManager: flavor.managerPackage,
+        kernelPatchFlavor: choice.kind === "registered" ? choice.flavor.id : APATCH_CUSTOM_FLAVOR,
+        kernelPatchSource:
+          choice.kind === "registered" ? choice.flavor.source : "attachment:" + choice.attachmentName,
+        requiredManager:
+          choice.kind === "registered"
+            ? choice.flavor.managerPackage
+            : "unknown (a custom core image pairs with the manager it was built for)",
         superkeyMode: superkey === "" ? "none" : "custom",
         kernelCompression: COMPRESSION_LABEL[kernel.descriptor.format],
         kernelSize: String(rawKernel.length),
@@ -267,7 +346,7 @@ export class ApatchPatchProvider implements PatchProvider {
         [APATCH_KPM_SETTING]: moduleNames.length === 0 ? "none" : moduleNames.join(","),
         kallsyms: "enabled",
         kallsymsAll: kallsymsAll ? "enabled" : "disabled",
-        kpimgVersion: versionFromStdout(kpimgInfo.stdout, kpimg.version),
+        kpimgVersion,
         kptoolsVersion: kptools.version,
         preserveImageSize: output.preserveImageSize ? "true" : "false",
         [KEEP_SIGNATURE_SETTING]: output.keepSignature ? "true" : "false",
@@ -277,7 +356,15 @@ export class ApatchPatchProvider implements PatchProvider {
       reproducible: true,
       notes: [
         "KernelPatch is injected into the kernel image; the ramdisk and every other section are left untouched.",
-        "The " + flavor.label + " core image only trusts the " + flavor.managerPackage + " manager, which must be installed for the patch to be usable.",
+        choice.kind === "registered"
+          ? "The " +
+            choice.flavor.label +
+            " core image only trusts the " +
+            choice.flavor.managerPackage +
+            " manager, which must be installed for the patch to be usable."
+          : "The attached core image (" +
+            choice.attachmentName +
+            ") is used as it is. Whatever manager it was built to trust is the one the device needs, and its version is read while the patch runs.",
         moduleNames.length === 0
           ? "No KernelPatch modules are embedded."
           : moduleNames.length +
@@ -312,7 +399,7 @@ export class ApatchPatchProvider implements PatchProvider {
     emit("prepare", 40, "Loading KernelPatch artifacts");
     const kptools = this.artifacts.resolve({ providerId: this.id, artifactId: APATCH_KPTOOLS_ID }).artifact;
     const kptoolsBytes = await this.artifacts.loadVerifiedPayload(kptools);
-    const kpimgBytes = await this.artifacts.loadVerifiedPayload(plan.artifact);
+    const kpimgBytes = await this.loadCoreImage(plan, context);
     const module = await compileWasiModule(kptools.id + ":" + String(kptools.sha256), kptoolsBytes);
 
     emit("patch", 60, "Injecting KernelPatch into the kernel");
@@ -322,7 +409,13 @@ export class ApatchPatchProvider implements PatchProvider {
 
     // KernelPatch modules: the plan pins the names, this run carries the bytes.
     const plannedModules = readModuleNames(plan.configuration);
-    const attachments = context.attachments ?? [];
+    // The core image is an attachment too, but it is not a KernelPatch module; only the modules
+    // named by the plan go through the module path.
+    const coreImageSource = plan.configuration.kernelPatchSource ?? "";
+    const coreImageName = coreImageSource.startsWith("attachment:")
+      ? coreImageSource.slice("attachment:".length)
+      : undefined;
+    const attachments = (context.attachments ?? []).filter((entry) => entry.name !== coreImageName);
     for (const attachment of attachments) {
       if (!plannedModules.includes(attachment.name)) {
         throw new PatchError(
@@ -382,6 +475,15 @@ export class ApatchPatchProvider implements PatchProvider {
         "The KernelPatch injection could not be confirmed.",
       );
     }
+    // kptools -l prints the version it read out of the kernel it just patched, which is the only
+    // place a custom core image's version can come from.
+    const patchedVersion =
+      confirmation.stdout
+        .find((line) => line.trim().startsWith("version="))
+        ?.trim()
+        .slice("version=".length) ??
+      plan.configuration.kpimgVersion ??
+      plan.artifact.version;
     const reportedModules = Number(
       (confirmation.stdout.find((line) => /^num=\d+$/.test(line.trim())) ?? "num=0").trim().slice(4),
     );
@@ -439,6 +541,9 @@ export class ApatchPatchProvider implements PatchProvider {
         artifactVersion: plan.artifact.version,
         artifactSha256: plan.artifact.sha256 ?? "unknown",
         kpimgVersion: plan.configuration.kpimgVersion ?? plan.artifact.version,
+        kpimgSource: plan.configuration.kernelPatchSource ?? plan.artifact.id,
+        kpimgSha256: await sha256Hex(kpimgBytes),
+        kernelPatchVersion: patchedVersion,
         kptoolsArtifact: kptools.id,
         kptoolsVersion: kptools.version,
         kptoolsSha256: kptools.sha256 ?? "unknown",

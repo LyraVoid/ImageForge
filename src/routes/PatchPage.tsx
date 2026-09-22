@@ -38,11 +38,19 @@ export function PatchPage() {
   const [superkeyDraft, setSuperkeyDraft] = useState("");
   const [preinitDraft, setPreinitDraft] = useState("");
   const kpmInputRef = useRef<HTMLInputElement>(null);
+  const kpimgInputRef = useRef<HTMLInputElement>(null);
   const attachments = useForgeStore((state) => state.attachments);
   const setAttachments = useForgeStore((state) => state.setAttachments);
 
+  const isCustomFlavour = (): boolean =>
+    plan !== null && plan.providerId === "apatch" && readOptionFromPlan(plan, APATCH_FLAVOR_SETTING) === "custom";
+
   const readOption = (key: string, fallback: string): string =>
     optionDraft[key] ?? plan?.configuration[key] ?? fallback;
+
+  function readOptionFromPlan(target: { configuration: Record<string, string> }, key: string): string {
+    return optionDraft[key] ?? target.configuration[key] ?? "";
+  }
 
   // A plan can pin kmi="unset" (nothing chosen yet); the sentinel must never reach the UI.
   const chosenKmi = (): string => plannedKmi(plan?.configuration);
@@ -228,18 +236,52 @@ export function PatchPage() {
                     {flavor.label}
                   </option>
                 ))}
+                <option value="custom">Custom core image (attach your own)</option>
               </Select>
-              <p className="text-[11px] leading-4 text-muted-foreground">
-                {APATCH_FLAVORS.find((flavor) => flavor.id === readOption(APATCH_FLAVOR_SETTING, "upstream"))
-                  ?.source ?? ""}
-              </p>
+              {isCustomFlavour() ? (
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <input
+                    ref={kpimgInputRef}
+                    type="file"
+                    className="hidden"
+                    onChange={(event) => void handleAttachmentSelection(event)}
+                  />
+                  <Button variant="secondary" size="sm" onClick={() => kpimgInputRef.current?.click()}>
+                    <Layers />
+                    Attach a core image
+                  </Button>
+                  <Badge variant={attachments.length > 0 ? "primary" : "neutral"}>
+                    {attachments.length === 0
+                      ? "no core image attached"
+                      : (plan.configuration.kernelPatchSource ?? "attached")}
+                  </Badge>
+                  {attachments.length > 0 ? (
+                    <Button variant="ghost" size="sm" onClick={() => void setAttachments([])}>
+                      Clear
+                    </Button>
+                  ) : null}
+                  <p className="w-full text-[11px] leading-4 text-muted-foreground">
+                    It has to be a KernelPatch core image (it starts with KP1158). The bytes travel
+                    with this run only, the plan records the file name, and the result reports the
+                    digest and the version kptools reads from it. Whatever manager it was built to
+                    trust is the one the device needs.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-[11px] leading-4 text-muted-foreground">
+                  {APATCH_FLAVORS.find((flavor) => flavor.id === readOption(APATCH_FLAVOR_SETTING, "upstream"))
+                    ?.source ?? ""}
+                </p>
+              )}
             </div>
             <p className="shrink-0 text-right font-mono text-[11px] text-muted-foreground">
               required manager
               <br />
               <span className="text-foreground">
-                {APATCH_FLAVORS.find((flavor) => flavor.id === readOption(APATCH_FLAVOR_SETTING, "upstream"))
-                  ?.managerPackage ?? "unknown"}
+                {isCustomFlavour()
+                  ? "unknown"
+                  : (APATCH_FLAVORS.find((flavor) => flavor.id === readOption(APATCH_FLAVOR_SETTING, "upstream"))
+                      ?.managerPackage ?? "unknown")}
               </span>
             </p>
           </CardContent>
