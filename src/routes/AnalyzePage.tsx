@@ -2,6 +2,7 @@ import { ArrowRight, Info, RotateCcw, ShieldAlert, ShieldCheck } from "lucide-re
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router";
 import type { PatchCandidate } from "@/core";
+import { DiagnosticsButton } from "@/components/app/diagnostics-button";
 import { ErrorPanel } from "@/components/app/error-panel";
 import { FieldList } from "@/components/app/field-list";
 import { Badge } from "@/components/ui/badge";
@@ -163,9 +164,12 @@ export function AnalyzePage() {
       </div>
 
       <div className="flex items-center justify-between gap-3">
-        <Button variant="ghost" size="sm" onClick={() => setTechnicalOpen(true)}>
-          {t("analyze.technical")}
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" onClick={() => setTechnicalOpen(true)}>
+            {t("analyze.technical")}
+          </Button>
+          <DiagnosticsButton />
+        </div>
         <p className="font-mono text-[11px] text-muted-foreground">
           sha256 {analysis.sha256.slice(0, 16)}… · crc32 {analysis.crc32}
         </p>

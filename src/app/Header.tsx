@@ -15,6 +15,7 @@ import {
 import { LanguageMenu } from "@/components/ui/language-menu";
 import { StepIndicator } from "@/components/ui/step-indicator";
 import { useT } from "@/i18n/use-translation";
+import { APP_VERSION } from "@/lib/app-meta";
 import { useThemeStore } from "@/stores/theme-store";
 import type { ThemeMode } from "@/stores/theme-store";
 import { useWorkflowSteps, stepIndexForPath } from "./workflow";
@@ -42,7 +43,7 @@ export function Header() {
           </span>
           <span className="text-sm font-semibold tracking-tight">ImageForge</span>
           <Badge variant="neutral" className="hidden sm:inline-flex">
-            v0.1
+            v{APP_VERSION}
           </Badge>
         </Link>
 

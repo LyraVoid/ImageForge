@@ -249,6 +249,44 @@ export const ja: Messages = {
   "settings.license.body":
     "第三者のコンポーネントはそれぞれのライセンスを保ち、再ライセンスされることはありません。リポジトリ直下の LICENSE・NOTICE・THIRD_PARTY_LICENSES/ を参照してください。このビルドには上流 root ソリューションのコードは含まれていません。",
 
+  "diagnostics.export": "診断レポートを書き出す",
+  "readiness.title": "デバイスに書き込む前のチェックリスト",
+  "readiness.intro":
+    "この実行が記録した事実です。ImageForge はデバイスに書き込みません。確認するのは利用者の側です。",
+  "readiness.target": "対象パーティション",
+  "readiness.target.value": "生成物は {target} イメージで、{target} パーティションに属します。",
+  "readiness.manager": "マネージャーアプリ",
+  "readiness.manager.value": "端末に {manager} が必要です。このイメージが信頼する唯一のマネージャーです。",
+  "readiness.manager.unknown":
+    "持ち込んだコアイメージは、それが作られたときのマネージャーだけを信頼します。そちらを入れてください。",
+  "readiness.mock": "この出力は Mock プロバイダーのもので、root は取得できません。",
+  "readiness.avb": "検証付きブート",
+  "readiness.avb.dropped":
+    "AVB 署名は破棄されたため、再署名するか検証を無効にしない限り検証付きブートは失敗します。",
+  "readiness.avb.kept":
+    "元イメージの古い AVB バイト列を残しています。パッチ後はどのみち無効なので、再署名するか検証を無効にしない限り検証付きブートは失敗します。",
+  "readiness.scope": "変更された範囲",
+  "readiness.scope.kernel":
+    "パッチされたのはカーネルセクションだけです。ラムディスクを含む他のセクションは渡されたバイト列のままです。",
+  "readiness.scope.ramdisk": "パッチされたのはラムディスクだけです。カーネルは渡されたバイト列のままです。",
+  "readiness.superkey": "root の資格情報",
+  "readiness.superkey.none": "スーパーキーは未設定です。注入された KernelPatch は署名でマネージャーを認証します。",
+  "readiness.superkey.custom":
+    "スーパーキーが設定され、カーネルにはその SHA-256 だけが入っています。認証に必要なのでキーは保管してください。",
+  "readiness.modules": "埋め込まれたモジュール",
+  "readiness.modules.value": "{count} 個のモジュールがイメージと一緒に読み込まれます。利用してよいかはライセンスの確認次第です。",
+  "readiness.size": "イメージサイズ",
+  "readiness.size.compact":
+    "出力はコンパクトな boot イメージです（{size}）。パーティションの詰め物は boot イメージの一部ではありません。",
+  "readiness.size.padded": "元のパーティションイメージのサイズを保つため、出力は {size} までゼロ埋めされています。",
+  "readiness.verified": "自己チェック",
+  "readiness.verified.pass": "{count} 項目のチェックがすべて通りました。計画 ID: {planId}。",
+  "readiness.verified.fail": "{count} 項目で問題が報告されています。使う前に確認してください。",
+  "readiness.restore": "戻る道を残す",
+  "readiness.restore.kernel": "同じビルドの純正イメージを保管してください。戻すとは、それを書き戻すことです。",
+  "readiness.restore.ramdisk":
+    "同じビルドの純正イメージを保管してください。Magisk 自身のパッチツールは .backup/init.xz からも復元できますが、純正イメージが確実な戻り道です。",
+
   "notfound.title": "このページは存在しません",
   "notfound.body": "ワークフローは Android イメージの選択から始まります。",
   "notfound.back": "最初に戻る",

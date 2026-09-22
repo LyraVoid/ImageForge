@@ -1,6 +1,7 @@
 import { CircleCheck, LoaderCircle, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Link, Navigate, useNavigate } from "react-router";
+import { DiagnosticsButton } from "@/components/app/diagnostics-button";
 import { ErrorPanel } from "@/components/app/error-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,6 +61,7 @@ export function ProcessingPage() {
             <Button variant="ghost" onClick={() => navigate("/")}>
               {t("process.failed.restart")}
             </Button>
+            <DiagnosticsButton />
           </CardContent>
         </Card>
         <ErrorPanel error={error} />

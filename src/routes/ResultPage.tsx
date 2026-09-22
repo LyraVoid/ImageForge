@@ -1,8 +1,10 @@
 import { Download, RotateCcw, ShieldCheck } from "lucide-react";
 import { useCallback } from "react";
 import { Link, Navigate, useNavigate } from "react-router";
+import { DiagnosticsButton } from "@/components/app/diagnostics-button";
 import { ErrorPanel } from "@/components/app/error-panel";
 import { KeyValueList } from "@/components/app/key-value-list";
+import { ReadinessChecklist } from "@/components/app/readiness-checklist";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -54,7 +56,11 @@ export function ResultPage() {
   if (!output) return <Navigate to="/" replace />;
 
   const checks = output.verification.checks;
-  const metadataEntries = Object.entries(output.metadata).map(([key, value]) => ({ key, value }));
+  const metadataEntries = Object.entries(output.metadata).map(([key, value]) => ({
+    key,
+    label: record(key),
+    value,
+  }));
   const warningEntries = Array.from(new Set([...output.warnings, ...output.verification.verification.warnings]));
 
   return (
@@ -137,6 +143,13 @@ export function ResultPage() {
         </CardContent>
       </Card>
 
+      <ReadinessChecklist
+        plan={output.plan}
+        metadata={output.metadata}
+        verification={output.verification}
+        sizeBytes={output.sizeBytes}
+      />
+
       <div className="rounded-lg border border-info/30 bg-info-muted px-4 py-3">
         <p className="text-[11px] leading-4 text-muted-foreground">
           {providerNote(t, output.plan.providerId, output.plan.providerName, output.metadata.kpimgVersion)}
@@ -161,9 +174,12 @@ export function ResultPage() {
       ) : null}
 
       <Card>
-        <CardHeader>
-          <CardTitle>{t("result.technical")}</CardTitle>
-          <CardDescription>{t("result.technical.description")}</CardDescription>
+        <CardHeader className="flex-row items-start justify-between gap-3">
+          <div className="space-y-1">
+            <CardTitle>{t("result.technical")}</CardTitle>
+            <CardDescription>{t("result.technical.description")}</CardDescription>
+          </div>
+          <DiagnosticsButton className="shrink-0" />
         </CardHeader>
         <CardContent>
           <KeyValueList entries={metadataEntries} />

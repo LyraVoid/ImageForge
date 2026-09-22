@@ -127,6 +127,7 @@ export function PatchPage() {
 
   const configurationEntries = Object.entries(plan.configuration).map(([key, value]) => ({
     key,
+    label: record(key),
     value: String(value),
   }));
 

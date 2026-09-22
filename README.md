@@ -8,6 +8,9 @@ repacking and hashing all run inside a Web Worker with WebAssembly assist.
 
     Android image -> Analyze -> Select patch method -> Resolve artifact -> Patch -> Verify -> Download
 
+User guide: [docs/usage.md](docs/usage.md) — which image a method needs, what the checklist means,
+and what to do when it goes wrong.
+
 ImageForge does **not** flash devices, does not talk to fastboot or ADB, and never uploads
 an image to a server.
 
@@ -61,6 +64,11 @@ Deliberately honest limits:
   replaced and the image is repacked with its original layout: the dtb, the ramdisk table and the
   bootconfig stay where they were.
 
+* **The result page ends with a checklist, not just a download button.** It repeats what the run
+  recorded — the target partition, the manager app the image needs, what the dropped AVB signature
+  means, what changed, the plan id — so the consequences of writing the image to a device are
+  visible before you do it. **Export diagnostics** writes the same facts as JSON (no image bytes, no
+  secret) for a bug report.
 * **The interface speaks English, Simplified Chinese, Traditional Chinese and Japanese.** The
   language picker is in the header and in Settings. Patch records are deliberately *not* translated:
   a plan pins provider, release, artifact and configuration, and its id is a hash over them, so the
@@ -118,7 +126,8 @@ neither toolchain is required for app development.
 
 ## Architecture
 
-Full details in [docs/architecture.md](docs/architecture.md).
+Full details in [docs/architecture.md](docs/architecture.md), user-facing steps in
+[docs/usage.md](docs/usage.md).
 
     UI            React + TypeScript + Tailwind design tokens
     Application   Zustand store, worker client, routing

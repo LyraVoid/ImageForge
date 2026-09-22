@@ -255,6 +255,47 @@ export const en = {
   "settings.license.body":
     "Third-party components keep their own licenses and are never re-licensed. See LICENSE, NOTICE and THIRD_PARTY_LICENSES/ in the repository root. No upstream root solution code is bundled in this build.",
 
+  "diagnostics.export": "Export diagnostics",
+  "readiness.title": "Before you write it to a device",
+  "readiness.intro":
+    "What this run recorded. ImageForge never writes to a device; these are the things to check on your side.",
+  "readiness.target": "Target partition",
+  "readiness.target.value": "The produced image is a {target} image and belongs in the {target} partition.",
+  "readiness.manager": "Manager app",
+  "readiness.manager.value":
+    "{manager} has to be installed on the device: it is the only manager this image trusts.",
+  "readiness.manager.unknown":
+    "A hand-supplied core image pairs with the manager it was built for; install that one.",
+  "readiness.mock": "This output comes from the Mock Provider: it does not root a device.",
+  "readiness.avb": "Verified boot",
+  "readiness.avb.dropped":
+    "The AVB signature was dropped, so verified boot fails unless you re-sign the image or disable verification.",
+  "readiness.avb.kept":
+    "The stale AVB bytes of the source image were kept; they are invalid after a patch either way, so verified boot fails unless you re-sign the image or disable verification.",
+  "readiness.scope": "What changed",
+  "readiness.scope.kernel":
+    "Only the kernel section was patched; every other section, the ramdisk included, is byte for byte what you supplied.",
+  "readiness.scope.ramdisk": "Only the ramdisk was patched; the kernel is byte for byte what you supplied.",
+  "readiness.superkey": "Root credentials",
+  "readiness.superkey.none":
+    "No superkey is set: the injected KernelPatch authenticates the manager by its signature.",
+  "readiness.superkey.custom":
+    "A superkey is set and only its SHA-256 is in the kernel; keep the key, it is what authenticates an authorised client.",
+  "readiness.modules": "Embedded modules",
+  "readiness.modules.value":
+    "{count} module(s) load together with the image; whether you may use them is your licence check.",
+  "readiness.size": "Image size",
+  "readiness.size.compact":
+    "The output is the compact boot image ({size}); partition padding is not part of a boot image.",
+  "readiness.size.padded": "The output was zero padded to {size} so it keeps the source partition size.",
+  "readiness.verified": "Self check",
+  "readiness.verified.pass": "All {count} checks passed. Plan id: {planId}.",
+  "readiness.verified.fail": "{count} check(s) reported a problem; read them before using the image.",
+  "readiness.restore": "Keeping a way back",
+  "readiness.restore.kernel": "Keep a stock image of the same build: restoring means writing that image back.",
+  "readiness.restore.ramdisk":
+    "Keep a stock image of the same build. Magisk's own patcher can also restore itself from .backup/init.xz, but a stock image is the reliable way back.",
+
   "notfound.title": "This page does not exist",
   "notfound.body": "The workflow starts with selecting an Android image.",
   "notfound.back": "Back to the start",
