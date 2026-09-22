@@ -152,6 +152,12 @@ ranges rather than loaded.
 Both filesystems are checked against the device itself: a test reads a `sha256sum` listing taken
 from the running system and has to reproduce every digest from the image.
 
+The paths the device never exercised have hand built fixtures (`tests/fixtures/erofs.ts`,
+`tests/fixtures/ext4.ts`): the compressed erofs path, a hash indexed directory and a two level extent
+tree. That is not busywork — the erofs fixture immediately exposed a real bug (a flat inode keeps
+whole blocks, including a partial last one, so a file smaller than a block read back as zeroes) and
+the ext4 one exposed that an indexed directory's root block holds dirents only up to its index.
+
 The shape of a real device shows in what gets used: on a CPH2723 (Android 16) the OTA carries 54
 partitions where `system`, `vendor`, `product`, `system_ext`, `odm` and `my_stock` are erofs and
 `vendor_dlkm` is ext4, so erofs is what a listing has to understand first.

@@ -235,10 +235,16 @@ export async function readInodeData(
     );
   }
   const out = new Uint8Array(inode.size);
-  const fullBlocks = Math.floor(inode.size / superblock.blockSize);
+  // A flat inode keeps whole blocks on disk, including a partial last block; a flat-inline inode
+  // keeps that partial block inline instead, right after the inode and its xattr body.
+  const fullBlocks =
+    inode.dataLayout === "flat-inline"
+      ? Math.floor(inode.size / superblock.blockSize)
+      : Math.ceil(inode.size / superblock.blockSize);
   if (fullBlocks > 0) {
-    const bytes = await source.read(inode.rawBlock << superblock.blkBits, fullBlocks * superblock.blockSize);
-    if (bytes.length < fullBlocks * superblock.blockSize) {
+    const want = Math.min(inode.size, fullBlocks * superblock.blockSize);
+    const bytes = await source.read(inode.rawBlock << superblock.blkBits, want);
+    if (bytes.length < want) {
       throw new PackageError(
         "Inode " + inode.nid + " reads past the end of the image.",
         "This erofs image is truncated.",

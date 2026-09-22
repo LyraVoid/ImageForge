@@ -332,14 +332,15 @@ export async function listExt4Directory(
   const totalBlocks = Math.max(1, Math.floor(inode.size / blockSize));
   const entries: Ext4DirectoryEntry[] = [];
 
-  const scan = async (block: number, fromOffset: number): Promise<void> => {
+  const scan = async (block: number, fromOffset: number, until = blockSize): Promise<void> => {
     const data = await source.read(block * blockSize, blockSize);
     let at = fromOffset;
-    while (at + 8 <= data.length) {
+    const end = Math.min(until, data.length);
+    while (at + 8 <= end) {
       const entryIno = readU32(data, at);
       const recordLength = readU16(data, at + 4);
       const nameLength = data[at + 6];
-      if (recordLength < 8 || at + recordLength > data.length) break;
+      if (recordLength < 8 || at + recordLength > end) break;
       if (entryIno !== 0 && nameLength > 0 && nameLength <= 255 && at + 8 + nameLength <= data.length) {
         const name = new TextDecoder().decode(data.subarray(at + 8, at + 8 + nameLength));
         if (name !== "." && name !== "..") {
@@ -382,9 +383,10 @@ export async function listExt4Directory(
     throw new PackageError("The index root of inode " + inode.number + " is truncated.", "This ext4 image is damaged.");
   }
   // The root block holds the entries that belong to its own leaf first, then the index:
-  // ".", "..", the dx_root_info (8 bytes at 24) and a count/limit pair followed by hash/block pairs.
-  await scan(root, 0);
+  // ".", ".." (24 bytes), the dx_root_info (8 bytes) and a count/limit pair followed by hash/block
+  // pairs. Only the dirents before the index are read here; the rest of the entries live in leaves.
   const indexAt = 8 + 4 + 8 + 4 + 8;
+  await scan(root, 0, indexAt);
   const count = readU16(rootData, indexAt + 2);
   for (let index = 0; index < count; index += 1) {
     const at = indexAt + 4 + index * 8;
