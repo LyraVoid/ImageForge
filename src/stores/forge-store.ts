@@ -11,7 +11,7 @@ import type {
 } from "@/core";
 import type { OpenedPackage } from "@/core/package";
 import type { WorkspaceArtifact } from "@/core/workspace";
-import type { ErofsListing, PartitionView, WorkspaceSourceRecord } from "@/workers/protocol";
+import type { FilesystemListing, PartitionView, WorkspaceSourceRecord } from "@/workers/protocol";
 import { mergePlanOptions } from "./plan-options";
 import { createPatchWorkerClient } from "@/workers/client";
 import type { PatchWorkerClient, WorkerMode } from "@/workers/client";
@@ -83,8 +83,8 @@ interface ForgeState {
   artifacts: WorkspaceArtifact[];
   /** What the unpack tool found in the current source, once it has looked. */
   partitionView: PartitionView | null;
-  /** The directory of an erofs image the user is looking at. */
-  erofsListing: ErofsListing | null;
+  /** The directory of a filesystem image the user is looking at. */
+  filesystemListing: FilesystemListing | null;
   analysis: AnalyzeResponse | null;
   selectedProviderId: string | null;
   planResponse: PlanResponse | null;
@@ -102,8 +102,8 @@ interface ForgeState {
   inspectPartition: () => Promise<PartitionView | null>;
   unpackSparse: () => Promise<WorkspaceArtifact | null>;
   extractLogicalPartition: (partitionName: string) => Promise<WorkspaceArtifact | null>;
-  browseErofs: (path: string) => Promise<ErofsListing | null>;
-  extractErofsFile: (path: string) => Promise<Uint8Array | null>;
+  browseFilesystem: (path: string) => Promise<FilesystemListing | null>;
+  extractFilesystemFile: (path: string) => Promise<Uint8Array | null>;
   selectProvider: (providerId: string, options?: PatchOptions) => Promise<PatchPlan | null>;
   runPatch: () => Promise<boolean>;
   cancelPatch: () => Promise<void>;
@@ -122,7 +122,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
   packageListing: null,
   artifacts: [],
   partitionView: null,
-  erofsListing: null,
+  filesystemListing: null,
   analysis: null,
   selectedProviderId: null,
   planResponse: null,
@@ -149,7 +149,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       packageListing: null,
       artifacts: [],
       partitionView: null,
-      erofsListing: null,
+      filesystemListing: null,
       analysis: null,
       selectedProviderId: null,
       planResponse: null,
@@ -219,8 +219,8 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     if (!state.source) return null;
     try {
       const view = await getClient().inspectPartition(state.source.id);
-      set({ partitionView: view, erofsListing: null, error: null });
-      if (view.kind === "erofs") await get().browseErofs("/");
+      set({ partitionView: view, filesystemListing: null, error: null });
+      if (view.kind === "erofs" || view.kind === "ext4") await get().browseFilesystem("/");
       return view;
     } catch (error) {
       set({ error: toImageForgeError(error).toJSON() });
@@ -254,24 +254,24 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     }
   },
 
-  browseErofs: async (path) => {
+  browseFilesystem: async (path) => {
     const state = get();
     if (!state.source) return null;
     try {
-      const listing = await getClient().listErofs(state.source.id, path);
-      set({ erofsListing: listing, error: null });
+      const listing = await getClient().browseFilesystem(state.source.id, path);
+      set({ filesystemListing: listing, error: null });
       return listing;
     } catch (error) {
-      set({ error: toImageForgeError(error).toJSON(), erofsListing: null });
+      set({ error: toImageForgeError(error).toJSON(), filesystemListing: null });
       return null;
     }
   },
 
-  extractErofsFile: async (path) => {
+  extractFilesystemFile: async (path) => {
     const state = get();
     if (!state.source) return null;
     try {
-      const bytes = await getClient().readErofsFile(state.source.id, path);
+      const bytes = await getClient().readFilesystemFile(state.source.id, path);
       const name = path.split("/").filter((part) => part !== "").pop() ?? "file";
       const artifact = await getClient().registerArtifact({
         sourceId: state.source.id,
@@ -414,7 +414,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       packageListing: null,
       artifacts: [],
       partitionView: null,
-      erofsListing: null,
+      filesystemListing: null,
       analysis: null,
       selectedProviderId: null,
       planResponse: null,

@@ -141,6 +141,16 @@ ranges rather than loaded.
   difference between a decodable block and "invalid LZ4 block".
   Refused by name, because each is a feature of its own: files in the packed inode (fragments),
   interlaced pclusters, inline pclusters, and any algorithm other than LZ4.
+* **ext4** (`ext4.ts`, from `fs/ext4/ext4.h`, `ext4_extents.h` and `namei.c`, Linux v6.6): the
+  superblock and its feature set, inodes at `bg_inode_table * blockSize + index * inodeSize`, the
+  extent tree (any depth, with `ee_len > 32768` extents read as zeroes instead of being read from
+  disk), linear directories, and hash indexed directories through the `dx_root` index
+  (`namei.c:228`: a count/limit pair, then hash/block pairs where the block is a *logical* block of
+  the directory). Refused by name: inodes without extents (the old indirect block map), meta block
+  groups, inline data directories and encrypted directories.
+
+Both filesystems are checked against the device itself: a test reads a `sha256sum` listing taken
+from the running system and has to reproduce every digest from the image.
 
 The shape of a real device shows in what gets used: on a CPH2723 (Android 16) the OTA carries 54
 partitions where `system`, `vendor`, `product`, `system_ext`, `odm` and `my_stock` are erofs and

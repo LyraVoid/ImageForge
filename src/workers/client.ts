@@ -10,7 +10,7 @@ import type {
   PlanRequest,
   PlanResponse,
   ProgressSink,
-  ErofsListing,
+  FilesystemListing,
   PartitionView,
   RegisterArtifactRequest,
   WorkspaceSnapshot,
@@ -40,8 +40,8 @@ export interface PatchWorkerClient {
   inspectPartition(sourceId: string): Promise<PartitionView>;
   unpackSparseSource(sourceId: string): Promise<WorkspaceArtifact>;
   extractLogicalPartition(sourceId: string, partitionName: string): Promise<WorkspaceArtifact>;
-  listErofs(sourceId: string, path: string): Promise<ErofsListing>;
-  readErofsFile(sourceId: string, path: string): Promise<Uint8Array>;
+  browseFilesystem(sourceId: string, path: string): Promise<FilesystemListing>;
+  readFilesystemFile(sourceId: string, path: string): Promise<Uint8Array>;
   closeSource(sourceId: string): Promise<void>;
   terminate(): void;
 }
@@ -79,8 +79,8 @@ function createWorkerBackedClient(worker: Worker): PatchWorkerClient {
     inspectPartition: (sourceId) => remote.inspectPartition(sourceId),
     unpackSparseSource: (sourceId) => remote.unpackSparseSource(sourceId),
     extractLogicalPartition: (sourceId, name) => remote.extractLogicalPartition(sourceId, name),
-    listErofs: (sourceId, path) => remote.listErofs(sourceId, path),
-    readErofsFile: (sourceId, path) => remote.readErofsFile(sourceId, path),
+    browseFilesystem: (sourceId, path) => remote.browseFilesystem(sourceId, path),
+    readFilesystemFile: (sourceId, path) => remote.readFilesystemFile(sourceId, path),
     closeSource: (sourceId) => remote.closeSource(sourceId),
     terminate: () => worker.terminate(),
   };
@@ -124,8 +124,8 @@ function createInlineClient(): PatchWorkerClient {
     inspectPartition: async (sourceId) => (await load()).inspectPartition(sourceId),
     unpackSparseSource: async (sourceId) => (await load()).unpackSparseSource(sourceId),
     extractLogicalPartition: async (sourceId, name) => (await load()).extractLogicalPartition(sourceId, name),
-    listErofs: async (sourceId, path) => (await load()).listErofs(sourceId, path),
-    readErofsFile: async (sourceId, path) => (await load()).readErofsFile(sourceId, path),
+    browseFilesystem: async (sourceId, path) => (await load()).browseFilesystem(sourceId, path),
+    readFilesystemFile: async (sourceId, path) => (await load()).readFilesystemFile(sourceId, path),
     closeSource: async (sourceId) => {
       if (session) await session.closeSource(sourceId);
     },

@@ -16,14 +16,20 @@ import {
 import type { ByteSource, OpenedPackage } from "../core/package";
 import {
   LP_METADATA_GEOMETRY_MAGIC,
+  checkExt4Supported,
+  listExt4Directory,
   logicalPartitionSource,
   parseErofs,
+  parseExt4,
   parseSparse,
   parseSuper,
   readDirectory,
+  readExt4File,
+  readExt4Inode,
   readInode,
   readInodeData,
   resolveErofsPath,
+  resolveExt4Path,
   unpackSparse,
 } from "../core/partition";
 import {
@@ -49,7 +55,7 @@ import type {
   RegisterArtifactRequest,
   WorkspaceSnapshot,
   WorkspaceSourceRecord,
-  ErofsListing,
+  FilesystemListing,
 } from "./protocol";
 
 export const PATCH_WORKER_VERSION = "1.0.0";
@@ -315,8 +321,21 @@ export class PatchWorkerSession implements PatchWorkerApi {
     });
   }
 
-  async listErofs(sourceId: string, path: string): Promise<ErofsListing> {
-    const { source } = this.requireSource(sourceId);
+  async browseFilesystem(sourceId: string, path: string): Promise<FilesystemListing> {
+    const { source, record } = this.requireSource(sourceId);
+    if (record.detected.content === "ext4") {
+      const superblock = await parseExt4(source);
+      checkExt4Supported(superblock);
+      const inode = await resolveExt4Path(source, superblock, path);
+      const entries = await listExt4Directory(source, superblock, inode);
+      const detailed: FilesystemListing["entries"] = [];
+      for (const entry of entries.slice(0, 512)) {
+        const child = await readExt4Inode(source, superblock, entry.ino);
+        detailed.push({ name: entry.name, fileType: entry.fileType, sizeBytes: child.size });
+      }
+      return { path, kind: "ext4", entries: detailed };
+    }
+
     const superblock = await parseErofs(source);
     const inode = await resolveErofsPath(source, superblock, path);
     if (!inode.isDirectory) {
@@ -326,16 +345,33 @@ export class PatchWorkerSession implements PatchWorkerApi {
       );
     }
     const entries = await readDirectory(source, superblock, inode);
-    const detailed: ErofsListing["entries"] = [];
+    const detailed: FilesystemListing["entries"] = [];
     for (const entry of entries.slice(0, 512)) {
       const child = await readInode(source, superblock, entry.nid);
-      detailed.push({ ...entry, sizeBytes: child.size, dataLayout: child.dataLayout });
+      detailed.push({
+        name: entry.name,
+        fileType: entry.fileType,
+        sizeBytes: child.size,
+        dataLayout: child.dataLayout,
+      });
     }
-    return { path, superblock, entries: detailed };
+    return { path, kind: "erofs", superblock, entries: detailed };
   }
 
-  async readErofsFile(sourceId: string, path: string): Promise<Uint8Array> {
-    const { source } = this.requireSource(sourceId);
+  async readFilesystemFile(sourceId: string, path: string): Promise<Uint8Array> {
+    const { source, record } = this.requireSource(sourceId);
+    if (record.detected.content === "ext4") {
+      const superblock = await parseExt4(source);
+      checkExt4Supported(superblock);
+      const inode = await resolveExt4Path(source, superblock, path);
+      if (inode.isDirectory) {
+        throw new WorkerError(
+          "Inode " + inode.number + " is a directory.",
+          "A directory is not a file; open it instead.",
+        );
+      }
+      return readExt4File(source, superblock, inode);
+    }
     const superblock = await parseErofs(source);
     const inode = await resolveErofsPath(source, superblock, path);
     if (inode.isDirectory) {

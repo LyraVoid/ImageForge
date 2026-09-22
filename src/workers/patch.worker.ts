@@ -25,7 +25,7 @@ Comlink.expose({
   unpackSparseSource: (sourceId: string) => session.unpackSparseSource(sourceId),
   extractLogicalPartition: (sourceId: string, partitionName: string) =>
     session.extractLogicalPartition(sourceId, partitionName),
-  listErofs: (sourceId: string, path: string) => session.listErofs(sourceId, path),
-  readErofsFile: (sourceId: string, path: string) => session.readErofsFile(sourceId, path),
+  browseFilesystem: (sourceId: string, path: string) => session.browseFilesystem(sourceId, path),
+  readFilesystemFile: (sourceId: string, path: string) => session.readFilesystemFile(sourceId, path),
   closeSource: (sourceId: string) => session.closeSource(sourceId),
 });

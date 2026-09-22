@@ -24,13 +24,13 @@ export function UnpackPage() {
   const stage = useForgeStore((state) => state.stage);
   const error = useForgeStore((state) => state.error);
   const view = useForgeStore((state) => state.partitionView);
-  const listing = useForgeStore((state) => state.erofsListing);
+  const listing = useForgeStore((state) => state.filesystemListing);
   const artifacts = useForgeStore((state) => state.artifacts);
   const inspectPartition = useForgeStore((state) => state.inspectPartition);
   const unpackSparse = useForgeStore((state) => state.unpackSparse);
   const extractLogicalPartition = useForgeStore((state) => state.extractLogicalPartition);
-  const browseErofs = useForgeStore((state) => state.browseErofs);
-  const extractErofsFile = useForgeStore((state) => state.extractErofsFile);
+  const browseFilesystem = useForgeStore((state) => state.browseFilesystem);
+  const extractFilesystemFile = useForgeStore((state) => state.extractFilesystemFile);
   const readArtifactBytes = useForgeStore((state) => state.readArtifactBytes);
   const sendToPatcher = useForgeStore((state) => state.sendToPatcher);
   const [busy, setBusy] = useState<string | null>(null);
@@ -49,7 +49,7 @@ export function UnpackPage() {
 
   const handleErofsFile = async (path: string) => {
     setBusy(path);
-    const bytes = await extractErofsFile(path);
+    const bytes = await extractFilesystemFile(path);
     setBusy(null);
     if (bytes) download(path.split("/").pop() ?? "file", bytes);
   };
@@ -185,7 +185,7 @@ export function UnpackPage() {
                 </table>
               </CardContent>
             </Card>
-          ) : view.kind === "erofs" ? (
+          ) : view.kind === "erofs" || view.kind === "ext4" ? (
             <Card>
               <CardHeader className="flex-row items-center gap-2">
                 <FolderOpen className="size-3.5 text-muted-foreground" aria-hidden />
@@ -193,7 +193,7 @@ export function UnpackPage() {
                   <CardTitle>{t("unpack.browse")}</CardTitle>
                   <CardDescription className="truncate font-mono">{path}</CardDescription>
                 </div>
-                <Button variant="ghost" size="sm" disabled={path === "/"} onClick={() => void browseErofs(parent)}>
+                <Button variant="ghost" size="sm" disabled={path === "/"} onClick={() => void browseFilesystem(parent)}>
                   <Undo2 />
                   {t("unpack.up")}
                 </Button>
@@ -201,7 +201,7 @@ export function UnpackPage() {
               <CardContent>
                 <ul className="divide-y divide-border">
                   {entries.map((entry) => (
-                    <li key={entry.nid + entry.name} className="flex items-center gap-2 py-1.5">
+                    <li key={path + "/" + entry.name} className="flex items-center gap-2 py-1.5">
                       <span className="min-w-0 flex-1 truncate font-mono text-[11px]">{entry.name}</span>
                       <Badge variant="outline">{entry.fileType}</Badge>
                       {entry.dataLayout === "compressed" || entry.dataLayout === "compressed-compact" ? (
@@ -214,7 +214,9 @@ export function UnpackPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => void browseErofs(path === "/" ? "/" + entry.name : path + "/" + entry.name)}
+                          onClick={() =>
+                            void browseFilesystem(path === "/" ? "/" + entry.name : path + "/" + entry.name)
+                          }
                         >
                           <ChevronRight />
                         </Button>
@@ -238,7 +240,9 @@ export function UnpackPage() {
             <Card>
               <CardHeader>
                 <CardTitle>{t("unpack.incompatible")}</CardTitle>
-                <CardDescription>{view.detected.label}</CardDescription>
+                <CardDescription>
+                  {view.kind === "unsupported" ? view.detected.label : ""}
+                </CardDescription>
               </CardHeader>
             </Card>
           )}

@@ -1,9 +1,16 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { bytesSource, extractPackageEntry, openPackage } from "@/core/package";
 import {
   EROFS_SUPER_OFFSET,
+  EXT4_FEATURE_INCOMPAT_EXTENTS,
+  EXT4_ROOT_INO,
+  listExt4Directory,
   logicalPartitionSource,
+  parseExt4,
+  readExt4File,
+  readExt4Inode,
+  resolveExt4Path,
   parseErofs,
   parseSparse,
   parseSuper,
@@ -15,9 +22,11 @@ import {
   inodeOffset,
 } from "@/core/partition";
 import { PackageError } from "@/core/errors";
+import { sha256Hex } from "@/core/hash";
 import { buildSparse, sparseExpected } from "../fixtures/sparse";
 import { buildSuper } from "../fixtures/super";
 import { fileSource } from "../fixtures/file-source";
+import { repoPath } from "../fixtures/artifacts";
 
 const OTA_PACKAGE = process.env.IMAGEFORGE_OTA_PACKAGE ?? "";
 const hasOtaPackage = OTA_PACKAGE !== "" && existsSync(OTA_PACKAGE);
@@ -187,4 +196,96 @@ describe.skipIf(!hasOtaPackage)("a real erofs partition", () => {
       /does not exist/,
     );
   }, 300000);
+});
+/** A `sha256sum` listing taken from the device, so its digests are the reference. */
+function readDigests(path: string): [string, string][] {
+  const lines = textOf(path).split("\n").filter((line) => line.trim() !== "");
+  return lines.map((line) => {
+    const [digest, file] = line.trim().split(/\s+/);
+    return [file, digest] as [string, string];
+  });
+}
+
+function textOf(path: string): string {
+  return existsSync(path) ? readFileSync(path, "utf8") : "";
+}
+
+const EROFS_DIGESTS = process.env.IMAGEFORGE_EROFS_DIGESTS ?? repoPath(".research", "aster-validation", "erofs-product-digests.txt");
+const EXT4_DIGESTS = process.env.IMAGEFORGE_EXT4_DIGESTS ?? repoPath(".research", "aster-validation", "ext4-vendor_dlkm-digests.txt");
+const hasErofsDigests = existsSync(EROFS_DIGESTS) && readDigests(EROFS_DIGESTS).length > 0;
+const hasExt4Digests = existsSync(EXT4_DIGESTS) && readDigests(EXT4_DIGESTS).length > 0;
+
+describe.skipIf(!hasOtaPackage)("a real ext4 partition", () => {
+  it("lists vendor_dlkm and reads a kernel module out of it", async () => {
+    const packageSource = fileSource(OTA_PACKAGE);
+    const opened = await openPackage(packageSource);
+    const entry = opened.entries.find((candidate) => candidate.id.endsWith("::vendor_dlkm"));
+    expect(entry).toBeDefined();
+    const partition = await extractPackageEntry(packageSource, entry?.id as string);
+    const image = bytesSource(partition);
+
+    const superblock = await parseExt4(image);
+    expect(superblock.blockSize).toBe(4096);
+    expect(superblock.inodeSize).toBe(256);
+    expect(superblock.is64Bit).toBe(false);
+    expect(superblock.featureIncompat & EXT4_FEATURE_INCOMPAT_EXTENTS).toBe(EXT4_FEATURE_INCOMPAT_EXTENTS);
+
+    const root = await readExt4Inode(image, superblock, EXT4_ROOT_INO);
+    const rootNames = (await listExt4Directory(image, superblock, root)).map((candidate) => candidate.name);
+    expect(rootNames).toContain("etc");
+    expect(rootNames).toContain("lib");
+
+    // a real dlkm partition holds hundreds of modules in one directory
+    const modules = await resolveExt4Path(image, superblock, "/lib/modules");
+    const listing = await listExt4Directory(image, superblock, modules);
+    expect(listing.length).toBeGreaterThan(400);
+
+    const module = await resolveExt4Path(image, superblock, "/lib/modules/adsp_loader_dlkm.ko");
+    const data = await readExt4File(image, superblock, module);
+    expect(data.length).toBe(module.size);
+    expect([...data.subarray(0, 4)]).toEqual([0x7f, 0x45, 0x4c, 0x46]);
+  }, 600000);
+
+  it("refuses a path that is not there", async () => {
+    const packageSource = fileSource(OTA_PACKAGE);
+    const opened = await openPackage(packageSource);
+    const entry = opened.entries.find((candidate) => candidate.id.endsWith("::vendor_dlkm"));
+    const image = bytesSource(await extractPackageEntry(packageSource, entry?.id as string));
+    const superblock = await parseExt4(image);
+
+    await expect(resolveExt4Path(image, superblock, "/definitely-not-here")).rejects.toThrowError(/does not exist/);
+  }, 600000);
+});
+
+describe.skipIf(!hasOtaPackage || !hasErofsDigests)("erofs files against the device", () => {
+  it("reproduces every digest the device reported", async () => {
+    const packageSource = fileSource(OTA_PACKAGE);
+    const opened = await openPackage(packageSource);
+    const entry = opened.entries.find((candidate) => candidate.id.endsWith("::product"));
+    const image = bytesSource(await extractPackageEntry(packageSource, entry?.id as string));
+    const superblock = await parseErofs(image);
+
+    for (const [file, digest] of readDigests(EROFS_DIGESTS)) {
+      // the device reports the path it mounts the partition at; the image holds it from the root
+      const inode = await resolveErofsPath(image, superblock, file.replace(/^\/product/, "") || "/");
+      const data = await readInodeData(image, superblock, inode);
+      expect(await sha256Hex(data), file).toBe(digest);
+    }
+  }, 600000);
+});
+
+describe.skipIf(!hasOtaPackage || !hasExt4Digests)("ext4 files against the device", () => {
+  it("reproduces every digest the device reported", async () => {
+    const packageSource = fileSource(OTA_PACKAGE);
+    const opened = await openPackage(packageSource);
+    const entry = opened.entries.find((candidate) => candidate.id.endsWith("::vendor_dlkm"));
+    const image = bytesSource(await extractPackageEntry(packageSource, entry?.id as string));
+    const superblock = await parseExt4(image);
+
+    for (const [file, digest] of readDigests(EXT4_DIGESTS)) {
+      const inode = await resolveExt4Path(image, superblock, file.replace(/^\/vendor_dlkm/, "") || "/");
+      const data = await readExt4File(image, superblock, inode);
+      expect(await sha256Hex(data), file).toBe(digest);
+    }
+  }, 600000);
 });

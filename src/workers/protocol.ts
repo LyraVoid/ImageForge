@@ -1,6 +1,6 @@
 import type { ArtifactKind, DetectedArtifact, WorkspaceArtifact } from "../core/workspace";
 import type { OpenedPackage } from "../core/package";
-import type { ErofsDirectoryEntry, ErofsSuperblock, LpPartition, SparseHeader } from "../core/partition";
+import type { ErofsSuperblock, Ext4Superblock, LpPartition, SparseHeader } from "../core/partition";
 import type {
   BootImageHeaderFields,
   CompatibilityResult,
@@ -108,12 +108,22 @@ export type PartitionView =
       partitions: LpPartition[];
     }
   | { kind: "erofs"; superblock: ErofsSuperblock }
+  | { kind: "ext4"; superblock: Ext4Superblock }
   | { kind: "unsupported"; detected: DetectedArtifact };
 
-export interface ErofsListing {
+/** One directory of a filesystem image, whichever kind it is. */
+export interface FilesystemListing {
   path: string;
-  superblock: ErofsSuperblock;
-  entries: (ErofsDirectoryEntry & { sizeBytes: number; dataLayout: string })[];
+  kind: "erofs" | "ext4";
+  /** The erofs superblock, when there is one; ext4 keeps its own. */
+  superblock?: ErofsSuperblock;
+  entries: {
+    name: string;
+    fileType: string;
+    sizeBytes: number;
+    /** erofs storage form, when the image is erofs. */
+    dataLayout?: string;
+  }[];
 }
 
 export interface RegisterArtifactRequest {
@@ -152,10 +162,10 @@ export interface PatchWorkerApi {
   unpackSparseSource(sourceId: string): Promise<WorkspaceArtifact>;
   /** Reads one logical partition out of a super image into an artifact. */
   extractLogicalPartition(sourceId: string, partitionName: string): Promise<WorkspaceArtifact>;
-  /** Lists a directory of an erofs image. */
-  listErofs(sourceId: string, path: string): Promise<ErofsListing>;
-  /** Reads one file out of an erofs image, when it is stored flat. */
-  readErofsFile(sourceId: string, path: string): Promise<Uint8Array>;
+  /** Lists a directory of a filesystem image (erofs or ext4). */
+  browseFilesystem(sourceId: string, path: string): Promise<FilesystemListing>;
+  /** Reads one file out of a filesystem image. */
+  readFilesystemFile(sourceId: string, path: string): Promise<Uint8Array>;
   digestArtifact(id: string): Promise<string>;
   /** Closes a source and everything that was derived from it. */
   closeSource(sourceId: string): Promise<void>;
