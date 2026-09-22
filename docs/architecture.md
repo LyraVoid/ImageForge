@@ -161,6 +161,33 @@ Vendor boot images are parsed and repacked: the platform ramdisk fragment is rep
 layout is recomputed by the parser's own rule (page aligned ramdisk, then dtb, table and bootconfig),
 so every other section ends up where it started.
 
+## Lazy loading
+
+Describing a provider is data, running one is code, and the two travel separately:
+
+* `src/core/patch/providers/descriptors.ts` holds the name, description, supported formats and
+  status of every provider. The compatibility engine and the UI read only those, so listing the
+  candidates never imports a patch pipeline.
+* `src/core/patch/providers/registry.ts` imports an implementation with `import()` the first time
+  that provider is actually used (`PROVIDER_LOADERS`). Every `PatchProvider` method is
+  asynchronous, so a `LazyPatchProvider` can stand in for the real object: it reports the
+  descriptor's name, forwards the first call and shares one import between concurrent callers. A
+  failed import is not cached, so it can be retried.
+* Constants a caller can legitimately need without running anything (plan configuration keys, entry
+  names, the registered KernelPatch flavours, the Magisk config builder) live in `*-config.ts`
+  next to the implementation, and the `src/core` barrel re-exports those instead of the classes.
+* The inline worker session — the fallback used when `Worker` is unavailable — is imported on demand
+  too, so a browser that has a Worker does not carry the Image Engine on the main thread.
+* `package.json` declares the app side-effect free except for CSS, which lets the bundler drop the
+  `src/core` re-exports a page never touches.
+
+Effect on the production build (measured, the numbers are machine specific): the first load went
+from about 725 kB of JavaScript to about 590 kB, the Image Engine and the four providers left the
+initial graph, and each provider became its own chunk — `apatch` 36 kB, `kernelsu` 12 kB,
+`magisk` 10 kB, `mock` 5 kB — fetched when a plan or a patch first needs them. The worker builds
+its own copies of those chunks, which is how Vite bundles a worker entry; the page only downloads
+what it imports.
+
 ## Patch providers
 
 | Provider | Target | Mechanism |

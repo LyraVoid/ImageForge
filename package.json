@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "license": "AGPL-3.0-or-later",
+  "sideEffects": [
+    "**/*.css"
+  ],
   "description": "Local-first Android image patcher that runs entirely in your browser.",
   "scripts": {
     "dev": "vite",

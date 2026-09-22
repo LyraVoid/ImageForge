@@ -2,6 +2,17 @@ import type { ArtifactRegistry } from "../../artifacts/registry";
 import { KERNELSU_KSUINIT_ID, kernelsuLkmId } from "../../artifacts/catalog";
 import type { PatchArtifact } from "../../artifacts/types";
 import { KEEP_SIGNATURE_SETTING, outputOptions } from "./output-options";
+import {
+  KERNELSU_CONFIG_ENTRY,
+  KERNELSU_CONFIG_SETTING,
+  KERNELSU_INIT_BACKUP_ENTRY,
+  KERNELSU_INIT_ENTRY,
+  KERNELSU_KMI_SETTING,
+  KERNELSU_MODULE_ENTRY,
+  KERNELSU_MODULE_NAME,
+  KERNELSU_REQUIRED_MANAGER,
+  plannedKmi,
+} from "./kernelsu-config";
 import { findMagiskMarker, loadRamdiskSection, ramdiskBytesForVerification, repackWithRamdisk } from "./ramdisk-support";
 import type { RamdiskSection } from "./ramdisk-support";
 import { AbortedError, PatchError } from "../../errors";
@@ -36,31 +47,6 @@ import type {
   PatchRunContext,
   PatchVerificationResult,
 } from "../types";
-
-/** Plan configuration key holding the device KMI, for example android15-6.6. */
-export const KERNELSU_KMI_SETTING = "kmi";
-
-/** Plan configuration key holding extra ksud flags, for example "norc=1 allow_shell=1". */
-export const KERNELSU_CONFIG_SETTING = "ksuConfig";
-
-/** Entry names, exactly as ksud writes them. */
-export const KERNELSU_INIT_ENTRY = "init";
-export const KERNELSU_INIT_BACKUP_ENTRY = "init.real";
-export const KERNELSU_MODULE_ENTRY = "kernelsu.ko";
-export const KERNELSU_CONFIG_ENTRY = "ksu_config";
-
-export const KERNELSU_REQUIRED_MANAGER = "me.weishu.kernelsu";
-
-/**
- * The KMI a plan pins, or an empty string when it has not been chosen yet. The plan stores the
- * sentinel "unset" so it can be displayed, but nothing outside the plan should ever have to know
- * that: this turns it back into "not chosen".
- */
-export function plannedKmi(configuration: Record<string, string> | undefined): string {
-  const value = (configuration?.[KERNELSU_KMI_SETTING] ?? "").trim();
-  return value === "unset" || value === "none" ? "" : value;
-}
-export const KERNELSU_MODULE_NAME = "kernelsu";
 
 const PLAN_STEPS: PatchPlanStep[] = [
   { id: "analyze", label: "Read the boot image", progress: 5 },

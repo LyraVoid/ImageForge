@@ -134,14 +134,15 @@ Full details in [docs/architecture.md](docs/architecture.md), user-facing steps 
     Patch Engine  planner -> resolver -> executor -> verifier
     Compatibility image metadata -> provider candidates
     Artifacts     releases, artifacts, digests, architectures
-    Providers     one pipeline per patch method
+    Providers     one pipeline per patch method, imported when a run needs it
     Image Engine  parse / extract / transform / repack / verify
     Ramdisk       CPIO newc read and write inside the original container
     Worker        Comlink RPC with progress events
     WASM          CRC32, LZ4 block coding and xz (LZMA2) coding
 
 Hard rules: providers never parse boot images, the UI never decides compatibility, versions
-are never hardcoded in the UI, and heavy work never runs on the main thread.
+are never hardcoded in the UI, heavy work never runs on the main thread, and nothing a page does
+not need is loaded (describing a provider is data, running one is an on-demand import).
 
 The ramdisk layer is lossless by construction: an untouched ramdisk serialises back to the exact
 bytes it was parsed from, including entry padding, the trailer fields and any trailing padding,

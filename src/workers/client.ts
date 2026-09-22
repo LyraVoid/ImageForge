@@ -1,5 +1,5 @@
 import * as Comlink from "comlink";
-import { createPatchWorkerSession } from "./session";
+import type { PatchWorkerSession } from "./session";
 import type {
   AnalyzeResponse,
   PatchRequest,
@@ -43,18 +43,34 @@ function createWorkerBackedClient(worker: Worker): PatchWorkerClient {
   };
 }
 
+/**
+ * The inline session is imported on first use. It pulls in the Image Engine, the Patch Engine and
+ * (through the registry) the providers, so a browser that does have a Worker must not pay for it
+ * just because it is the fallback.
+ */
 function createInlineClient(): PatchWorkerClient {
-  const session = createPatchWorkerSession();
+  let session: PatchWorkerSession | null = null;
+  const load = async (): Promise<PatchWorkerSession> => {
+    if (!session) {
+      const module = await import("./session");
+      session = module.createPatchWorkerSession();
+    }
+    return session;
+  };
   return {
     mode: "inline",
-    version: () => session.version(),
-    analyze: (file, name) => session.analyze(file, name),
-    plan: (request) => session.plan(request),
-    patch: (request, onProgress) => session.patch(request, onProgress),
-    cancel: () => session.cancel(),
-    reset: () => session.reset(),
+    version: async () => (await load()).version(),
+    analyze: async (file, name) => (await load()).analyze(file, name),
+    plan: async (request) => (await load()).plan(request),
+    patch: async (request, onProgress) => (await load()).patch(request, onProgress),
+    cancel: async () => {
+      if (session) await session.cancel();
+    },
+    reset: async () => {
+      if (session) await session.reset();
+    },
     terminate: () => {
-      void session.reset();
+      if (session) void session.reset();
     },
   };
 }

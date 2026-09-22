@@ -1,10 +1,6 @@
 import type { ArtifactRegistry } from "../../artifacts/registry";
 import type { PatchArtifact } from "../../artifacts/types";
-import {
-  APATCH_KPIMG_ASTER_ID,
-  APATCH_KPIMG_ID,
-  APATCH_KPTOOLS_ID,
-} from "../../artifacts/catalog";
+import { APATCH_KPTOOLS_ID } from "../../artifacts/catalog";
 import { canonicalize } from "../../canonical";
 import { AbortedError, IncompatibleProviderError, PatchError } from "../../errors";
 import { sha256Hex } from "../../hash";
@@ -21,6 +17,16 @@ import {
 import type { CompressionDescriptor } from "../../image";
 import type { ParsedImage, VerifyExpectations } from "../../image";
 import { compileWasiModule, runWasiTool } from "../../../wasm/wasi-runner";
+import {
+  APATCH_CUSTOM_FLAVOR,
+  APATCH_CUSTOM_KPIMG_ID,
+  APATCH_DEFAULT_FLAVOR,
+  APATCH_FLAVORS,
+  APATCH_FLAVOR_SETTING,
+  APATCH_KPM_SETTING,
+  APATCH_SUPERKEY_SETTING,
+} from "./apatch-config";
+import type { ApatchFlavor } from "./apatch-config";
 import { describeKpm, readKpmInfo } from "./kpm-info";
 import { KEEP_SIGNATURE_SETTING, outputOptions } from "./output-options";
 import type {
@@ -35,15 +41,6 @@ import type {
   PatchVerificationResult,
 } from "../types";
 
-/** Plan configuration key holding an optional superkey. Empty means the APatch default. */
-export const APATCH_SUPERKEY_SETTING = "superkey";
-
-/** Plan configuration key selecting which KernelPatch core image is injected. */
-export const APATCH_FLAVOR_SETTING = "kernelPatchFlavor";
-
-/** Plan configuration key listing the KernelPatch modules embedded into the image. */
-export const APATCH_KPM_SETTING = "kpmModules";
-
 function readModuleNames(configuration: Record<string, string> | undefined): string[] {
   const raw = (configuration?.[APATCH_KPM_SETTING] ?? "").trim();
   if (raw === "" || raw === "none") return [];
@@ -52,40 +49,6 @@ function readModuleNames(configuration: Record<string, string> | undefined): str
     .map((entry) => entry.trim())
     .filter((entry) => entry !== "");
 }
-
-export interface ApatchFlavor {
-  id: string;
-  label: string;
-  artifactId: string;
-  /** The manager package the injected KernelPatch trusts. */
-  managerPackage: string;
-  source: string;
-}
-
-export const APATCH_FLAVORS: ApatchFlavor[] = [
-  {
-    id: "upstream",
-    label: "Upstream KernelPatch",
-    artifactId: APATCH_KPIMG_ID,
-    managerPackage: "me.bmax.apatch",
-    source: "official APatch release 11224 (KernelPatch 0.13.3)",
-  },
-  {
-    id: "aster",
-    label: "Aster fork",
-    artifactId: APATCH_KPIMG_ASTER_ID,
-    managerPackage: "me.yuki.aster",
-    source:
-      "LyraVoid/KernelPatch-Aster 0ff4ae2b8cad8058c408d8a5bdb12569b1a84981 (upstream 0.13.8 plus the Aster manager trust commit)",
-  },
-];
-
-export const APATCH_DEFAULT_FLAVOR = "upstream";
-
-/** A flavour whose core image is supplied with the run instead of coming from the registry. */
-export const APATCH_CUSTOM_FLAVOR = "custom";
-
-export const APATCH_CUSTOM_KPIMG_ID = "custom-kpimg";
 
 export type ApatchFlavorChoice =
   | { kind: "registered"; flavor: ApatchFlavor }

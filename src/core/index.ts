@@ -25,8 +25,8 @@ export * from "./compat/types";
 export { evaluateCompatibility } from "./compat/engine";
 export type { CompatibilityInput } from "./compat/engine";
 export * from "./patch/types";
-export { MockPatchProvider, MOCK_BOOTCONFIG_MARKER, MOCK_CMDLINE_MARKER } from "./patch/providers/mock-provider";
 export { ProviderRegistry, createProviderRegistry } from "./patch/providers/registry";
+export type { PatchProviderFactory } from "./patch/providers/registry";
 export {
   APATCH_PROVIDER_DESCRIPTOR,
   KERNELSU_PROVIDER_DESCRIPTOR,
@@ -35,6 +35,13 @@ export {
   PLANNED_PROVIDER_DESCRIPTORS,
   PROVIDER_DESCRIPTORS,
 } from "./patch/providers/descriptors";
+
+/**
+ * The provider *implementations* are not exported from here on purpose: they are imported on demand
+ * by the registry, so importing this barrel does not pull four patch pipelines into a bundle that
+ * only wants to describe them. Everything a caller can legitimately need without running a provider
+ * lives in the config modules below.
+ */
 export {
   APATCH_CUSTOM_FLAVOR,
   APATCH_CUSTOM_KPIMG_ID,
@@ -43,18 +50,12 @@ export {
   APATCH_FLAVOR_SETTING,
   APATCH_KPM_SETTING,
   APATCH_SUPERKEY_SETTING,
-  ApatchPatchProvider,
-} from "./patch/providers/apatch-provider";
-export type { PatchAttachment } from "./patch/types";
-export {
-  KEEP_SIGNATURE_SETTING,
-  PRESERVE_IMAGE_SIZE_SETTING,
-  outputOptions,
-} from "./patch/providers/output-options";
+} from "./patch/providers/apatch-config";
+export type { ApatchFlavor } from "./patch/providers/apatch-config";
+export { KEEP_SIGNATURE_SETTING, PRESERVE_IMAGE_SIZE_SETTING, outputOptions } from "./patch/providers/output-options";
 export type { OutputOptions } from "./patch/providers/output-options";
 export { describeKpm, readKpmInfo } from "./patch/providers/kpm-info";
 export type { KpmInfo } from "./patch/providers/kpm-info";
-export type { ApatchFlavor } from "./patch/providers/apatch-provider";
 export {
   KERNELSU_CONFIG_ENTRY,
   KERNELSU_CONFIG_SETTING,
@@ -64,9 +65,8 @@ export {
   KERNELSU_MODULE_ENTRY,
   KERNELSU_MODULE_NAME,
   KERNELSU_REQUIRED_MANAGER,
-  KernelsuPatchProvider,
   plannedKmi,
-} from "./patch/providers/kernelsu-provider";
+} from "./patch/providers/kernelsu-config";
 export {
   KERNELSU_KSUINIT_ID,
   KERNELSU_KSUINIT_SHA256,
@@ -93,8 +93,9 @@ export {
   MAGISK_REQUIRED_MANAGER,
   MAGISK_STUB_ENTRY,
   MAGISK_VERITY_KEY_ENTRY,
-  MagiskPatchProvider,
   buildMagiskConfig,
-} from "./patch/providers/magisk-provider";
+} from "./patch/providers/magisk-config";
+export type { MagiskConfigInput } from "./patch/providers/magisk-config";
+export { MOCK_BOOTCONFIG_MARKER, MOCK_CMDLINE_MARKER } from "./patch/providers/mock-config";
 export { PatchEngine, createPatchEngine } from "./patch/engine";
 export type { AnalyzedImage, PatchEngineOptions, PatchRunOutcome } from "./patch/engine";

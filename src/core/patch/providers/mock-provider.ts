@@ -17,8 +17,7 @@ import type {
   PatchVerificationResult,
 } from "../types";
 
-export const MOCK_CMDLINE_MARKER = "imageforge.mock=1";
-export const MOCK_BOOTCONFIG_MARKER = "imageforge_mock";
+import { MOCK_BOOTCONFIG_MARKER, MOCK_CMDLINE_MARKER } from "./mock-config";
 
 const PLAN_STEPS: PatchPlanStep[] = [
   { id: "analyze", label: "Analyze image", progress: 0 },
