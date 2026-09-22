@@ -116,7 +116,10 @@ Real images shaped two decisions:
 * The kernel payload is handed to providers as raw section bytes together with its detected
   compression, so a provider can refuse an unsupported format instead of corrupting it.
 
-Compression support: gzip is expanded through `DecompressionStream`; LZ4 legacy and LZ4
+Compression support: gzip is expanded through `DecompressionStream`; the LZ4 block encoder in
+the WebAssembly module searches hash chains with lazy matching and backward extension, the way the
+reference HC encoder does, which is what keeps a re-compressed ramdisk close to the size the source
+image had; LZ4 legacy and LZ4
 frame payloads are expanded by the WebAssembly codec, which also keeps a 64 KiB window so
 frames with dependent blocks decode correctly; xz goes through the same module, which holds an
 LZMA2 codec built from the crate magiskboot uses. LZMA, BZip2 and Zstandard are detected and

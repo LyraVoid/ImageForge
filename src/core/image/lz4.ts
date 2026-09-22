@@ -241,6 +241,10 @@ function compressBlocks(raw: Uint8Array, blockMaxSize: number, wasm: WasmImageMo
 
 function encodeLegacy(raw: Uint8Array, settings: Lz4LegacySettings, wasm: WasmImageModule): Uint8Array {
   const blocks = compressBlocks(raw, settings.blockMaxSize, wasm);
+  // The legacy stream is only the magic followed by [size][block] pairs: the reference tool and the
+  // images devices ship agree on that, and a reader simply consumes the whole input. Some patchers
+  // (magiskboot) append the uncompressed size as well; a decoder can do without it, so it is not
+  // written here.
   let size = 4;
   for (const block of blocks) size += 4 + block.length;
   const out = new Uint8Array(size);

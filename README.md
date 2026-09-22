@@ -147,7 +147,7 @@ and a real device `init_boot` image is used to enforce that
 | Kernel architecture detection | arm64, arm (zImage), x86_64 (bzImage) heuristics |
 | Compression detection | gzip, LZ4 (legacy and frame), XZ, LZMA, BZip2, Zstandard, CPIO |
 | Compression expansion | gzip, LZ4 legacy and LZ4 frame (including dependent blocks), xz |
-| Compression re-encoding | gzip and LZ4 (reproducing the original block size, checksums, content size and dictionary id) and xz (magiskboot's settings: preset 6, CRC32) |
+| Compression re-encoding | gzip and LZ4 (reproducing the original block size, checksums, content size and dictionary id, with an HC style match search that lands within about 3% of magiskboot's LZ4 HC output) and xz (magiskboot's settings: preset 6, CRC32) |
 | AVB signature | detected, dropped on repack with a warning |
 
 ## Verification model

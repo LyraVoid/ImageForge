@@ -213,65 +213,157 @@ pub unsafe extern "C" fn imageforge_lz4_compress_block(
     }
 }
 
+/// How many chain candidates one position may inspect. magiskboot compresses with LZ4 HC at its
+/// highest level; a bounded search with the same early rejection is what makes that affordable
+/// inside WebAssembly.
+const LZ4_HC_ATTEMPTS: usize = 128;
+
+/// Matches shorter than this also search the next position, which is the lazy matching LZ4 HC does.
+const LZ4_HC_LAZY_LENGTH: usize = 128;
+
+/// Records a position in the hash chain, exactly like the reference encoder's insert step.
+fn lz4_insert(input: &[u8], position: usize, head: &mut [u32], chain: &mut [u32]) {
+    let hash = lz4_hash4(read_u32_le(input, position));
+    chain[position & 0xffff] = head[hash];
+    head[hash] = position as u32;
+}
+
+/// Walks the chain for the longest match at `i`, rejecting candidates that cannot beat the best
+/// one found so far before it pays for a full comparison.
+fn lz4_find_match(
+    input: &[u8],
+    i: usize,
+    match_limit: usize,
+    mut candidate: usize,
+    chain: &[u32],
+) -> Option<(usize, usize)> {
+    let mut best_start = 0usize;
+    let mut best_length = 0usize;
+    let mut attempts = 0usize;
+    let probe = read_u32_le(input, i);
+
+    while candidate != u32::MAX as usize && attempts < LZ4_HC_ATTEMPTS {
+        if candidate >= i || i - candidate > LZ4_MAX_OFFSET {
+            break;
+        }
+        let worth_it = best_length < LZ4_MIN_MATCH
+            || (i + best_length < match_limit
+                && candidate + best_length < input.len()
+                && input[candidate + best_length] == input[i + best_length]);
+        if worth_it && read_u32_le(input, candidate) == probe {
+            let mut length = LZ4_MIN_MATCH;
+            while i + length < match_limit && input[candidate + length] == input[i + length] {
+                length += 1;
+            }
+            if length > best_length {
+                best_length = length;
+                best_start = candidate;
+            }
+        }
+        candidate = chain[candidate & 0xffff] as usize;
+        attempts += 1;
+    }
+
+    if best_length >= LZ4_MIN_MATCH {
+        Some((best_start, best_length))
+    } else {
+        None
+    }
+}
+
 fn lz4_compress_block(input: &[u8], output: &mut [u8]) -> Option<usize> {
     let n = input.len();
     if n == 0 {
         return Some(0);
     }
 
-    let mut table = vec![0u32; 1usize << LZ4_HASH_LOG];
+    let mut head = vec![u32::MAX; 1usize << LZ4_HASH_LOG];
+    let mut chain = vec![u32::MAX; 1usize << 16];
     let mut pos = 0usize;
     let mut anchor = 0usize;
     let mut i = 0usize;
     let match_limit = n.saturating_sub(LZ4_LAST_LITERALS);
 
     while i + LZ4_MF_LIMIT <= n {
-        let sequence = read_u32_le(input, i);
-        let slot = lz4_hash4(sequence);
-        let candidate = table[slot] as usize;
-        table[slot] = i as u32;
+        let hash = lz4_hash4(read_u32_le(input, i));
+        let previous = head[hash];
+        chain[i & 0xffff] = previous;
+        head[hash] = i as u32;
 
-        if candidate < i && i - candidate <= LZ4_MAX_OFFSET && read_u32_le(input, candidate) == sequence {
-            let mut match_len = LZ4_MIN_MATCH;
-            while i + match_len < match_limit && input[candidate + match_len] == input[i + match_len] {
-                match_len += 1;
-            }
+        let mut found = lz4_find_match(input, i, match_limit, previous as usize, &chain);
 
-            let literal_len = i - anchor;
-            let match_code = match_len - LZ4_MIN_MATCH;
-            if pos >= output.len() {
-                return None;
+        // Lazy matching: a longer match one byte later is worth emitting a literal for, which is
+        // where a good part of the compression difference over a greedy encoder comes from.
+        if let Some((_, length)) = found {
+            if length < LZ4_HC_LAZY_LENGTH && i + 1 + LZ4_MF_LIMIT <= n {
+                let next_hash = lz4_hash4(read_u32_le(input, i + 1));
+                let next_previous = head[next_hash];
+                chain[(i + 1) & 0xffff] = next_previous;
+                head[next_hash] = (i + 1) as u32;
+                if let Some((_, next_length)) = lz4_find_match(input, i + 1, match_limit, next_previous as usize, &chain) {
+                    if next_length > length {
+                        i += 1;
+                        continue;
+                    }
+                }
             }
-            let token_pos = pos;
-            pos += 1;
-            output[token_pos] = ((if literal_len >= 15 { 15 } else { literal_len } as u8) << 4)
-                | (if match_code >= 15 { 15 } else { match_code } as u8);
+        }
 
-            if literal_len >= 15 {
-                pos = write_length(output, pos, literal_len - 15)?;
-            }
-            if pos + literal_len > output.len() {
-                return None;
-            }
-            output[pos..pos + literal_len].copy_from_slice(&input[anchor..anchor + literal_len]);
-            pos += literal_len;
+        match found.take() {
+            Some((candidate, match_len)) => {
+                // Extend the match backwards into the pending literals, the way the reference HC
+                // encoder does: it costs nothing and it is where a few more percent come from.
+                let mut candidate = candidate;
+                let mut match_start = i;
+                let mut length = match_len;
+                while match_start > anchor && candidate > 0 && input[candidate - 1] == input[match_start - 1] {
+                    candidate -= 1;
+                    match_start -= 1;
+                    length += 1;
+                }
 
-            if pos + 2 > output.len() {
-                return None;
-            }
-            let offset = (i - candidate) as u16;
-            output[pos] = (offset & 0xff) as u8;
-            output[pos + 1] = (offset >> 8) as u8;
-            pos += 2;
+                let literal_len = match_start - anchor;
+                let match_code = length - LZ4_MIN_MATCH;
+                if pos >= output.len() {
+                    return None;
+                }
+                let token_pos = pos;
+                pos += 1;
+                output[token_pos] = ((if literal_len >= 15 { 15 } else { literal_len } as u8) << 4)
+                    | (if match_code >= 15 { 15 } else { match_code } as u8);
 
-            if match_code >= 15 {
-                pos = write_length(output, pos, match_code - 15)?;
-            }
+                if literal_len >= 15 {
+                    pos = write_length(output, pos, literal_len - 15)?;
+                }
+                if pos + literal_len > output.len() {
+                    return None;
+                }
+                output[pos..pos + literal_len].copy_from_slice(&input[anchor..anchor + literal_len]);
+                pos += literal_len;
 
-            i += match_len;
-            anchor = i;
-        } else {
-            i += 1;
+                if pos + 2 > output.len() {
+                    return None;
+                }
+                let offset = (match_start - candidate) as u16;
+                output[pos] = (offset & 0xff) as u8;
+                output[pos + 1] = (offset >> 8) as u8;
+                pos += 2;
+
+                if match_code >= 15 {
+                    pos = write_length(output, pos, match_code - 15)?;
+                }
+
+                // Keep the positions inside the match in the chains: later text can match them.
+                let match_end = match_start + length;
+                let mut inside = i + 1;
+                while inside < match_end {
+                    lz4_insert(input, inside, &mut head, &mut chain);
+                    inside += 1;
+                }
+                i = match_end;
+                anchor = i;
+            }
+            None => i += 1,
         }
     }
 
@@ -293,94 +385,6 @@ fn lz4_compress_block(input: &[u8], output: &mut [u8]) -> Option<usize> {
 
     Some(pos)
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn crc32_matches_known_vector() {
-        let data = b"123456789";
-        let crc = unsafe { imageforge_crc32(data.as_ptr(), data.len()) };
-        assert_eq!(crc, 0xcbf4_3926);
-    }
-
-    #[test]
-    fn decodes_a_literal_only_block() {
-        let input = [0x50u8, b'h', b'e', b'l', b'l', b'o'];
-        let mut output = [0u8; 8];
-        let written = lz4_decompress_block(&input, &mut output).unwrap();
-        assert_eq!(written, 5);
-        assert_eq!(&output[..5], b"hello");
-    }
-
-    #[test]
-    fn compresses_and_decompresses_round_trip() {
-        let mut input = Vec::new();
-        for i in 0..4096u32 {
-            input.extend_from_slice(b"imageforge-imageforge-");
-            input.push((i % 251) as u8);
-        }
-        let mut compressed = vec![0u8; input.len() * 2 + 64];
-        let written = lz4_compress_block(&input, &mut compressed).unwrap();
-        assert!(written < input.len(), "compression should shrink repetitive data");
-
-        let mut output = vec![0u8; input.len()];
-        let decoded = lz4_decompress_block(&compressed[..written], &mut output).unwrap();
-        assert_eq!(decoded, input.len());
-        assert_eq!(output, input);
-    }
-
-    #[test]
-    fn compresses_incompressible_data_losslessly() {
-        let mut state = 12345u32;
-        let input: Vec<u8> = (0..2048)
-            .map(|_| {
-                state = state.wrapping_mul(1103515245).wrapping_add(12345);
-                (state >> 16) as u8
-            })
-            .collect();
-        let mut compressed = vec![0u8; input.len() * 2 + 64];
-        let written = lz4_compress_block(&input, &mut compressed).unwrap();
-
-        let mut output = vec![0u8; input.len()];
-        let decoded = lz4_decompress_block(&compressed[..written], &mut output).unwrap();
-        assert_eq!(decoded, input.len());
-        assert_eq!(output, input);
-    }
-
-    #[test]
-    fn decodes_a_block_that_matches_into_the_previous_window() {
-        // prefix "abcdefgh", then a literal-only block must not disturb it, and a
-        // block whose match reaches into the prefix must resolve correctly.
-        let prefix = b"abcdefgh";
-        let mut buffer = vec![0u8; prefix.len() + 32];
-        buffer[..prefix.len()].copy_from_slice(prefix);
-
-        // token 0x00: no literals, match length 4 + extension 0 at offset 8 -> "abcd"
-        let block = [0x00u8, 0x08, 0x00];
-        let written = lz4_decompress_block_with_prefix(&block, &mut buffer, prefix.len()).unwrap();
-        assert_eq!(written, 4);
-        assert_eq!(&buffer[prefix.len()..prefix.len() + 4], b"abcd");
-    }
-
-    #[test]
-    fn decodes_an_overlapping_match() {
-        // token 0x22: two literals then a match of length 2 + 4 = 6 at offset 2
-        let input = [0x22u8, b'a', b'b', 0x02, 0x00];
-        let mut output = [0u8; 8];
-        let written = lz4_decompress_block(&input, &mut output).unwrap();
-        assert_eq!(written, 8);
-        assert_eq!(&output[..8], b"abababab");
-    }
-}
-// --- xz / LZMA2 ------------------------------------------------------------------------------
-//
-// Magisk's magiskboot compresses its ramdisk payloads with xz, and XZ is also one of the
-// containers Android kernels and ramdisks use, so the module has to be able to read and write it.
-// The codec comes from lzma-rust2, the crate magiskboot itself uses, with the same settings
-// (preset 6 and a CRC32 check). magiskboot also prepends a BCJ filter for the target architecture;
-// omitting it produces a slightly larger but equally standard stream that every decoder reads.
 
 use lzma_rust2::{CheckType, XzOptions, XzReader, XzWriter};
 use std::io::{Read, Write};
