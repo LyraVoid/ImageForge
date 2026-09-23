@@ -10,7 +10,7 @@ redistributed with this AGPL-3.0-or-later project as separate, unmodified progra
 | Field | Value |
 | --- | --- |
 | Repository | https://github.com/SunRayEx/Magisk-Metro ("The Magic Mask for Android", the releases are named MagisKube) |
-| Fork of | https://github.com/topjohnwu/Magisk, on the v30.7 base: `app/gradle.properties` sets `magisk.versionCode=30700`, and the four patcher files below are byte for byte v30.7's |
+| Fork of | https://github.com/topjohnwu/Magisk, on the v30.7 base: `app/gradle.properties` at the pinned tag sets `magisk.versionCode=30700`, and the four patcher files below are byte for byte v30.7's |
 | Pinned release | `1.0.0` (published 2026-08-01), tag commit `b1b0247e5ba47d571fd5e97acf7ffbb785003118` |
 | Release asset | `app-release.apk`, 13380464 bytes, sha256 `b6fddaab15bd104bb6cc00dcad987f7f26073537459f5477658659c13f229a0f` |
 | Manager package | `org.magiskube.magisk`, compiled into its binaries (`native/src/include/consts.hpp` `JAVA_PACKAGE_NAME`, `native/src/include/consts.rs` `APP_PACKAGE_NAME`) |
@@ -54,6 +54,20 @@ Two details worth recording, both read from the release rather than assumed:
   to is `org.magiskube.magisk` (`app/stub/build.gradle.kts:13,21` keeps upstream's id). That is an
   inconsistency in the fork, and it does not affect a patch: the stub is the hidden-manager carrier,
   renamed by the app when it hides itself.
+
+## The branch has moved to the v31.0 base since this release
+
+The pinned release is the v30.7-era build described above, and it is the newest **release** the project
+has published. Its `master` has since moved to Magisk v31.0 (`app/gradle.properties` now sets
+`magisk.versionCode=31000`), which a newer build of MagisKube would be based on. That is not a version
+number change on our side: Magisk v31.0 changed the xz preset magiskboot asks for from 9 to 6
+(`native/src/boot/compress.rs:217-218`, CRC32 kept) and dropped Zopfli, so a v31.0-era patcher declares
+a smaller dictionary and produces different streams from the ones this project reproduces. A build on
+that base would therefore need its own registration and its own byte-for-byte verification, exactly as
+this one has, rather than being swapped in.
+
+For the same reason, the upstream Magisk flavour here is pinned at v30.7 as well: it is what upstream
+marks as its latest release, and v31.0 is published as a pre-release.
 
 ## What has and has not been verified here
 
