@@ -171,6 +171,18 @@ when nothing was replaced, the whole image is. If your picture needs more room t
 grows and the page says by how much: a device partition has a fixed size, so a larger image needs a
 partition at least that big. The tool never flashes anything — you get the `splash.img` to download.
 
+## Hand a partition to a flashing or packaging tool
+
+**Pack as sparse image** turns any .img artifact the workspace holds into an Android sparse image
+(named with .sparse.img), which is the form flashing and packaging tools take. Blocks whose bytes are
+all the same become one fill chunk and the rest become raw chunks, exactly as AOSP's img2simg chunks
+them, so the result is byte for byte what that tool would write; the difference is that here it is
+streamed into a blob, so even a three gigabyte partition can be packed and downloaded.
+
+A note on what is deliberately not emitted: a dont-care chunk means "leave whatever is already on the
+device", which is a different statement from "this region is zero", and AOSP's own writer does not use
+it either, so neither do we. If a fill or raw image will not do, say so and it can become an option.
+
 ## Look at a file without patching it
 
 **Inspect an image** is the read-only face of the same workspace: open anything there and the page

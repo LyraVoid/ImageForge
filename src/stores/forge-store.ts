@@ -134,6 +134,8 @@ interface ForgeState {
   readArtifactBytes: (artifactId: string) => Promise<Uint8Array | null>;
   /** The artifact as a `Blob`: for a streamed partition this is the only copy that exists. */
   artifactBlob: (artifactId: string) => Promise<Blob | null>;
+  /** Rewrites an artifact as an Android sparse image and keeps it in the workspace. */
+  packSparse: (artifactId: string) => Promise<WorkspaceArtifact | null>;
   /** Points the tools at one entry inside the opened package, or at the file itself (null). */
   openInside: (entryId: string | null) => void;
   inspectPartition: () => Promise<PartitionView | null>;
@@ -584,6 +586,17 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
   artifactBlob: async (artifactId) => {
     try {
       return await getClient().artifactBlob(artifactId);
+    } catch (error) {
+      set({ error: toImageForgeError(error).toJSON() });
+      return null;
+    }
+  },
+
+  packSparse: async (artifactId) => {
+    try {
+      const artifact = await getClient().packSparseArtifact(artifactId);
+      set({ artifacts: [...get().artifacts, artifact], error: null });
+      return artifact;
     } catch (error) {
       set({ error: toImageForgeError(error).toJSON() });
       return null;

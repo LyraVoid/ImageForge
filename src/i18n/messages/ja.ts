@@ -143,6 +143,7 @@ export const ja: Messages = {
   "logo.resolutionHint": "MediaTek の logo は画面サイズを記録しておらず、同じブロック長が複数の解像度に当てはまります。絵が正しく見えるものを選んでください。候補は最大ブロックのサイズから出しています。",
   "logo.resolutionApply": "このサイズを使う",
 
+  "sparse.pack": "スパースイメージに変換",
   "dropzone.title": "Android イメージをここにドロップ",
   "dropzone.hint": "またはクリックしてファイルを選択",
   "dropzone.busy": "イメージを分析しています",

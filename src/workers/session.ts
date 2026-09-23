@@ -1,6 +1,7 @@
 import { WorkerError } from "../core/errors";
 import { sha256Hex } from "../core/hash";
 import { buildZip, parseImage } from "../core/image";
+import { DEFAULT_SPARSE_BLOCK_SIZE, packSparseStream } from "../core/partition";
 import type { ParsedImage } from "../core/image";
 import { buildImageReport } from "../core/image/report";
 import { createPatchEngine } from "../core/patch/engine";
@@ -747,6 +748,28 @@ export class PatchWorkerSession implements PatchWorkerApi {
       },
       bytes: toStandaloneBuffer(packed.bytes),
     });
+  }
+
+  async packSparseArtifact(artifactId: string, options: { blockSize?: number } = {}): Promise<WorkspaceArtifact> {
+    const artifact = this.artifacts.get(artifactId);
+    if (!artifact) {
+      throw new WorkerError("Nothing in the workspace has the id " + artifactId + ".", "Extract it first.");
+    }
+    const blob = await this.artifactBlob(artifactId);
+    const source = blobSource(blob);
+    const blockSize = options.blockSize ?? DEFAULT_SPARSE_BLOCK_SIZE;
+    const stream = await packSparseStream(source, { blockSize });
+    const name = artifact.record.name.replace(/\.[a-z0-9]+$/i, "") + ".sparse.img";
+    return this.registerStreamedArtifact(
+      {
+        sourceId: artifact.record.sourceId,
+        parentId: artifactId,
+        tool: "sparse",
+        name,
+        params: { sparse: "true", blockSize: String(blockSize) },
+      },
+      stream,
+    );
   }
 
   /** Zips files a tool built in the page (pictures, a manifest) and keeps the archive as an artifact. */

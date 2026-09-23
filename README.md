@@ -45,6 +45,12 @@ by operation into a `Blob` (which browsers keep on disk) rather than a single bu
 `my_stock` can be extracted and downloaded — it used to be impossible, since one `Uint8Array` of that
 size cannot exist in a browser. The page marks such an artifact as blob-backed.
 
+**Packing is covered too.** An extracted partition can be rewritten as an Android sparse image from
+the unpack page, and the chunking matches AOSP's own writer: the image it produces is byte for byte
+what img2simg writes for the same input, verified against the real tool and against a 15 MB partition
+taken from an OTA. The result streams into a blob, so a 3 GiB partition can be packed without being
+held in memory.
+
 **The boot screen is editable too.** Two containers are read and written: OPPO / Realme / OnePlus
 splash.img (Qualcomm) and MediaTek's logo.img (Xiaomi and other MTK devices). A splash image's frames
 are named; a MediaTek one has no frame names and does not record its screen size, so the page asks for

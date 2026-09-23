@@ -143,6 +143,7 @@ export const zhHant: Messages = {
   "logo.resolutionHint": "MTK 的 logo 不記錄螢幕尺寸，而同一塊長度可能對應好幾種解析度。選一個圖看起來正確的即可；候選來自最大那塊的尺寸。",
   "logo.resolutionApply": "使用這個尺寸",
 
+  "sparse.pack": "打包為稀疏映像",
   "dropzone.title": "把 Android 映像拖到這裡",
   "dropzone.hint": "或點擊選擇檔案",
   "dropzone.busy": "正在分析映像",

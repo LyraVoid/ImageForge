@@ -21,6 +21,8 @@ Comlink.expose({
   extractPackageEntry: (sourceId: string, entryId: string, options?: { stream?: boolean }) =>
     session.extractPackageEntry(sourceId, entryId, options),
   artifactBlob: (id: string) => session.artifactBlob(id),
+  packSparseArtifact: (artifactId: string, options?: { blockSize?: number }) =>
+    session.packSparseArtifact(artifactId, options),
   analyzeArtifact: (artifactId: string) => session.analyzeArtifact(artifactId),
   inspectPartition: (sourceId: string, inside?: string) => session.inspectPartition(sourceId, inside),
   unpackSparseSource: (sourceId: string) => session.unpackSparseSource(sourceId),

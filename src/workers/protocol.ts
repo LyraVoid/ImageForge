@@ -219,6 +219,12 @@ export interface PatchWorkerApi {
   extractPackageEntry(sourceId: string, entryId: string, options?: { stream?: boolean }): Promise<WorkspaceArtifact>;
   /** The artifact as a `Blob`, which is what a browser can download without a copy in memory. */
   artifactBlob(id: string): Promise<Blob>;
+  /**
+   * Rewrites an artifact as an Android sparse image, which is what flashing and packaging tools
+   * take. The result is produced as a stream and kept as a blob, so a large partition never has to
+   * be in memory. The chunking matches AOSP's `img2simg` for the same input.
+   */
+  packSparseArtifact(artifactId: string, options?: { blockSize?: number }): Promise<WorkspaceArtifact>;
   /** Hands an artifact to the patcher, which reads its bytes where they already are. */
   analyzeArtifact(artifactId: string): Promise<AnalyzeResponse>;
   /** What kind of partition container the open source is, and what it holds. */

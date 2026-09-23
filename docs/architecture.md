@@ -220,6 +220,21 @@ of them, so the reference implementation decodes them: `public/wasm/bzip2.wasm` 
 compiled by `scripts/build-bzip2-wasm.sh`, the same pattern as `lz4.wasm`, and its output was
 checked digest for digest against `bunzip2`.
 
+## Writing sparse images
+
+An extracted partition can be rewritten as an Android sparse image (src/core/partition/sparse-write.ts).
+The chunking is AOSP's: a block whose bytes are all the same, zero or not, becomes one fill chunk, runs
+of them with the same value merge, and everything else becomes raw chunks that merge while they are
+adjacent. That is deliberately narrow, because it makes the writer checkable: the tests compare its
+output with the real img2simg byte for byte on crafted inputs and on a 15 MB partition from an OTA, and
+feed its output back through simg2img, whose result is byte for byte the original partition.
+
+Two things it does not do on purpose. It never emits a dont-care chunk, which means "leave whatever is
+already on the device" and is a different statement from "this region is zero" — AOSP's writer does not
+use one either, and a wrong one can leave stale bytes behind on a device. And it writes the image as a
+stream, so the result is kept as a blob rather than a buffer, which is what makes a three gigabyte
+partition packable at all.
+
 ## Hard rules
 
 1. **Providers never parse boot images.** A provider receives the normalized object

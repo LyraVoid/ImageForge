@@ -40,6 +40,7 @@ export interface PatchWorkerClient {
   listPackage(sourceId: string): Promise<OpenedPackage>;
   extractPackageEntry(sourceId: string, entryId: string, options?: { stream?: boolean }): Promise<WorkspaceArtifact>;
   artifactBlob(id: string): Promise<Blob>;
+  packSparseArtifact(artifactId: string, options?: { blockSize?: number }): Promise<WorkspaceArtifact>;
   analyzeArtifact(artifactId: string): Promise<AnalyzeResponse>;
   inspectPartition(sourceId: string, inside?: string): Promise<PartitionView>;
   unpackSparseSource(sourceId: string): Promise<WorkspaceArtifact>;
@@ -107,6 +108,7 @@ function createWorkerBackedClient(worker: Worker): PatchWorkerClient {
     listPackage: (sourceId) => remote.listPackage(sourceId),
     extractPackageEntry: (sourceId, entryId, options) => remote.extractPackageEntry(sourceId, entryId, options),
     artifactBlob: (id) => remote.artifactBlob(id),
+    packSparseArtifact: (artifactId, options) => remote.packSparseArtifact(artifactId, options),
     analyzeArtifact: (artifactId) => remote.analyzeArtifact(artifactId),
     inspectPartition: (sourceId, inside) => remote.inspectPartition(sourceId, inside),
     unpackSparseSource: (sourceId) => remote.unpackSparseSource(sourceId),
@@ -171,6 +173,8 @@ function createInlineClient(): PatchWorkerClient {
     extractPackageEntry: async (sourceId, entryId, options) =>
       (await load()).extractPackageEntry(sourceId, entryId, options),
     artifactBlob: async (id) => (await load()).artifactBlob(id),
+    packSparseArtifact: async (artifactId, options) =>
+      (await load()).packSparseArtifact(artifactId, options),
     analyzeArtifact: async (artifactId) => (await load()).analyzeArtifact(artifactId),
     inspectPartition: async (sourceId, inside) => (await load()).inspectPartition(sourceId, inside),
     unpackSparseSource: async (sourceId) => (await load()).unpackSparseSource(sourceId),

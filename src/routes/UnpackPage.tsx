@@ -34,6 +34,7 @@ export function UnpackPage() {
   const browseFilesystem = useForgeStore((state) => state.browseFilesystem);
   const extractFilesystemFile = useForgeStore((state) => state.extractFilesystemFile);
   const artifactBlob = useForgeStore((state) => state.artifactBlob);
+  const packSparse = useForgeStore((state) => state.packSparse);
   const sendToPatcher = useForgeStore((state) => state.sendToPatcher);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -296,6 +297,11 @@ export function UnpackPage() {
                         <Download />
                         {t("extract.download")}
                       </Button>
+                      {artifact.name.endsWith(".img") ? (
+                        <Button variant="ghost" size="sm" onClick={() => void packSparse(artifact.id)}>
+                          {t("sparse.pack")}
+                        </Button>
+                      ) : null}
                     </li>
                   ))}
                 </ul>

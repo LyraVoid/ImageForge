@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { WorkerError } from "@/core/errors";
 import { sha256Hex } from "@/core/hash";
 import { createPatchWorkerClient } from "@/workers/client";
+import { bytesSource } from "@/core/package";
+import { parseSparse, unpackSparse } from "@/core/partition";
 import { PatchWorkerSession } from "@/workers/session";
 import { buildBootImage } from "../fixtures/bootimg";
 import { buildPayload } from "../fixtures/payload";
@@ -214,6 +216,27 @@ describe("PatchWorkerSession", () => {
     // and closing the source takes the streamed artifact with it
     await session.closeSource(source.id);
     expect((await session.workspace()).artifacts).toHaveLength(0);
+  });
+
+  it("rewrites an artifact as a sparse image its own reader unpacks back", async () => {
+    const session = new PatchWorkerSession();
+    const image = await buildBootImage({ kernel: null });
+    const zip = await buildZip([{ name: "boot.img", data: image }]);
+    const source = await session.openSource(toArrayBuffer(zip), "images.zip");
+    const artifact = await session.extractPackageEntry(source.id, "boot.img");
+
+    const sparse = await session.packSparseArtifact(artifact.id);
+    expect(sparse.params?.sparse).toBe("true");
+    expect(sparse.params?.blockSize).toBe("4096");
+    expect(sparse.name).toBe("boot.sparse.img");
+
+    const bytes = await session.readArtifact(sparse.id, 0, sparse.sizeBytes);
+    const parsed = await parseSparse(bytesSource(new Uint8Array(bytes)));
+    expect(parsed.header.totalBlocks).toBe(Math.ceil(image.length / 4096));
+    const unpacked = await unpackSparse(bytesSource(new Uint8Array(bytes)), parsed);
+    expect(await sha256Hex(unpacked)).toBe(await sha256Hex(image));
+
+    await session.closeSource(source.id);
   });
 
   it("refuses to extract something the package does not have", async () => {
