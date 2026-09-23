@@ -120,6 +120,11 @@ Deliberately honest limits:
   pinned release (GPL-3.0 throughout) and compressed at patch time with magiskboot's codec, settings
   and declared dictionary; together with magiskboot's archive layout that makes the produced ramdisk
   **byte for byte the one the official app writes**, which the real-material test asserts.
+
+The suite needs real material for its strongest checks — an OTA package, device dumps, a MediaTek logo
+image — and every test that needs it skips itself and names the environment variable that supplies it.
+[docs/testing.md](docs/testing.md) lists them all, says where each one looks, and how the material was
+captured. `pnpm typecheck && pnpm lint && pnpm test && pnpm build` is the gate.
 * **A KernelPatch core image can also be supplied by hand.** Picking the custom flavour lets you
   attach your own `kpimg`: it is checked for the KernelPatch magic before kptools runs, the plan
   pins the file name, and the result reports the digest and the version kptools read from it.

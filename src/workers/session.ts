@@ -607,6 +607,35 @@ export class PatchWorkerSession implements PatchWorkerApi {
     return this.previewOf(decoded.rgba, decoded.width, decoded.height);
   }
 
+  /**
+   * Checks what a packer claims instead of trusting it, by reading the rebuilt image back through the
+   * same parsers the editor used: every frame the user left alone has to come back byte for byte, and
+   * a pack with no replacements at all has to reproduce the whole image. Both containers share this,
+   * so a third one gets the check for free.
+   */
+  private async verifyRepack(input: {
+    source: ByteSource;
+    rebuilt: Uint8Array;
+    replaced: number;
+    /** Frame indices the user did not replace. */
+    untouched: number[];
+    storedInSource: (index: number) => Promise<Uint8Array>;
+    storedInRebuilt: (index: number) => Promise<Uint8Array>;
+  }): Promise<"identical" | "frames-intact" | "different"> {
+    for (const index of input.untouched) {
+      const before = await input.storedInSource(index);
+      const after = await input.storedInRebuilt(index);
+      if (before.length !== after.length || !before.every((byte, at) => byte === after[at])) {
+        return "different";
+      }
+    }
+    const identical =
+      input.replaced === 0 &&
+      input.rebuilt.length === input.source.size &&
+      (await sha256Hex(input.rebuilt)) === (await sha256Hex(await readAll(input.source)));
+    return identical ? "identical" : "frames-intact";
+  }
+
   /** Scales a frame's pixels down to what a list needs, keeping the aspect ratio. */
   private previewOf(rgba: Uint8Array, width: number, height: number): SplashPreview {
     if (width <= SPLASH_PREVIEW_MAX && height <= SPLASH_PREVIEW_MAX) {
@@ -669,20 +698,14 @@ export class PatchWorkerSession implements PatchWorkerApi {
       const packedMtk = await packMtkLogo(source, mtk, mtkEntries);
       const check = bytesSource(packedMtk.bytes);
       const reparsed = await parseMtkLogo(check, resolution);
-      let mtkIntact = true;
-      for (const frame of mtk.frames) {
-        if (byIndex.has(frame.index) && frame.layout) continue;
-        const before = await readMtkFrameRaw(source, frame);
-        const after = await readMtkFrameRaw(check, reparsed.frames[frame.index]);
-        if (before.length !== after.length || !before.every((byte, index) => byte === after[index])) {
-          mtkIntact = false;
-          break;
-        }
-      }
-      const mtkIdentical =
-        packedMtk.replaced === 0 &&
-        packedMtk.bytes.length === source.size &&
-        (await sha256Hex(packedMtk.bytes)) === (await sha256Hex(await readAll(source)));
+      const mtkVerified = await this.verifyRepack({
+        source,
+        rebuilt: packedMtk.bytes,
+        replaced: packedMtk.replaced,
+        untouched: mtk.frames.filter((frame) => !(byIndex.has(frame.index) && frame.layout)).map((frame) => frame.index),
+        storedInSource: async (index) => readMtkFrameRaw(source, mtk.frames[index]),
+        storedInRebuilt: async (index) => readMtkFrameRaw(check, reparsed.frames[index]),
+      });
       const mtkName =
         (this.sources.get(sourceId)?.record.name ?? "logo.img").replace(/\.[a-z]+$/i, "") + "-patched.img";
       return this.registerArtifact({
@@ -693,7 +716,7 @@ export class PatchWorkerSession implements PatchWorkerApi {
         params: {
           replaced: String(packedMtk.replaced),
           sizeDelta: String(packedMtk.sizeDelta),
-          verified: mtkIdentical ? "identical" : mtkIntact ? "frames-intact" : "different",
+          verified: mtkVerified,
           format: "mtk-logo",
         },
         bytes: toStandaloneBuffer(packedMtk.bytes),
@@ -714,25 +737,16 @@ export class PatchWorkerSession implements PatchWorkerApi {
     });
     const packed = await packSplash(source, parsed, entries);
 
-    // Check what the packer claims instead of trusting it, reading the result back through the same
-    // parser the editor used: every frame the user left alone has to come back byte for byte, and a
-    // pack with no replacements at all has to reproduce the whole image.
-    const check = bytesSource(packed.bytes);
-    const repacked = await parseSplash(check);
-    let untouchedIntact = true;
-    for (const frame of parsed.frames) {
-      if (byIndex.has(frame.index)) continue;
-      const before = await readSplashFrameCompressed(source, frame);
-      const after = await readSplashFrameCompressed(check, repacked.frames[frame.index]);
-      if (before.length !== after.length || !before.every((byte, index) => byte === after[index])) {
-        untouchedIntact = false;
-        break;
-      }
-    }
-    const identical =
-      packed.replaced === 0 &&
-      packed.bytes.length === source.size &&
-      (await sha256Hex(packed.bytes)) === (await sha256Hex(await readAll(source)));
+    const rebuilt = bytesSource(packed.bytes);
+    const reparsedSplash = await parseSplash(rebuilt);
+    const verified = await this.verifyRepack({
+      source,
+      rebuilt: packed.bytes,
+      replaced: packed.replaced,
+      untouched: parsed.frames.filter((frame) => !byIndex.has(frame.index)).map((frame) => frame.index),
+      storedInSource: async (index) => readSplashFrameCompressed(source, parsed.frames[index]),
+      storedInRebuilt: async (index) => readSplashFrameCompressed(rebuilt, reparsedSplash.frames[index]),
+    });
 
     const name =
       (this.sources.get(sourceId)?.record.name ?? "splash.img").replace(/\.img$/, "") + "-patched.img";
@@ -744,7 +758,7 @@ export class PatchWorkerSession implements PatchWorkerApi {
       params: {
         replaced: String(packed.replaced),
         sizeDelta: String(packed.sizeDelta),
-        verified: identical ? "identical" : untouchedIntact ? "frames-intact" : "different",
+        verified,
       },
       bytes: toStandaloneBuffer(packed.bytes),
     });
@@ -760,13 +774,16 @@ export class PatchWorkerSession implements PatchWorkerApi {
     const blockSize = options.blockSize ?? DEFAULT_SPARSE_BLOCK_SIZE;
     const stream = await packSparseStream(source, { blockSize });
     const name = artifact.record.name.replace(/\.[a-z0-9]+$/i, "") + ".sparse.img";
+    // a partition is a whole number of blocks, a random file usually is not, and the tail is padded:
+    // say by how much rather than leaving the difference to be discovered
+    const paddedBytes = Math.ceil(source.size / blockSize) * blockSize - source.size;
     return this.registerStreamedArtifact(
       {
         sourceId: artifact.record.sourceId,
         parentId: artifactId,
         tool: "sparse",
         name,
-        params: { sparse: "true", blockSize: String(blockSize) },
+        params: { sparse: "true", blockSize: String(blockSize), paddedBytes: String(paddedBytes) },
       },
       stream,
     );
