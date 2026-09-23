@@ -1,4 +1,16 @@
-import { ArrowRight, Download, ImageIcon, LoaderCircle, MonitorSmartphone, RotateCcw, Wand2 } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  ImageIcon,
+  LoaderCircle,
+  MonitorSmartphone,
+  RotateCcw,
+  Upload,
+  Wand2,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ErrorPanel } from "@/components/app/error-panel";
 import { ImagePicker } from "@/components/app/image-picker";
@@ -13,6 +25,7 @@ import { downloadBlob } from "@/lib/download";
 import { useForgeStore } from "@/stores/forge-store";
 
 const MODES: SplashResolutionMode[] = ["direct", "followOriginal", "autoAdapt", "custom"];
+const FRAME_PAGE_SIZE = 12;
 
 /**
  * The splash editor: the frames of an OPPO/Realme/OnePlus splash image, one picture per frame the
@@ -47,6 +60,7 @@ export function LogoPage() {
   const [uploadError, setUploadError] = useState(false);
   const [batch, setBatch] = useState<{ matched: number; count: number; unmatched: string[] } | null>(null);
   const [screen, setScreen] = useState({ width: "", height: "" });
+  const [page, setPage] = useState(0);
   const input = useRef<HTMLInputElement | null>(null);
   const batchInput = useRef<HTMLInputElement | null>(null);
 
@@ -93,12 +107,19 @@ export function LogoPage() {
     if (source && stage !== "analyzing" && splash === null) void loadSplash();
   }, [source, stage, splash, loadSplash]);
 
-  // Frames are ten megabytes each, so previews are read one after another and appear as they arrive.
+  const pageCount = splash ? Math.max(1, Math.ceil(splash.frames.length / FRAME_PAGE_SIZE)) : 1;
+  const currentPage = Math.min(page, pageCount - 1);
+  const visibleFrames = splash
+    ? splash.frames.slice(currentPage * FRAME_PAGE_SIZE, (currentPage + 1) * FRAME_PAGE_SIZE)
+    : [];
+
+  // Frames are ten megabytes each, so only the page on screen is read, one at a time.
   useEffect(() => {
     if (!splash) return;
     let cancelled = false;
     const load = async () => {
-      for (const frame of splash.frames) {
+      const start = currentPage * FRAME_PAGE_SIZE;
+      for (const frame of splash.frames.slice(start, start + FRAME_PAGE_SIZE)) {
         if (cancelled) return;
         if (useForgeStore.getState().splashPreviews[frame.index]) continue;
         if (frame.width === 0) continue;
@@ -109,7 +130,7 @@ export function LogoPage() {
     return () => {
       cancelled = true;
     };
-  }, [splash, readSplashFramePreview]);
+  }, [splash, readSplashFramePreview, currentPage]);
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -133,7 +154,7 @@ export function LogoPage() {
   const last = packed.at(-1);
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-5">
+    <div className="mx-auto w-full max-w-5xl space-y-5 py-2">
       <div className="space-y-1">
         <h1 className="text-base font-semibold tracking-tight">{t("tool.logo.title")}</h1>
         <p className="text-xs text-muted-foreground">{t("tool.logo.description")}</p>
@@ -152,8 +173,8 @@ export function LogoPage() {
           {t("extract.reading")}
         </p>
       ) : (
-        <>
-          <Card>
+        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
+          <Card className="lg:col-span-2">
             <CardHeader className="flex-row items-center gap-2">
               <ImageIcon className="size-3.5 text-muted-foreground" aria-hidden />
               <div className="min-w-0 flex-1">
@@ -173,7 +194,7 @@ export function LogoPage() {
           </Card>
 
           {splash.needsResolution ? (
-            <Card>
+            <Card className="lg:col-start-2 lg:row-start-2">
               <CardHeader className="flex-row items-center gap-2">
                 <MonitorSmartphone className="size-3.5 text-muted-foreground" aria-hidden />
                 <div className="min-w-0 flex-1">
@@ -229,7 +250,7 @@ export function LogoPage() {
             </Card>
           ) : null}
 
-          <Card>
+          <Card className="lg:col-start-2 lg:row-start-3">
             <CardHeader className="flex-row items-center gap-2">
               <Wand2 className="size-3.5 text-muted-foreground" aria-hidden />
               <CardTitle>{t("logo.mode")}</CardTitle>
@@ -268,7 +289,7 @@ export function LogoPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="lg:col-start-1 lg:row-span-3 lg:row-start-2">
             <CardHeader>
               <CardTitle>{t("logo.frames")}</CardTitle>
               <CardDescription>{t("logo.replaceHint")}</CardDescription>
@@ -295,8 +316,9 @@ export function LogoPage() {
                   if (files.length > 0) void handleBatch(files);
                 }}
               />
-              <div className="flex flex-wrap items-center gap-2 pb-2">
+              <div className="flex flex-wrap items-center gap-2 pb-3">
                 <Button variant="secondary" size="sm" disabled={busy} onClick={() => batchInput.current?.click()}>
+                  <Upload />
                   {t("logo.batch")}
                 </Button>
                 {batch ? (
@@ -307,16 +329,50 @@ export function LogoPage() {
                       : ""}
                   </span>
                 ) : null}
+                <div className="ml-auto flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    disabled={currentPage === 0}
+                    aria-label={t("animation.previous")}
+                    onClick={() => setPage(Math.max(0, currentPage - 1))}
+                  >
+                    <ChevronLeft />
+                  </Button>
+                  <span className="min-w-12 text-center font-mono text-[11px] text-muted-foreground">
+                    {currentPage + 1} / {pageCount}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    disabled={currentPage >= pageCount - 1}
+                    aria-label={t("animation.next")}
+                    onClick={() => setPage(Math.min(pageCount - 1, currentPage + 1))}
+                  >
+                    <ChevronRight />
+                  </Button>
+                </div>
               </div>
-              <ul className="divide-y divide-border">
-                {splash.frames.map((frame) => {
+              <ul className="grid grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-3">
+                {visibleFrames.map((frame) => {
                   const preview = previews[frame.index];
                   const replacement = replacements[frame.index];
                   return (
-                    <li key={frame.index} className="flex flex-wrap items-center gap-3 py-2 first:pt-0 last:pb-0">
-                      <FrameThumb preview={replacement ? replacement.preview : preview} pending={frame.width !== 0} />
-                      <div className="min-w-0 flex-1 space-y-0.5">
-                        <p className="truncate font-mono text-[11px] text-foreground">
+                    <li key={frame.index} className="overflow-hidden rounded-md border border-border bg-surface">
+                      <div className="relative aspect-[16/9] border-b border-border bg-surface-muted">
+                        <FrameThumb
+                          preview={replacement ? replacement.preview : preview}
+                          pending={frame.width !== 0}
+                          tile
+                        />
+                        {replacement ? (
+                          <Badge variant="success" className="absolute right-2 top-2 max-w-[calc(100%-1rem)] truncate">
+                            {replacement.sourceName}
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <div className="space-y-2 p-3">
+                        <p className="truncate font-mono text-xs text-foreground">
                           {frame.name.trim() || t("logo.frameName", { index: String(frame.index) })}
                         </p>
                         {frame.width === 0 && splash.format === "mtk-logo" ? (
@@ -335,29 +391,36 @@ export function LogoPage() {
                                 real: formatBytes(frame.realSize),
                               })}
                         </p>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="flex-1"
+                            disabled={busy}
+                            onClick={() => {
+                              setTarget(frame.index);
+                              input.current?.click();
+                            }}
+                          >
+                            {t("logo.replace")}
+                          </Button>
+                          {replacement ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label={t("logo.reset")}
+                              onClick={() => clearSplashReplacement(frame.index)}
+                            >
+                              <RotateCcw />
+                            </Button>
+                          ) : null}
+                        </div>
+                        {replacement ? (
+                          <p className="font-mono text-[10px] text-muted-foreground">
+                            {replacement.target.width}×{replacement.target.height}
+                          </p>
+                        ) : null}
                       </div>
-                      {replacement ? (
-                        <Badge variant="success">
-                          {replacement.sourceName} · {replacement.target.width}×{replacement.target.height}
-                        </Badge>
-                      ) : null}
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        disabled={busy}
-                        onClick={() => {
-                          setTarget(frame.index);
-                          input.current?.click();
-                        }}
-                      >
-                        {t("logo.replace")}
-                      </Button>
-                      {replacement ? (
-                        <Button variant="ghost" size="sm" onClick={() => clearSplashReplacement(frame.index)}>
-                          <RotateCcw />
-                          {t("logo.reset")}
-                        </Button>
-                      ) : null}
                     </li>
                   );
                 })}
@@ -366,7 +429,7 @@ export function LogoPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="lg:col-start-2 lg:row-start-4 lg:sticky lg:top-20">
             <CardHeader className="flex-row items-center gap-2">
               <Download className="size-3.5 text-muted-foreground" aria-hidden />
               <CardTitle>{t("logo.pack")}</CardTitle>
@@ -446,7 +509,7 @@ export function LogoPage() {
               ) : null}
             </CardContent>
           </Card>
-        </>
+        </div>
       )}
     </div>
   );
@@ -462,11 +525,11 @@ function FrameSizeInput({ label, onApply }: { label: string; onApply: (width: nu
   const [height, setHeight] = useState("");
   const ready = Number(width) > 0 && Number(height) > 0;
   return (
-    <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-      {label}
+    <span className="flex flex-wrap items-center gap-1 text-[11px] text-muted-foreground">
+      <span className="w-full text-[10px]">{label}</span>
       <input
         aria-label={(label + " width") as never}
-        className="w-14 rounded border border-border bg-surface px-1 py-0.5 font-mono text-[11px]"
+        className="w-10 rounded border border-border bg-surface px-1 py-0.5 font-mono text-[11px]"
         type="number"
         min={1}
         value={width}
@@ -475,14 +538,20 @@ function FrameSizeInput({ label, onApply }: { label: string; onApply: (width: nu
       ×
       <input
         aria-label={(label + " height") as never}
-        className="w-14 rounded border border-border bg-surface px-1 py-0.5 font-mono text-[11px]"
+        className="w-10 rounded border border-border bg-surface px-1 py-0.5 font-mono text-[11px]"
         type="number"
         min={1}
         value={height}
         onChange={(event) => setHeight(event.target.value)}
       />
-      <Button variant="secondary" size="sm" disabled={!ready} onClick={() => onApply(Number(width), Number(height))}>
-        {label}
+      <Button
+        variant="secondary"
+        size="icon"
+        aria-label={label}
+        disabled={!ready}
+        onClick={() => onApply(Number(width), Number(height))}
+      >
+        <Check />
       </Button>
     </span>
   );
@@ -492,9 +561,11 @@ function FrameSizeInput({ label, onApply }: { label: string; onApply: (width: nu
 function FrameThumb({
   preview,
   pending,
+  tile = false,
 }: {
   preview?: { width: number; height: number; rgba: Uint8Array };
   pending: boolean;
+  tile?: boolean;
 }) {
   const canvas = useRef<HTMLCanvasElement | null>(null);
 
@@ -514,9 +585,14 @@ function FrameThumb({
   }, [preview]);
 
   return (
-    <span className="flex h-10 w-16 shrink-0 items-center justify-center overflow-hidden rounded border border-border bg-surface-muted">
+    <span
+      className={cn(
+        "flex items-center justify-center overflow-hidden bg-surface-muted",
+        tile ? "h-full w-full" : "h-10 w-16 shrink-0 rounded border border-border",
+      )}
+    >
       {preview ? (
-        <canvas ref={canvas} className="max-h-10 max-w-16" />
+        <canvas ref={canvas} className={tile ? "max-h-full max-w-full" : "max-h-10 max-w-16"} />
       ) : pending ? (
         <LoaderCircle className="size-3 animate-spin text-muted-foreground" aria-hidden />
       ) : (
