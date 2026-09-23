@@ -207,6 +207,11 @@ export const zhHant: Messages = {
   "extract.selected": "已選 {count} 個",
 
   "logo.setSize": "設定尺寸",
+  "task.extract": "正在提取",
+  "task.sparse": "正在打包稀疏映像",
+  "task.super": "正在建構 super 映像",
+  "task.logo": "正在讀取影格",
+
   "dropzone.title": "把 Android 映像拖到這裡",
   "dropzone.hint": "或點擊選擇檔案",
   "dropzone.busy": "正在分析映像",

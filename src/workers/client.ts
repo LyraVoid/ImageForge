@@ -13,6 +13,7 @@ import type {
   PlanRequest,
   PlanResponse,
   ProgressSink,
+  TaskProgressSink,
   FilesystemListing,
   PartitionView,
   RegisterArtifactRequest,
@@ -46,6 +47,8 @@ export interface PatchWorkerClient {
   artifactBlob(id: string): Promise<Blob>;
   packSparseArtifact(artifactId: string, options?: { blockSize?: number }): Promise<WorkspaceArtifact>;
   packSuperImage(request: SuperPackRequest): Promise<WorkspaceArtifact>;
+  /** Long jobs report their progress here, whichever tool started them. */
+  onTaskProgress(sink: TaskProgressSink | undefined): Promise<void>;
   compareWithArtifact(sourceId: string, inside: string | undefined, artifactId: string): Promise<DiffSummary>;
   inspectAnimation(sourceId: string, inside?: string): Promise<AnimationSummary>;
   readAnimationFrame(sourceId: string, inside: string | undefined, name: string): Promise<ArrayBuffer>;
@@ -129,6 +132,7 @@ function createWorkerBackedClient(worker: Worker): PatchWorkerClient {
     artifactBlob: (id) => remote.artifactBlob(id),
     packSparseArtifact: (artifactId, options) => remote.packSparseArtifact(artifactId, options),
     packSuperImage: (request) => remote.packSuperImage(request),
+    onTaskProgress: (sink) => remote.onTaskProgress(sink ? Comlink.proxy(sink) : undefined),
     compareWithArtifact: (sourceId, inside, artifactId) =>
       remote.compareWithArtifact(sourceId, inside, artifactId),
     inspectAnimation: (sourceId, inside) => remote.inspectAnimation(sourceId, inside),
@@ -212,6 +216,7 @@ function createInlineClient(): PatchWorkerClient {
     packSparseArtifact: async (artifactId, options) =>
       (await load()).packSparseArtifact(artifactId, options),
     packSuperImage: async (request) => (await load()).packSuperImage(request),
+    onTaskProgress: async (sink) => (await load()).onTaskProgress(sink),
     compareWithArtifact: async (sourceId, inside, artifactId) =>
       (await load()).compareWithArtifact(sourceId, inside, artifactId),
     inspectAnimation: async (sourceId, inside) => (await load()).inspectAnimation(sourceId, inside),

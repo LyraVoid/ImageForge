@@ -2,6 +2,7 @@ import { Outlet, useLocation } from "react-router";
 import { StepIndicator } from "@/components/ui/step-indicator";
 import { useT } from "@/i18n/use-translation";
 import { Header } from "./Header";
+import { TaskProgressBar } from "@/components/app/task-progress-bar";
 import { isPatchFlow } from "./tools";
 import { useWorkflowSteps, stepIndexForPath } from "./workflow";
 
@@ -20,6 +21,7 @@ export function AppShell() {
         </div>
       ) : null}
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <TaskProgressBar />
         <Outlet />
       </main>
       <footer className="border-t border-border">

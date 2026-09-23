@@ -98,6 +98,8 @@ import type {
   SplashReplacementRequest,
   SplashSummary,
   SuperPackRequest,
+  TaskProgress,
+  TaskProgressSink,
   WorkspaceSnapshot,
   WorkspaceSourceRecord,
   FilesystemListing,
@@ -158,6 +160,8 @@ export class PatchWorkerSession implements PatchWorkerApi {
   private readonly engine: PatchEngine;
   private state: SessionState | null = null;
   private controller: AbortController | null = null;
+  /** Where a long job reports how far it has got. */
+  private taskSink: TaskProgressSink | null = null;
   /** The workspace is metadata plus bytes; nothing here is ever sent to the main thread unasked. */
   private workspaceState: Workspace = emptyWorkspace();
   private readonly sources = new Map<string, HeldSource>();
@@ -346,8 +350,11 @@ export class PatchWorkerSession implements PatchWorkerApi {
       throw new WorkerError("Nothing was selected.", "Pick at least one entry.");
     }
     const out: WorkspaceArtifact[] = [];
-    for (const entryId of entryIds) {
+    // the count is over the whole selection: one entry finishing is one more of the set, and the
+    // extraction of each one reports its own bytes inside that
+    for (const [index, entryId] of entryIds.entries()) {
       out.push(await this.extractPackageEntry(sourceId, entryId));
+      this.reportTask({ task: "extract", done: index + 1, total: entryIds.length });
     }
     return out;
   }
@@ -379,7 +386,7 @@ export class PatchWorkerSession implements PatchWorkerApi {
       const payload = await parsePayload(payloadSource);
       return this.registerStreamedArtifact(
         { sourceId, parentId: sourceId, tool: "extract", name: entry.name, params: { entry: entryId } },
-        payloadPartitionStream(payloadSource, payload, partitionName),
+        this.countProgress(payloadPartitionStream(payloadSource, payload, partitionName), "extract", entry.sizeBytes),
       );
     }
 
@@ -549,7 +556,9 @@ export class PatchWorkerSession implements PatchWorkerApi {
     }
     const parsed = await parseSplash(source);
     const frames: SplashSummary["frames"] = [];
-    for (const frame of parsed.frames) {
+    for (const [index, frame] of parsed.frames.entries()) {
+      // reading a splash means inflating every frame, which is the slow part worth reporting
+      this.reportTask({ task: "logo", done: index, total: parsed.frames.length });
       // One frame at a time: a real splash holds twenty of them at ten megabytes each, and the
       // listing only needs their size.
       const bmp = await readSplashFrameBmp(source, frame);
@@ -631,6 +640,68 @@ export class PatchWorkerSession implements PatchWorkerApi {
     const bmp = await readSplashFrameBmp(source, frame);
     const decoded = decodeBmp(bmp);
     return this.previewOf(decoded.rgba, decoded.width, decoded.height);
+  }
+
+  /**
+   * Wraps a stream so a long job reports how many bytes it has produced. The stream is otherwise
+   * untouched: nothing is buffered, so a three gigabyte partition still flows straight into a blob.
+   */
+  private reportTask(progress: TaskProgress): void {
+    this.taskSink?.(progress);
+  }
+
+  async onTaskProgress(sink: TaskProgressSink | undefined): Promise<void> {
+    this.taskSink = sink ?? null;
+  }
+
+  private countProgress(
+    stream: ReadableStream<Uint8Array>,
+    task: string,
+    totalBytes: number,
+  ): ReadableStream<Uint8Array> {
+    const onProgress = (progress: TaskProgress): void => this.reportTask(progress);
+    if (!this.taskSink) return stream;
+    const reader = stream.getReader();
+    let done = 0;
+    return new ReadableStream<Uint8Array>({
+      async pull(controller) {
+        const { done: finished, value } = await reader.read();
+        if (finished) {
+          onProgress({ task, done: totalBytes, total: totalBytes });
+          controller.close();
+          return;
+        }
+        done += value.length;
+        // a stream that also carries padding can produce more than the useful bytes: never past 100%
+        onProgress({ task, done: Math.min(done, totalBytes), total: totalBytes });
+        controller.enqueue(value);
+      },
+    });
+  }
+
+  /**
+   * Progress for a job whose work is what it reads rather than what it writes: packing a sparse or a
+   * super image walks the input, so counting bytes out of the source is the honest denominator.
+   */
+  private progressCounter(task: string, totalBytes: number) {
+    const onProgress = (progress: TaskProgress): void => this.reportTask(progress);
+    let done = 0;
+    const report = (bytes: number): void => {
+      done += bytes;
+      onProgress?.({ task, done: Math.min(done, totalBytes), total: totalBytes });
+    };
+    const wrap = (source: ByteSource): ByteSource =>
+      this.taskSink
+        ? {
+            size: source.size,
+            read: async (offset: number, length: number) => {
+              const bytes = await source.read(offset, length);
+              report(bytes.length);
+              return bytes;
+            },
+          }
+        : source;
+    return { wrap, report };
   }
 
   /**
@@ -799,7 +870,8 @@ export class PatchWorkerSession implements PatchWorkerApi {
     const blob = await this.artifactBlob(artifactId);
     const source = blobSource(blob);
     const blockSize = options.blockSize ?? DEFAULT_SPARSE_BLOCK_SIZE;
-    const stream = await packSparseStream(source, { blockSize });
+    const counter = this.progressCounter("sparse", source.size);
+    const stream = await packSparseStream(counter.wrap(source), { blockSize });
     const name = artifact.record.name.replace(/\.[a-z0-9]+$/i, "") + ".sparse.img";
     // a partition is a whole number of blocks, a random file usually is not, and the tail is padded:
     // say by how much rather than leaving the difference to be discovered
@@ -842,14 +914,19 @@ export class PatchWorkerSession implements PatchWorkerApi {
         writable: partition.writable,
       });
     }
-    const stream = await packSuperStream(inputs, {
-      deviceSize: request.deviceSize,
-      metadataSize: request.metadataSize,
-      metadataSlots: request.metadataSlots,
-      alignment: request.alignment,
-      groups: request.groups,
-      metadataOnly: request.metadataOnly,
-    });
+    const superBytes = inputs.reduce((sum, input) => sum + (input.source?.size ?? input.sizeBytes ?? 0), 0);
+    const counter = this.progressCounter("super", superBytes);
+    const stream = await packSuperStream(
+      inputs.map((input) => (input.source ? { ...input, source: counter.wrap(input.source) } : input)),
+      {
+        deviceSize: request.deviceSize,
+        metadataSize: request.metadataSize,
+        metadataSlots: request.metadataSlots,
+        alignment: request.alignment,
+        groups: request.groups,
+        metadataOnly: request.metadataOnly,
+      },
+    );
     return this.registerStreamedArtifact(
       {
         sourceId: firstSourceId,

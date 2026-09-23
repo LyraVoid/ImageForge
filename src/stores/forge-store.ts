@@ -14,6 +14,7 @@ import type { WorkspaceArtifact } from "@/core/workspace";
 import type {
   AnimationSummary,
   DiffSummary,
+  TaskProgress,
   FilesystemListing,
   PartitionView,
   SplashSummary,
@@ -42,6 +43,9 @@ export interface SplashReplacement {
 
 /** The longest side of a preview the editor builds in the page. */
 const SPLASH_PREVIEW_MAX = 240;
+
+/** The task progress subscription is made once per session, the first time a file is opened. */
+let progressSubscribed = false;
 import { mergePlanOptions } from "./plan-options";
 import { createPatchWorkerClient } from "@/workers/client";
 import type { PatchWorkerClient, WorkerMode } from "@/workers/client";
@@ -142,6 +146,11 @@ interface ForgeState {
   providerOptions: PatchOptions | null;
   attachments: AttachmentFile[];
   progress: PatchProgressEvent | null;
+  /**
+   * How far a long job outside the patch flow has got: extracting a big partition, packing a super or
+   * a sparse image, reading every frame of a splash. Null when nothing is running.
+   */
+  taskProgress: TaskProgress | null;
   output: ForgeOutput | null;
   error: ImageForgeErrorJson | null;
   analyzeFile: (file: File) => Promise<AnalyzeResponse | null>;
@@ -274,6 +283,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
   providerOptions: null,
   attachments: [],
   progress: null,
+  taskProgress: null,
   output: null,
   error: null,
 
@@ -283,6 +293,11 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
    * lists (see the tools registry).
    */
   analyzeFile: async (file) => {
+    // long jobs report through one subscription rather than a sink per call
+    if (!progressSubscribed) {
+      progressSubscribed = true;
+      void getClient().onTaskProgress((progress) => set({ taskProgress: progress }));
+    }
     const active = getClient();
     set({
       stage: "analyzing",

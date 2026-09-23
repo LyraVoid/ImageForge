@@ -207,6 +207,11 @@ export const ja: Messages = {
   "extract.selected": "{count} 件を選択中",
 
   "logo.setSize": "サイズ指定",
+  "task.extract": "抽出中",
+  "task.sparse": "スパースイメージを作成中",
+  "task.super": "super イメージを作成中",
+  "task.logo": "フレームを読み込み中",
+
   "dropzone.title": "Android イメージをここにドロップ",
   "dropzone.hint": "またはクリックしてファイルを選択",
   "dropzone.busy": "イメージを分析しています",

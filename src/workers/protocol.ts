@@ -83,6 +83,25 @@ export interface PatchResponse {
 
 export type ProgressSink = (event: PatchProgressEvent) => void;
 
+/**
+ * How far a long job has got. Separate from the patch progress because it is about bytes moving, not
+ * about the stages of a patch: extracting a partition, packing a super image, reading every frame of
+ * a splash. Without it those jobs are a spinner with no end in sight.
+ */
+export interface TaskProgress {
+  /** A short id the interface turns into words: extract, super, sparse, logo. */
+  task: string;
+  done: number;
+  total: number;
+}
+
+export type TaskProgressSink = (progress: TaskProgress) => void;
+
+/** Methods that can take a while report through this, once, instead of taking a sink each. */
+export interface TaskProgressApi {
+  onTaskProgress(sink: TaskProgressSink | undefined): Promise<void>;
+}
+
 /** A file the user opened, as the workspace sees it. The bytes stay in the session. */
 export interface WorkspaceSourceRecord {
   id: string;
@@ -337,6 +356,8 @@ export interface PatchWorkerApi {
     resolution?: { width: number; height: number },
     frameResolutions?: Record<string, { width: number; height: number }>,
   ): Promise<SplashPreview>;
+  /** Long jobs report their progress to the sink given here, whichever tool started them. */
+  onTaskProgress(sink: TaskProgressSink | undefined): Promise<void>;
   /** Compares the open source with an artifact, byte by byte. */
   compareWithArtifact(sourceId: string, inside: string | undefined, artifactId: string): Promise<DiffSummary>;
   /** Reads a boot animation: its desc.txt, its parts and their frames. */

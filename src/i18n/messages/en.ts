@@ -210,6 +210,11 @@ export const en = {
   "extract.selected": "{count} selected",
 
   "logo.setSize": "Set size",
+  "task.extract": "Extracting",
+  "task.sparse": "Packing sparse image",
+  "task.super": "Building super image",
+  "task.logo": "Reading frames",
+
   "dropzone.title": "Drop an Android image here",
   "dropzone.hint": "or click to browse files",
   "dropzone.busy": "Analyzing image",

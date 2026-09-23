@@ -25,6 +25,7 @@ Comlink.expose({
     session.packSparseArtifact(artifactId, options),
   packSuperImage: (request: Parameters<typeof session.packSuperImage>[0]) =>
     session.packSuperImage(request),
+  onTaskProgress: (sink: Parameters<typeof session.onTaskProgress>[0]) => session.onTaskProgress(sink),
   compareWithArtifact: (sourceId: string, inside: string | undefined, artifactId: string) =>
     session.compareWithArtifact(sourceId, inside, artifactId),
   inspectAnimation: (sourceId: string, inside?: string) => session.inspectAnimation(sourceId, inside),
