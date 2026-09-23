@@ -14,7 +14,7 @@ for, and a patch made with one flavour is only usable with that manager.
 | Pinned revision | `99fbd65d5ed2c8f3fa30f0ab3720213efa3592f3` |
 | Release used for the artifact | `11224` (`APatch_11224_9a63e0f_HEAD-release-signed.apk`) |
 | File inside the release package | `assets/kpimg` |
-| Reported version | KernelPatch image `0.13.3` (`0xd03`), config `android,release`, arch `arm64` |
+| Reported version | KernelPatch image `0.13.3`, config `android,release`, arch `arm64`. The header carries it as the packed value `0xd03` = `VERSION(major 0, minor 13, patch 3)`, not as an offset (`kernel/include/preset.h:54,56-61`) |
 | Trusted manager | `me.bmax.apatch` |
 | Bundled artifact | `public/artifacts/apatch/kpimg`, 190816 bytes, sha256 `8f472d389d00f11c2d34c7059e1df8d580b9cb7d8c9f99b70877801b52992e2a` |
 | License | GPL-3.0-or-later (LICENSE in this directory) |
@@ -28,7 +28,7 @@ for, and a patch made with one flavour is only usable with that manager.
 | Pinned revision | `0ff4ae2b8cad8058c408d8a5bdb12569b1a84981` (2026-09-15) |
 | Base | upstream KernelPatch `72a904c4` (0.13.8) plus one commit |
 | Local modifications | `aster: trust the Aster manager, and accept its v2+v3 signature` — touches only `kernel/patch/android/userd.c` and `lkm/manager/apk_sign.c`. The trusted manager list is reduced to `me.yuki.aster` with the SHA-256 of that APK's v2 signing certificate, and a v3 signature next to v2 is no longer rejected. `tools/` (what kptools is built from) is untouched. |
-| Reported version | KernelPatch image `0.13.8` (`0xd08`), compile time `05:10:47 Sep 15 2026` |
+| Reported version | KernelPatch image `0.13.8` (packed header value `0xd08`), compile time `05:10:47 Sep 15 2026` |
 | Trusted manager | `me.yuki.aster` |
 | Release used for the artifact | `0.13.8` (`LyraVoid/KernelPatch-Aster`), asset `kpimg-android` |
 | Bundled artifact | `public/artifacts/apatch/kpimg-aster.bin`, 340880 bytes, sha256 `429718afcabe5bbcf51389ce41a2c983940b3392fb3fa20b99454f3465849a94` |
@@ -74,10 +74,11 @@ used in the browser matches the released native tool.
 | Manager repository | https://github.com/LyraVoid/FolkPatch (GPL-3.0) |
 | Core image repository | https://github.com/LyraVoid/KernelPatch |
 | Pinned revision | `1de1a37304406615a3c3b6f1d28d2cd926b93a0f` (tag `0.13.8`, released 2026-08-31) |
+| Manager app pin | `LyraVoid/FolkPatch` tag `kp0.13.8`, commit `155eb044af5abd816db6409328a37dd5ac50b1f1` (release `kp0.13.8`, 2026-08-31; asset sha256 `0b1671fe42a565a4fb8a573ac9b480febe11189380f96c83ccbe29fdfd375890`). The app is GPL-3.0; not bundled, only named here because the core image below is the one built for it |
 | Base | upstream KernelPatch `72a904c4` (0.13.8) plus the extended branch's own commits |
 | Local modifications | the extended branch adds its own hooks — among them `folkpatch_pathhide`, `folkpatch_netisolate`, `folkpatch_suaudit` and `folkpatch_uts` — and reduces the trusted manager list to `me.yuki.folk` with the SHA-256 of that APK's v2 signing certificate. `tools/` still builds a complete kptools, and the image format is the same `KP1158` as upstream. |
-| Reported version | KernelPatch image `0.13.8` (`0xd08`), compile time `08:03:59 Aug 31 2026` |
-| Trusted manager | `me.yuki.folk` |
+| Reported version | KernelPatch image `0.13.8` (packed header value `0xd08`), compile time `08:03:59 Aug 31 2026` |
+| Trusted manager | `me.yuki.folk` only. The trust table is compiled in (`kernel/patch/android/userd.c:85-95`: the package plus the SHA-256 of its signing certificate), and the released app is signed with exactly that certificate — checked with `keytool -printcert`, digest `a9eba5b7 02eb55fb 5f4b1a67 2a7133a1 6a7bcaea 949cde43 c812ef26 c77de812`. `tests/unit/bundled-artifacts.test.ts` also holds the bundled images to this: the bytes of the core image this flavour uses name `me.yuki.folk` and none of the other registered managers |
 | Release used for the artifact | `0.13.8` (`LyraVoid/KernelPatch`), asset `kpimg-android` |
 | Bundled artifact | `public/artifacts/apatch/kpimg-folk.bin`, 474640 bytes, sha256 `d22352eee8bc1452436b1c3ee9ba7ebfb4408a1ba93456f02333a23c56df1509` |
 | License | GPL-2.0-or-later (inherited from upstream KernelPatch; see THIRD_PARTY_LICENSES/kernelpatch/) |

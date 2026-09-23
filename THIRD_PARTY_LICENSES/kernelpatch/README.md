@@ -12,7 +12,7 @@ build record and the two libc entry points supplied by a separate compatibility 
 | --- | --- |
 | Upstream repository | https://github.com/bmax121/KernelPatch |
 | Pinned revision | `72a904c412754e25f54353c30f31f5c884ed0673` |
-| Upstream version | 0.13.8 (kptools reports 0xd08) |
+| Upstream version | 0.13.8 (kptools reports the packed version value 0xd08 = `VERSION(major 0, minor 13, patch 8)`) |
 | Retrieved on | 2026-09-21 |
 | License | GPL-2.0-or-later (LICENSE file plus `SPDX-License-Identifier: GPL-2.0-or-later` headers) |
 | Bundled artifact | `public/wasm/kptools.wasm`, sha256 `bb53abeae8be16f4d2127af1b700d95ff8a75b38eea2829251c9f774c9b61c4c` |

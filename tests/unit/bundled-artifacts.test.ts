@@ -8,6 +8,7 @@ import {
   APATCH_KPIMG_SHA256,
   APATCH_KPTOOLS_ID,
   APATCH_KPTOOLS_SHA256,
+  APATCH_FLAVORS,
   ARTIFACT_CATALOG,
   ArtifactError,
   createArtifactRegistry,
@@ -112,6 +113,39 @@ describe("bundled artifacts", () => {
 
     expect(artifact.source).toBe("bundled:/wasm/kptools.wasm");
     expect(await sha256Hex(bytes)).toBe(APATCH_KPTOOLS_SHA256);
+  });
+
+  /**
+   * The three core images are only interchangeable in name: each one trusts exactly one manager, and
+   * for a build that reduced its trust table to a single package that difference is inside the bytes.
+   * Reading the header here is what stops a flavour from being paired with another flavour's image.
+   *
+   * The layout is KernelPatch's (`kernel/include/preset.h`: `MAGIC_LEN` 0x8, `version_t` of
+   * `{ _, patch, minor, major }` at `header_kp_version_offset`, and
+   * `VERSION(major, minor, patch) = (major << 16) + (minor << 8) + patch`).
+   */
+  it("pairs every KernelPatch flavour with a core image that trusts that manager", async () => {
+    expect(APATCH_FLAVORS.length).toBeGreaterThanOrEqual(3);
+    const packages = new Set<string>();
+
+    for (const flavor of APATCH_FLAVORS) {
+      const artifact = registry.resolve({ providerId: "apatch", artifactId: flavor.artifactId }).artifact;
+      const bytes = await registry.loadVerifiedPayload(artifact);
+      const text = new TextDecoder("latin1").decode(bytes);
+
+      expect(text.slice(0, 8), flavor.id).toBe("KP1158\u0000\u0000");
+      const version = bytes[11] + "." + bytes[10] + "." + bytes[9];
+      expect(version, flavor.id).toBe(artifact.version);
+
+      expect(text, flavor.id + " trusts its manager").toContain(flavor.managerPackage);
+      for (const other of APATCH_FLAVORS) {
+        if (other.id === flavor.id) continue;
+        expect(text, flavor.id + " must not trust " + other.managerPackage).not.toContain(other.managerPackage);
+      }
+      packages.add(flavor.managerPackage);
+    }
+
+    expect(packages.size).toBe(APATCH_FLAVORS.length);
   });
 
   it("links the two WebAssembly modules the project ships", () => {
