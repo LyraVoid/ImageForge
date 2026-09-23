@@ -5,6 +5,9 @@ Status: **bundled**.
 Magisk is GPL-3.0 throughout (unlike KernelSU, there is no per-directory split), so its binaries can
 be redistributed with this AGPL-3.0-or-later project as separate, unmodified programs.
 
+This record covers the upstream Magisk flavour. WeaveMask, a fork that patches the ramdisk the same
+way with its own payloads, is registered separately in `THIRD_PARTY_LICENSES/weavemask/`.
+
 | Field | Value |
 | --- | --- |
 | Upstream repository | https://github.com/topjohnwu/Magisk |
@@ -35,8 +38,11 @@ They are exactly the files Magisk's own patcher feeds to `magiskboot compress=xz
 (`scripts/boot_patch.sh:176`), and ImageForge compresses them at patch time with the same codec and
 settings, so the streams it writes are the streams the official patcher writes:
 
-* the codec is `lzma-rust2` 0.21.0, the crate magiskboot links (`native/src/boot/Cargo.toml:38`),
-  at preset 6 with a CRC32 check (`native/src/boot/compress.rs:228`);
+* the crate is `lzma-rust2` 0.21.0, the one magiskboot links (`native/src/boot/Cargo.toml:38`), with a
+  CRC32 check (`native/src/boot/compress.rs:225-226`). magiskboot asks that crate for preset 9; this
+  project's encoder searches with preset 6 and then declares the dictionary the reference streams
+  carry (64 MiB), which is why the produced stream is byte identical for these payloads even though
+  the search that produced it was smaller;
 * the dictionary the stream *declares* is the one the official streams carry, 64 MiB — `xz --list
   --verbose --verbose` on the `overlay.d/sbin/*.xz` and `.backup/init.xz` of a device image reports
   `--lzma2=dict=64MiB`. The property byte only tells a decoder how much window to reserve, and the

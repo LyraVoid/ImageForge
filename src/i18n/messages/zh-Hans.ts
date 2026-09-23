@@ -324,6 +324,9 @@ export const zhHans: Messages = {
   "patch.kernelsu.hint.tail": "查看 KMI：6.6.118-android15-... 对应 android15-6.6。",
   "patch.magisk.title": "Magisk 选项",
   "patch.magisk.description": "这些就是 Magisk 启动时从 .backup/.magisk 读取的内容。",
+  "patch.magisk.flavor": "管理器",
+  "patch.magisk.flavor.description":
+    "写入哪个管理器的载荷。Magisk 与 WeaveMask 用同样的方式修补 ramdisk，但每个应用只管理用自己载荷做出的镜像。",
   "patch.magisk.keepVerity": "保留 verity（KEEPVERITY）",
   "patch.magisk.keepVerity.body":
     "开启会保留 verity 并不改动 fstab。关闭会移除 ramdisk 内各 fstab 条目里 magiskboot 的 verity 标志，并去掉 verity_key。",

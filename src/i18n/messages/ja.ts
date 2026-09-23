@@ -325,6 +325,9 @@ export const ja: Messages = {
   "patch.kernelsu.hint.tail": "を実行して確認してください。6.6.118-android15-... なら android15-6.6 です。",
   "patch.magisk.title": "Magisk のオプション",
   "patch.magisk.description": "起動時に Magisk が .backup/.magisk から読み取る内容です。",
+  "patch.magisk.flavor": "マネージャー",
+  "patch.magisk.flavor.description":
+    "どのマネージャーのペイロードを書き込むか。Magisk と WeaveMask は同じ方法でラムディスクをパッチしますが、管理できるのは自分のペイロードで作ったイメージだけです。",
   "patch.magisk.keepVerity": "verity を維持する（KEEPVERITY）",
   "patch.magisk.keepVerity.body":
     "オンにすると verity を有効のままにし、fstab に手を加えません。オフにすると、ラムディスク内の各 fstab エントリから magiskboot の verity フラグを外し、verity_key も削除します。",

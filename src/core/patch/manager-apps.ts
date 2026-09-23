@@ -41,6 +41,11 @@ export const MANAGER_APPS: ManagerApp[] = [
     name: "FolkPatch",
     releaseUrl: "https://github.com/LyraVoid/FolkPatch/releases",
   },
+  {
+    packageName: "io.github.seyud.weave",
+    name: "WeaveMask",
+    releaseUrl: "https://github.com/Seyud/WeaveMask/releases",
+  },
 ];
 
 /** The manager app that owns a package name, or undefined for a hand-supplied core image. */

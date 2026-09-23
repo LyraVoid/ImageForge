@@ -1,10 +1,4 @@
 import type { ArtifactRegistry } from "../../artifacts/registry";
-import {
-  MAGISK_INIT_LD_PAYLOAD_ID,
-  MAGISK_MAGISKINIT_ID,
-  MAGISK_MAGISK_PAYLOAD_ID,
-  MAGISK_STUB_PAYLOAD_ID,
-} from "../../artifacts/catalog";
 import { AbortedError, PatchError } from "../../errors";
 import { sha1Hex, sha256Hex } from "../../hash";
 import {
@@ -50,13 +44,14 @@ import {
   MAGISK_INIT_LD_ENTRY,
   MAGISK_KEEP_FORCE_ENCRYPT_SETTING,
   MAGISK_KEEP_VERITY_SETTING,
+  MAGISK_FLAVOR_SETTING,
   MAGISK_MAGISK_ENTRY,
   MAGISK_OVERLAY_DIR,
   MAGISK_OVERLAY_SBIN_DIR,
   MAGISK_PREINIT_DEVICE_SETTING,
-  MAGISK_REQUIRED_MANAGER,
   MAGISK_STUB_ENTRY,
   MAGISK_VERITY_KEY_ENTRY,
+  magiskFlavor,
   buildMagiskConfig,
 } from "./magisk-config";
 
@@ -186,10 +181,10 @@ export class MagiskPatchProvider implements PatchProvider {
       supportedTargets: ["boot", "init_boot"],
       notes: [
         "The ramdisk is modified: on GKI Android 13+ that is init_boot.img, otherwise a boot.img that carries a ramdisk.",
-        "Magisk is GPL-3.0 throughout and its payloads are bundled, so nothing has to be supplied.",
-        "The stock init is replaced rather than renamed. Magisk's own patcher also keeps a compressed copy of it inside the ramdisk for its uninstall path, which this build does not write, so restoring later needs a stock image.",
+        "The payloads of the selected manager are bundled (both Magisk and WeaveMask are GPL-3.0 throughout), so nothing has to be supplied.",
+        "The stock init is replaced rather than renamed, and a compressed copy of it is kept inside the ramdisk for the manager's own uninstall path.",
         "A ramdisk that Magisk or KernelSU already patched is refused.",
-        "The Magisk app (com.topjohnwu.magisk) has to be installed on the device for the produced image to be usable.",
+        "The manager app of the selected flavour (com.topjohnwu.magisk, or io.github.seyud.weave for WeaveMask) has to be installed on the device for the produced image to be usable.",
       ],
     };
   }
@@ -205,11 +200,12 @@ export class MagiskPatchProvider implements PatchProvider {
     _planContext?: PatchPlanContext,
   ): Promise<PatchPlan> {
     const ramdisk = loadRamdiskSection(image);
-    const magiskinit = this.artifact(MAGISK_MAGISKINIT_ID);
     const keepVerity = readFlag(options.configuration, MAGISK_KEEP_VERITY_SETTING, true);
     const keepForceEncrypt = readFlag(options.configuration, MAGISK_KEEP_FORCE_ENCRYPT_SETTING, true);
     const preinitDevice = (options.configuration?.[MAGISK_PREINIT_DEVICE_SETTING] ?? "").trim();
     const output = outputOptions(options.configuration, undefined);
+    const flavor = magiskFlavor(options.configuration?.[MAGISK_FLAVOR_SETTING]);
+    const magiskinit = this.artifact(flavor.artifacts.magiskinit);
 
     const plan: PatchPlan = {
       id: "",
@@ -227,17 +223,18 @@ export class MagiskPatchProvider implements PatchProvider {
         injection: "ramdisk",
         initEntry: MAGISK_INIT_ENTRY,
         initHandling: "replaced by magiskinit",
+        [MAGISK_FLAVOR_SETTING]: flavor.id,
         magiskArtifacts: [
-          MAGISK_MAGISKINIT_ID,
-          MAGISK_MAGISK_PAYLOAD_ID,
-          MAGISK_STUB_PAYLOAD_ID,
-          MAGISK_INIT_LD_PAYLOAD_ID,
+          flavor.artifacts.magiskinit,
+          flavor.artifacts.magisk,
+          flavor.artifacts.stub,
+          flavor.artifacts.initLd,
         ].join(","),
         [MAGISK_KEEP_VERITY_SETTING]: keepVerity ? "true" : "false",
         [MAGISK_KEEP_FORCE_ENCRYPT_SETTING]: keepForceEncrypt ? "true" : "false",
         [MAGISK_PREINIT_DEVICE_SETTING]: preinitDevice === "" ? "auto" : preinitDevice,
         sha1Source: image.source === undefined ? "unavailable" : "the source image",
-        requiredManager: MAGISK_REQUIRED_MANAGER,
+        requiredManager: flavor.managerPackage,
         ramdiskCompression: COMPRESSION_LABEL[ramdisk.descriptor.format],
         ramdiskSectionSize: String(ramdisk.bytes.length),
         [PRESERVE_IMAGE_SIZE_SETTING]: output.preserveImageSize ? "true" : "false",
@@ -297,8 +294,19 @@ export class MagiskPatchProvider implements PatchProvider {
     }
 
     const magiskinitBytes = await this.artifacts.loadVerifiedPayload(plan.artifact);
-    const payloadIds = [MAGISK_MAGISK_PAYLOAD_ID, MAGISK_STUB_PAYLOAD_ID, MAGISK_INIT_LD_PAYLOAD_ID];
+    // The plan pins the payloads this run carries, so they are read from it rather than from the
+    // module's idea of the current flavour: a plan and the bytes it describes cannot drift apart.
+    const payloadIds = (plan.configuration.magiskArtifacts ?? "")
+      .split(",")
+      .map((id) => id.trim())
+      .filter((id) => id !== "" && id !== plan.artifact.id);
     const payloadEntries = [MAGISK_MAGISK_ENTRY, MAGISK_STUB_ENTRY, MAGISK_INIT_LD_ENTRY];
+    if (payloadIds.length !== payloadEntries.length) {
+      throw new PatchError(
+        "The plan names " + payloadIds.length + " payloads, but " + payloadEntries.length + " are written.",
+        "The patch plan is inconsistent with this build's patcher.",
+      );
+    }
     const payloads: Array<{ entry: string; bytes: Uint8Array }> = [];
     for (let index = 0; index < payloadIds.length; index += 1) {
       // The bundled artifacts are the uncompressed files Magisk's patcher compresses; compressing
@@ -404,7 +412,7 @@ export class MagiskPatchProvider implements PatchProvider {
         stockInitSaved: stockInit ? "yes (" + MAGISK_BACKUP_INIT_ENTRY + ")" : "no init in the source ramdisk",
         backupInitSha256: backupSha256,
         rmlist: addedPaths.join(" "),
-        requiredManager: MAGISK_REQUIRED_MANAGER,
+        requiredManager: magiskFlavor(plan.configuration[MAGISK_FLAVOR_SETTING]).managerPackage,
         archiveEntriesBefore: String(entriesBefore),
         archiveEntriesAfter: String(archive.entries.length),
         ramdiskCompression: COMPRESSION_LABEL[ramdisk.descriptor.format],

@@ -11,6 +11,7 @@ import {
   ARTIFACT_CATALOG,
   ArtifactError,
   createArtifactRegistry,
+  WEAVEMASK_MAGISKINIT_ID,
 } from "@/core";
 import { sha256Hex } from "@/core/hash";
 import { fsPayloadLoader, repoPath } from "../fixtures/artifacts";
@@ -82,6 +83,20 @@ describe("bundled artifacts", () => {
     expect(release.release).toBe("v30.7");
     expect(release.artifacts.map((artifact) => artifact.id).sort()).toEqual(
       ["magisk-init-ld", "magisk-magisk", "magisk-magiskinit", "magisk-stub"].sort(),
+    );
+
+    for (const artifact of release.artifacts) {
+      const bytes = await registry.loadVerifiedPayload(artifact);
+      expect(bytes.length).toBe(artifact.sizeBytes);
+      expect(await sha256Hex(bytes)).toBe(artifact.sha256);
+    }
+  });
+
+  it("ships the WeaveMask ramdisk payloads, digest verified", async () => {
+    const release = registry.resolve({ providerId: "magisk", artifactId: WEAVEMASK_MAGISKINIT_ID }).release;
+    expect(release.release).toBe("v30.7.5");
+    expect(release.artifacts.map((artifact) => artifact.id).sort()).toEqual(
+      ["weavemask-init-ld", "weavemask-magisk", "weavemask-magiskinit", "weavemask-stub"].sort(),
     );
 
     for (const artifact of release.artifacts) {

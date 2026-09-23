@@ -125,10 +125,10 @@ export const zhHant: Record<string, string> = {
   "Refuses a ramdisk that Magisk or KernelSU already patched.": "拒絕已被 Magisk 或 KernelSU 修補過的 ramdisk。",
   "Like Magisk's own patcher, the stock init is kept inside the ramdisk as .backup/init.xz, together with .backup/.rmlist, so Magisk's app can restore the image by itself.":
     "與 Magisk 自帶修補工具一樣，原廠 init 會以 .backup/init.xz 的形式保留在 ramdisk 內，並附上 .backup/.rmlist，這樣 Magisk 應用程式可以自行還原映像。",
-  "The payloads are bundled from the pinned Magisk release, which is GPL-3.0.":
-    "載荷封裝自固定版本的 Magisk release，其授權條款為 GPL-3.0。",
-  "The Magisk app (com.topjohnwu.magisk) has to be installed for the produced image to be usable.":
-    "產物映像要能用，必須安裝 Magisk 應用程式（com.topjohnwu.magisk）。",
+  "Two managers are registered as flavours, because each build of magiskinit only trusts its own app: Magisk (com.topjohnwu.magisk) and WeaveMask (io.github.seyud.weave, a fork whose patcher is byte for byte Magisk v30.7's). Each flavour carries the payloads of its own pinned release, and both are GPL-3.0.":
+    "登錄了兩個管理器 flavour——因為每個 magiskinit 建置只信任自己的應用程式：Magisk（com.topjohnwu.magisk）與 WeaveMask（io.github.seyud.weave，一個修補邏輯與 Magisk v30.7 逐位元組相同的分支）。每個 flavour 攜帶各自固定版本的載荷，兩者都是 GPL-3.0。",
+  "The manager app of the selected flavour has to be installed for the produced image to be usable.":
+    "產物映像要能用，必須安裝所選 flavour 對應的管理器應用程式。",
 
   // provider analysis notes
   "The Mock Provider never claims to root a device and leaves the ramdisk contents untouched.":
@@ -146,13 +146,13 @@ export const zhHant: Record<string, string> = {
     "帶 ramdisk 表的 vendor boot 映像目前還不支援。",
   "The KernelSU manager app (me.weishu.kernelsu) has to be installed for the produced image to be usable.":
     "產物映像要能用，必須安裝 KernelSU 管理器應用程式（me.weishu.kernelsu）。",
-  "Magisk is GPL-3.0 throughout and its payloads are bundled, so nothing has to be supplied.":
-    "Magisk 整體採用 GPL-3.0，其載荷已隨附，因此無需自備。",
-  "The stock init is replaced rather than renamed. Magisk's own patcher also keeps a compressed copy of it inside the ramdisk for its uninstall path, which this build does not write, so restoring later needs a stock image.":
-    "原廠 init 是被取代而不是改名。Magisk 自帶修補工具為了卸載路徑還會在 ramdisk 內保留它的一份壓縮副本，而本建置不寫這份副本，所以日後還原需要自備原廠映像。",
+  "The payloads of the selected manager are bundled (both Magisk and WeaveMask are GPL-3.0 throughout), so nothing has to be supplied.":
+    "所選管理器的載荷已隨附（Magisk 與 WeaveMask 整體都是 GPL-3.0），因此無需自備。",
+  "The stock init is replaced rather than renamed, and a compressed copy of it is kept inside the ramdisk for the manager's own uninstall path.":
+    "原廠 init 是被取代而不是改名，並會在 ramdisk 內保留它的一份壓縮副本，供管理器自身的卸載路徑使用。",
   "A ramdisk that Magisk or KernelSU already patched is refused.": "已被 Magisk 或 KernelSU 修補過的 ramdisk 會被拒絕。",
-  "The Magisk app (com.topjohnwu.magisk) has to be installed on the device for the produced image to be usable.":
-    "裝置上必須安裝 Magisk 應用程式（com.topjohnwu.magisk），產物映像才能使用。",
+  "The manager app of the selected flavour (com.topjohnwu.magisk, or io.github.seyud.weave for WeaveMask) has to be installed on the device for the produced image to be usable.":
+    "裝置上必須安裝所選 flavour 的管理器應用程式（com.topjohnwu.magisk；WeaveMask 則為 io.github.seyud.weave），產物映像才能使用。",
 
   // KernelPatch flavours
   "Upstream KernelPatch": "上游 KernelPatch",
@@ -164,6 +164,12 @@ export const zhHant: Record<string, string> = {
     "LyraVoid/KernelPatch-Aster 0ff4ae2b8cad8058c408d8a5bdb12569b1a84981（上游 0.13.8 加上 Aster 管理器信任的提交）",
   "LyraVoid/KernelPatch 1de1a37304406615a3c3b6f1d28d2cd926b93a0f (release 0.13.8 of the extended branch FolkPatch is built on)":
     "LyraVoid/KernelPatch 1de1a37304406615a3c3b6f1d28d2cd926b93a0f（FolkPatch 所用的擴充分支的 0.13.8 發佈）",
+
+  // Magisk flavours
+  "Magisk": "Magisk",
+  "WeaveMask": "WeaveMask",
+  "official Magisk release v30.7": "官方 Magisk release v30.7",
+  "WeaveMask release v30.7.5, a fork of Magisk": "WeaveMask release v30.7.5，Magisk 的一個分支",
 
   // plan steps
   "Analyze boot image": "分析 boot 映像",

@@ -328,6 +328,9 @@ export const en = {
   "patch.kernelsu.hint.tail": "on the device: 6.6.118-android15-... means android15-6.6.",
   "patch.magisk.title": "Magisk options",
   "patch.magisk.description": "These are what Magisk reads at boot from .backup/.magisk.",
+  "patch.magisk.flavor": "Manager",
+  "patch.magisk.flavor.description":
+    "Which manager's payloads are written. Magisk and WeaveMask patch the ramdisk the same way, but each app only manages the image made with its own payloads.",
   "patch.magisk.keepVerity": "Keep verity (KEEPVERITY)",
   "patch.magisk.keepVerity.body":
     "On keeps verity enabled and leaves fstab alone. Off removes magiskboot's verity flags from any fstab entry inside the ramdisk and drops verity_key.",

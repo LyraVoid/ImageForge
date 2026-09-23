@@ -73,10 +73,18 @@ const KERNELSU_LKM: Array<{ kmi: string; sha256: string; sizeBytes: number }> = 
 /** Magisk release the ramdisk payloads are taken from. */
 export const MAGISK_RELEASE = "v30.7";
 
+/** WeaveMask release the ramdisk payloads of that flavour are taken from. */
+export const WEAVEMASK_RELEASE = "v30.7.5";
+
 export const MAGISK_MAGISKINIT_ID = "magisk-magiskinit";
 export const MAGISK_MAGISK_PAYLOAD_ID = "magisk-magisk";
 export const MAGISK_STUB_PAYLOAD_ID = "magisk-stub";
 export const MAGISK_INIT_LD_PAYLOAD_ID = "magisk-init-ld";
+
+export const WEAVEMASK_MAGISKINIT_ID = "weavemask-magiskinit";
+export const WEAVEMASK_MAGISK_PAYLOAD_ID = "weavemask-magisk";
+export const WEAVEMASK_STUB_PAYLOAD_ID = "weavemask-stub";
+export const WEAVEMASK_INIT_LD_PAYLOAD_ID = "weavemask-init-ld";
 
 export const ARTIFACT_CATALOG: ArtifactCatalog = {
   schemaVersion: 1,
@@ -142,6 +150,51 @@ export const ARTIFACT_CATALOG: ArtifactCatalog = {
           sha256: MOCK_ARTIFACT_SHA256,
           source: "builtin:mock",
           sizeBytes: MOCK_ARTIFACT_SIZE_BYTES,
+        },
+      ],
+    },
+    {
+      providerId: "magisk",
+      release: WEAVEMASK_RELEASE,
+      releasedAt: "2026-05-25T00:00:00.000Z",
+      notes:
+        "Official WeaveMask release, a fork of Magisk whose patcher is byte for byte Magisk v30.7's: the same files, modes, configuration keys and codec settings, with the manager package and the payloads being WeaveMask's own. Its build of magiskinit only trusts the WeaveMask app (io.github.seyud.weave), so the payloads have to come from this release and the produced image needs that app. Distributed as a separate unmodified program; WeaveMask is GPL-3.0 throughout, like Magisk.",
+      artifacts: [
+        {
+          id: WEAVEMASK_MAGISKINIT_ID,
+          version: WEAVEMASK_RELEASE,
+          type: "init",
+          architecture: "arm64",
+          sha256: "b3df27f76fa68ee477efe36c6ecd6942ba3f7246e90c86540f2f22072103b948",
+          source: "bundled:/artifacts/weavemask/magiskinit",
+          sizeBytes: 199936,
+        },
+        {
+          id: WEAVEMASK_MAGISK_PAYLOAD_ID,
+          version: WEAVEMASK_RELEASE,
+          type: "payload",
+          architecture: "arm64",
+          sha256: "4e62c1f7ba3f5af7b790e718c5b263a7da44cf9c8a749497d6652a216ecc2023",
+          source: "bundled:/artifacts/weavemask/magisk",
+          sizeBytes: 393504,
+        },
+        {
+          id: WEAVEMASK_STUB_PAYLOAD_ID,
+          version: WEAVEMASK_RELEASE,
+          type: "payload",
+          architecture: "arm64",
+          sha256: "589013c08c2d26ff5cb6d8fc6cbcffa71cfcfdd7662d4ba358d155b61b8f147f",
+          source: "bundled:/artifacts/weavemask/stub",
+          sizeBytes: 33151,
+        },
+        {
+          id: WEAVEMASK_INIT_LD_PAYLOAD_ID,
+          version: WEAVEMASK_RELEASE,
+          type: "payload",
+          architecture: "arm64",
+          sha256: "54ec98f3f93473e51252267a8997cd12878dd463263f3dc2a32c14ab7951f9f0",
+          source: "bundled:/artifacts/weavemask/init-ld",
+          sizeBytes: 5208,
         },
       ],
     },

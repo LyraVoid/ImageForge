@@ -139,6 +139,10 @@ Deliberately honest limits:
   pinned release (GPL-3.0 throughout) and compressed at patch time with magiskboot's codec, settings
   and declared dictionary; together with magiskboot's archive layout that makes the produced ramdisk
   **byte for byte the one the official app writes**, which the real-material test asserts.
+  **WeaveMask is registered as a second flavour** of this provider: its patcher *is* Magisk v30.7's
+  (the same files, modes and configuration keys, checked byte for byte), while the payloads and the
+  manager app (`io.github.seyud.weave`) are its own — so the flavour, not a second implementation,
+  is what a run selects.
 
 The suite needs real material for its strongest checks — an OTA package, device dumps, a MediaTek logo
 image — and every test that needs it skips itself and names the environment variable that supplies it.
@@ -299,7 +303,7 @@ and a real device `init_boot` image is used to enforce that
 | Kernel architecture detection | arm64, arm (zImage), x86_64 (bzImage) heuristics |
 | Compression detection | gzip, LZ4 (legacy and frame), XZ, LZMA, BZip2, Zstandard, CPIO |
 | Compression expansion | gzip, LZ4 legacy and LZ4 frame (including dependent blocks), xz |
-| Compression re-encoding | gzip and LZ4 (the **reference liblz4 1.10.0 codec** compiled to WebAssembly at HC level 12, the same revision and setting magiskboot uses, so a device ramdisk re-encodes to the bytes the stock image shipped) and xz (magiskboot's settings: preset 6, CRC32) |
+| Compression re-encoding | gzip and LZ4 (the **reference liblz4 1.10.0 codec** compiled to WebAssembly at HC level 12, the same revision and setting magiskboot uses, so a device ramdisk re-encodes to the bytes the stock image shipped) and xz (magiskboot's crate and CRC32 check, with the declared dictionary rewritten to the one its streams carry, so the payload streams match byte for byte) |
 | AVB signature | detected, dropped on repack with a warning |
 
 ## Verification model

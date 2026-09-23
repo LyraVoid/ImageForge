@@ -414,7 +414,8 @@ built for against the KMI, and the result records its name, licence and vermagic
 
 The three payloads are bundled **uncompressed** — exactly the files Magisk's own patcher feeds to
 `magiskboot compress=xz` — and ImageForge compresses them at patch time with the same codec
-(`lzma-rust2` 0.21.0, preset 6, CRC32) and the same declared dictionary as the official streams
+(`lzma-rust2` 0.21.0, CRC32, the crate magiskboot links; its own search preset is smaller than
+magiskboot's, and the declared dictionary is rewritten to the reference one) and the declared dictionary as the official streams
 (64 MiB, see `src/core/image/xz.ts`), so the produced streams are byte for byte the ones the app
 writes. The stock init is compressed the same way.
 
@@ -538,7 +539,7 @@ production source maps show exactly the thirty icons the app imports plus thirte
 | --- | --- | --- |
 | `apatch` | `boot.img` only | KernelPatch core image injected into the kernel by the upstream kptools build in WebAssembly. Three core images are registered as artifacts (upstream, the Aster fork and the branch FolkPatch ships); each only trusts its own manager app, so the plan records `kernelPatchFlavor` and `requiredManager`. A run can also carry its own core image (`kernelPatchFlavor: custom`), which is checked for the KernelPatch magic before kptools sees it |
 | `kernelsu` | `boot.img`, `init_boot.img`, `vendor_boot.img` | The ramdisk init becomes `init.real` and the ksuinit wrapper takes its place, with the KernelSU loadable module next to it. The module comes from the registry for the device KMI or from the run |
-| `magisk` | `boot.img`, `init_boot.img`, `vendor_boot.img` | magiskinit replaces the ramdisk init, Magisk's payloads are written under `overlay.d/sbin`, its configuration goes to `.backup/.magisk`, and the stock init is kept as `.backup/init.xz` |
+| `magisk` | `boot.img`, `init_boot.img`, `vendor_boot.img` | magiskinit replaces the ramdisk init, the manager's payloads are written under `overlay.d/sbin`, its configuration goes to `.backup/.magisk`, and the stock init is kept as `.backup/init.xz`. Two flavours are registered (Magisk and the WeaveMask fork) because each build of magiskinit only trusts its own app; the plan records `magiskFlavor` and `requiredManager` |
 | `mock` | `boot.img`, `init_boot.img` | Rewrites the kernel cmdline and a bootconfig manifest |
 
 All four are implemented; the two ramdisk providers are described above.

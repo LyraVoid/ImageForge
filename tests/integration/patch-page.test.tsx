@@ -69,4 +69,24 @@ describe("patch page re-planning", () => {
     // the other option is untouched, and the plan still pins the default
     expect(store().planResponse?.plan.configuration.keepForceEncrypt).toBe("true");
   }, 60000);
+
+  it("lets the Magisk flavour be chosen, and the plan follows it", async () => {
+    await store().selectProvider("magisk");
+    renderPatchPage();
+
+    expect(await screen.findByText("Magisk options")).toBeInTheDocument();
+    const manager = screen.getByLabelText("Manager");
+    expect([...manager.querySelectorAll("option")].map((option) => option.textContent)).toEqual([
+      "Magisk · official Magisk release v30.7",
+      "WeaveMask · WeaveMask release v30.7.5, a fork of Magisk",
+    ]);
+
+    fireEvent.change(manager, { target: { value: "weavemask" } });
+
+    await waitFor(() => expect(store().planResponse?.plan.configuration.magiskFlavor).toBe("weavemask"));
+    // the plan pins WeaveMask's own payloads and the manager that trusts them
+    expect(store().planResponse?.plan.configuration.requiredManager).toBe("io.github.seyud.weave");
+    expect(store().planResponse?.plan.artifact.id).toBe("weavemask-magiskinit");
+    expect(store().planResponse?.plan.configuration.magiskArtifacts).toContain("weavemask-magisk");
+  }, 60000);
 });

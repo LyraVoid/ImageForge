@@ -83,12 +83,20 @@ export {
   MAGISK_MAGISK_PAYLOAD_ID,
   MAGISK_RELEASE,
   MAGISK_STUB_PAYLOAD_ID,
+  WEAVEMASK_INIT_LD_PAYLOAD_ID,
+  WEAVEMASK_MAGISKINIT_ID,
+  WEAVEMASK_MAGISK_PAYLOAD_ID,
+  WEAVEMASK_RELEASE,
+  WEAVEMASK_STUB_PAYLOAD_ID,
 } from "./artifacts/catalog";
 export {
   MAGISK_BACKUP_DIR,
   MAGISK_BACKUP_INIT_ENTRY,
   MAGISK_BACKUP_RMLIST_ENTRY,
   MAGISK_CONFIG_ENTRY,
+  MAGISK_DEFAULT_FLAVOR,
+  MAGISK_FLAVORS,
+  MAGISK_FLAVOR_SETTING,
   MAGISK_INIT_ENTRY,
   MAGISK_INIT_LD_ENTRY,
   MAGISK_KEEP_FORCE_ENCRYPT_SETTING,
@@ -101,8 +109,9 @@ export {
   MAGISK_STUB_ENTRY,
   MAGISK_VERITY_KEY_ENTRY,
   buildMagiskConfig,
+  magiskFlavor,
 } from "./patch/providers/magisk-config";
-export type { MagiskConfigInput } from "./patch/providers/magisk-config";
+export type { MagiskConfigInput, MagiskFlavor } from "./patch/providers/magisk-config";
 export { MOCK_BOOTCONFIG_MARKER, MOCK_CMDLINE_MARKER } from "./patch/providers/mock-config";
 export { PatchEngine, createPatchEngine } from "./patch/engine";
 export type { AnalyzedImage, PatchEngineOptions, PatchRunOutcome } from "./patch/engine";

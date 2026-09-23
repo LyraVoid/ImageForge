@@ -126,10 +126,10 @@ export const ja: Record<string, string> = {
     "Magisk または KernelSU でパッチ済みのラムディスクは拒否します。",
   "Like Magisk's own patcher, the stock init is kept inside the ramdisk as .backup/init.xz, together with .backup/.rmlist, so Magisk's app can restore the image by itself.":
     "Magisk 自身のパッチツールと同様に、純正の init は .backup/init.xz としてラムディスク内に残し、.backup/.rmlist も添えます。これにより Magisk アプリが自力でイメージを復元できます。",
-  "The payloads are bundled from the pinned Magisk release, which is GPL-3.0.":
-    "ペイロードは固定した Magisk リリースから同梱しています。ライセンスは GPL-3.0 です。",
-  "The Magisk app (com.topjohnwu.magisk) has to be installed for the produced image to be usable.":
-    "生成したイメージを使うには Magisk アプリ（com.topjohnwu.magisk）が必要です。",
+  "Two managers are registered as flavours, because each build of magiskinit only trusts its own app: Magisk (com.topjohnwu.magisk) and WeaveMask (io.github.seyud.weave, a fork whose patcher is byte for byte Magisk v30.7's). Each flavour carries the payloads of its own pinned release, and both are GPL-3.0.":
+    "マネージャーを 2 つ flavour として登録しています。magiskinit の各ビルドが信頼するのは自分用のアプリだけだからです。Magisk（com.topjohnwu.magisk）と WeaveMask（io.github.seyud.weave、パッチ処理が Magisk v30.7 とバイト単位で同一のフォーク）です。各 flavour はそれぞれ固定したリリースのペイロードを同梱し、どちらも GPL-3.0 です。",
+  "The manager app of the selected flavour has to be installed for the produced image to be usable.":
+    "生成したイメージを使うには、選択した flavour のマネージャーアプリが必要です。",
 
   // provider analysis notes
   "The Mock Provider never claims to root a device and leaves the ramdisk contents untouched.":
@@ -147,14 +147,14 @@ export const ja: Record<string, string> = {
     "ラムディスクテーブルを持つ vendor boot イメージにはまだ対応していません。",
   "The KernelSU manager app (me.weishu.kernelsu) has to be installed for the produced image to be usable.":
     "生成したイメージを使うには KernelSU マネージャーアプリ（me.weishu.kernelsu）が必要です。",
-  "Magisk is GPL-3.0 throughout and its payloads are bundled, so nothing has to be supplied.":
-    "Magisk は全体が GPL-3.0 で、ペイロードは同梱されているため、用意するものはありません。",
-  "The stock init is replaced rather than renamed. Magisk's own patcher also keeps a compressed copy of it inside the ramdisk for its uninstall path, which this build does not write, so restoring later needs a stock image.":
-    "純正の init は名前を変えるのではなく置き換えられます。Magisk 自身のパッチツールはアンインストール用にその圧縮コピーもラムディスク内に残しますが、このビルドはそれを書きません。そのため後で復元するには純正イメージが必要です。",
+  "The payloads of the selected manager are bundled (both Magisk and WeaveMask are GPL-3.0 throughout), so nothing has to be supplied.":
+    "選択したマネージャーのペイロードは同梱されています（Magisk も WeaveMask も全体が GPL-3.0）。用意するものはありません。",
+  "The stock init is replaced rather than renamed, and a compressed copy of it is kept inside the ramdisk for the manager's own uninstall path.":
+    "純正の init は名前を変えるのではなく置き換えられ、マネージャー自身のアンインストール用にその圧縮コピーもラムディスク内に残します。",
   "A ramdisk that Magisk or KernelSU already patched is refused.":
     "Magisk または KernelSU でパッチ済みのラムディスクは拒否します。",
-  "The Magisk app (com.topjohnwu.magisk) has to be installed on the device for the produced image to be usable.":
-    "生成したイメージを使うには、端末に Magisk アプリ（com.topjohnwu.magisk）が必要です。",
+  "The manager app of the selected flavour (com.topjohnwu.magisk, or io.github.seyud.weave for WeaveMask) has to be installed on the device for the produced image to be usable.":
+    "生成したイメージを使うには、端末に選択した flavour のマネージャーアプリ（com.topjohnwu.magisk、WeaveMask なら io.github.seyud.weave）が必要です。",
 
   // KernelPatch flavours
   "Upstream KernelPatch": "上流の KernelPatch",
@@ -166,6 +166,12 @@ export const ja: Record<string, string> = {
     "LyraVoid/KernelPatch-Aster 0ff4ae2b8cad8058c408d8a5bdb12569b1a84981（上流 0.13.8 に Aster マネージャー信頼のコミットを加えたもの）",
   "LyraVoid/KernelPatch 1de1a37304406615a3c3b6f1d28d2cd926b93a0f (release 0.13.8 of the extended branch FolkPatch is built on)":
     "LyraVoid/KernelPatch 1de1a37304406615a3c3b6f1d28d2cd926b93a0f（FolkPatch が使う拡張ブランチの 0.13.8 リリース）",
+
+  // Magisk flavours
+  "Magisk": "Magisk",
+  "WeaveMask": "WeaveMask",
+  "official Magisk release v30.7": "公式 Magisk リリース v30.7",
+  "WeaveMask release v30.7.5, a fork of Magisk": "WeaveMask リリース v30.7.5（Magisk のフォーク）",
 
   // plan steps
   "Analyze boot image": "boot イメージを分析",

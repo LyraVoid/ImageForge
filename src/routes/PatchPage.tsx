@@ -13,6 +13,9 @@ import {
   APATCH_FLAVORS,
   KERNELSU_KMI_SETTING,
   KNOWN_KMIS,
+  MAGISK_DEFAULT_FLAVOR,
+  MAGISK_FLAVORS,
+  MAGISK_FLAVOR_SETTING,
   MAGISK_KEEP_FORCE_ENCRYPT_SETTING,
   MAGISK_KEEP_VERITY_SETTING,
   MAGISK_PREINIT_DEVICE_SETTING,
@@ -392,6 +395,22 @@ export function PatchPage() {
           description={t("patch.magisk.description")}
         >
           <div className="divide-y divide-border">
+          <div className="space-y-1 py-3 first:pt-0">
+            <p className="text-xs font-medium text-foreground">{t("patch.magisk.flavor")}</p>
+            <p className="text-[11px] leading-4 text-muted-foreground">{t("patch.magisk.flavor.description")}</p>
+            <Select
+              aria-label={t("patch.magisk.flavor")}
+              className="mt-1 max-w-xs"
+              value={readOption(MAGISK_FLAVOR_SETTING, MAGISK_DEFAULT_FLAVOR)}
+              onChange={(event) => applyOption({ [MAGISK_FLAVOR_SETTING]: event.target.value })}
+            >
+              {MAGISK_FLAVORS.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {record(entry.label) + " · " + record(entry.source)}
+                </option>
+              ))}
+            </Select>
+          </div>
           <div className="flex items-start justify-between gap-4 py-3 first:pt-0">
             <div className="space-y-1">
               <p className="text-xs font-medium text-foreground">{t("patch.magisk.keepVerity")}</p>
