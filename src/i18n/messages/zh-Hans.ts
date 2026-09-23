@@ -430,7 +430,7 @@ export const zhHans: Messages = {
   "settings.runtime.wasm.checking": "检查中",
   "settings.runtime.wasmPath": "WASM 路径",
   "settings.runtime.limit": "镜像大小上限",
-  "settings.runtime.reason": "原因：{reason}。运行 {command} 可以生成 WebAssembly 模块。",
+  "settings.runtime.reason": "原因：{reason}",
   "settings.artifacts.title": "制品注册表",
   "settings.artifacts.description": "版本、架构与摘要都在这里声明，绝不写死在界面里。",
   "settings.artifacts.count": "{count} 个制品",

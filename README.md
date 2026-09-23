@@ -96,6 +96,27 @@ It is a static site, and the paths inside it are absolute — the service worker
 WebAssembly modules are fetched from `/`, `/wasm` and `/artifacts` — so serve `dist/` from the root
 of a domain rather than a subdirectory. After the first visit the app works offline.
 
+## Deploying it
+
+It is a static site, so any host that serves files will do. Four things are worth checking before you
+point a domain at it:
+
+* **Build it with `pnpm build`** (that is `tsc -b && vite build`, output in `dist/`) and publish
+  `dist/`. The build needs Node 22.13+; if your host only offers an older one, build locally and
+  upload the contents of `dist/` instead.
+* **Serve it from the root of a domain**, not a subdirectory: the service worker, the manifest and the
+  WebAssembly modules are fetched from `/`, `/wasm` and `/artifacts`.
+* **Turn on the single-page fallback**: every unknown path has to return `index.html`, otherwise a
+  deep link like `/tools/patch/plan` gives a 404 on a first visit (after one visit the service worker
+  serves the cached shell itself). On Netlify or Cloudflare Pages that is a `public/_redirects` with
+  `/* /index.html 200`; on Vercel a `vercel.json` rewrite; on nginx `try_files $uri /index.html`.
+* **Use HTTPS.** A few browser APIs — WebCrypto among them — only exist in a secure context. Without
+  it the app still works (hashing falls back to a JavaScript implementation, a few times slower) but
+  the service worker does not register, so there is no offline mode.
+
+Make sure your host serves the `.wasm` files at all: a rule that blocks unknown extensions stops the
+patch pipeline before it starts, and the settings page will say so.
+
 ## What it can read
 
 | Format | What it does here |

@@ -62,6 +62,16 @@ A round of adding managers, and of making the register behind them hold up.
 - **The toolchain is pinned and the CI matches it**: `packageManager` names the pnpm version, `engines`
   names Node 22.13+ (what pnpm 11 requires), and CI installs both from those fields.
 
+**Fixed before anyone deployed it**
+
+- **The app insisted on WebCrypto to verify the WebAssembly module, and a host that serves the site
+  over plain HTTP has none** — so a deployment could fail with "The digest of
+  /wasm/imageforge.wasm could not be checked: WebCrypto SubtleCrypto is not available in this
+  runtime", and the settings page then advised rebuilding a module that was there all along. Hashing
+  now falls back to an audited JavaScript implementation (`@noble/hashes`, loaded only when needed),
+  so digests are verified everywhere and the payloads stay checked; the advice was removed, and the
+  deployment requirements — root path, single-page fallback, HTTPS — are written down in the readme.
+
 **Corrections**
 
 - magiskboot links `lzma-rust2` 0.16.2, not the 0.21.0 this project uses; the output is identical for

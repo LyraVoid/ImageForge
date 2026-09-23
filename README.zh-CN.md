@@ -83,6 +83,23 @@ Rust 工具链；其余 WebAssembly 模块由 `scripts/` 从固定版本的上�
 它是纯静态站点，且内部路径是绝对路径 —— service worker、manifest、WebAssembly 模块分别从 `/`、`/wasm`、
 `/artifacts` 获取 —— 所以要部署在域名**根目录**而不是子目录。首次访问后即可离线使用。
 
+## 部署
+
+它是纯静态站点，任何能托管文件的平台都可以。指向域名之前，有四件事值得确认：
+
+* **用 `pnpm build` 构建**（即 `tsc -b && vite build`，产物在 `dist/`），发布 `dist/` 的内容。构建需要
+  Node 22.13+；如果托管平台的构建环境只有更老的 Node，就在本地构建好、上传 `dist/` 的内容。
+* **部署在域名根目录**，不要放在子目录：service worker、manifest、WebAssembly 模块分别从 `/`、`/wasm`、
+  `/artifacts` 获取。
+* **打开单页应用回退**：所有未知路径都要返回 `index.html`，否则首次访问 `/tools/patch/plan` 这类深层链接会 404
+  （访问过一次之后，service worker 会自己用缓存的外壳响应）。Netlify / Cloudflare Pages 用 `public/_redirects`
+  写 `/* /index.html 200`；Vercel 用 `vercel.json` 的 rewrite；nginx 用 `try_files $uri /index.html`。
+* **使用 HTTPS**：WebCrypto 等若干浏览器 API 只在安全上下文里存在。没有它应用仍能用（哈希会退回到 JavaScript
+  实现，慢几倍），但 service worker 不会注册，也就没有离线模式。
+
+另外请确认平台**会正常返回 `.wasm` 文件**：任何「拦掉未知扩展名」的规则都会在补丁流程开始前就把它掐断，
+设置页会明确报出来。
+
 ## 能读什么
 
 | 格式 | 这里能做到什么 |

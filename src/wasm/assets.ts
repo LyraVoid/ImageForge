@@ -111,8 +111,8 @@ export async function fetchWasmAsset(asset: WasmAsset): Promise<WasmAssetResult>
   try {
     actual = await sha256Hex(bytes);
   } catch (error) {
-    // No SubtleCrypto, so the digest cannot be checked. Refusing is the honest answer: the rest of
-    // the pipeline hashes bytes too, so a runtime without it cannot patch anything anyway.
+    // Hashing itself failed (a runtime without WebCrypto and without module loading, say). Refusing
+    // is still the honest answer: nothing here may run unverified.
     return { ok: false, reason: "The digest of " + asset.path + " could not be checked: " + describe(error) };
   }
   if (actual !== asset.sha256) {

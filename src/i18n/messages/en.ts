@@ -438,7 +438,7 @@ export const en = {
   "settings.runtime.wasm.checking": "checking",
   "settings.runtime.wasmPath": "WASM path",
   "settings.runtime.limit": "Image size limit",
-  "settings.runtime.reason": "Reason: {reason} Run {command} to produce the WebAssembly module.",
+  "settings.runtime.reason": "Reason: {reason}",
   "settings.artifacts.title": "Artifact registry",
   "settings.artifacts.description":
     "Versions, architectures and digests are declared here, never hardcoded in the UI.",

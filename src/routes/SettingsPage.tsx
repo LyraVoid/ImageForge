@@ -186,7 +186,7 @@ export function SettingsPage() {
               <KeyValueList entries={runtimeEntries} stacked />
               {wasm && !wasm.available && wasm.reason ? (
                 <p className="mt-3 text-[11px] leading-4 text-muted-foreground">
-                  {t("settings.runtime.reason", { reason: wasm.reason, command: "pnpm wasm:build" })}
+                  {t("settings.runtime.reason", { reason: wasm.reason })}
                 </p>
               ) : null}
             </SettingsGroup>

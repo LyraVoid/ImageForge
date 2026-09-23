@@ -433,7 +433,7 @@ export const ja: Messages = {
   "settings.runtime.wasm.checking": "確認中",
   "settings.runtime.wasmPath": "WASM のパス",
   "settings.runtime.limit": "イメージサイズの上限",
-  "settings.runtime.reason": "理由: {reason} WebAssembly モジュールは {command} で生成できます。",
+  "settings.runtime.reason": "理由: {reason}",
   "settings.artifacts.title": "アーティファクト登録簿",
   "settings.artifacts.description":
     "バージョン・アーキテクチャ・ダイジェストはここで宣言します。UI に直接書き込むことはありません。",

@@ -430,7 +430,7 @@ export const zhHant: Messages = {
   "settings.runtime.wasm.checking": "檢查中",
   "settings.runtime.wasmPath": "WASM 路徑",
   "settings.runtime.limit": "映像大小上限",
-  "settings.runtime.reason": "原因：{reason}。執行 {command} 可以產生 WebAssembly 模組。",
+  "settings.runtime.reason": "原因：{reason}",
   "settings.artifacts.title": "產物註冊表",
   "settings.artifacts.description": "版本、架構與摘要都在這裡宣告，絕不寫死在介面裡。",
   "settings.artifacts.count": "{count} 個產物",
