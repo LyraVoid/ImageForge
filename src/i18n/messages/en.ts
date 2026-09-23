@@ -37,6 +37,18 @@ export const en = {
   "home.highlight.private.detail": "Images are never uploaded",
   "home.highlight.open": "Open Source",
   "home.highlight.open.detail": "AGPL-3.0-or-later",
+  "home.localBadge": "Local workspace",
+  "home.primary.badge": "Recommended",
+  "home.flow.title": "How it works",
+  "home.flow.image": "Open an image",
+  "home.flow.image.detail": "Drop boot, init_boot or vendor_boot.",
+  "home.flow.choose": "Choose a method",
+  "home.flow.choose.detail": "See what this exact image supports.",
+  "home.flow.patch": "Patch and verify",
+  "home.flow.patch.detail": "The work stays inside a Web Worker.",
+  "home.flow.download": "Download the result",
+  "home.flow.download.detail": "Nothing is flashed automatically.",
+  "home.more.description": "More local-first tools for images and packages.",
   "picker.limit":
     "Images are processed with the Web Worker + WASM pipeline and are limited to {size}. ImageForge never flashes a device.",
 

@@ -34,6 +34,18 @@ export const ja: Messages = {
   "home.highlight.private.detail": "イメージがアップロードされることはありません",
   "home.highlight.open": "オープンソース",
   "home.highlight.open.detail": "AGPL-3.0-or-later",
+  "home.localBadge": "ローカルワークスペース",
+  "home.primary.badge": "推奨ワークフロー",
+  "home.flow.title": "処理の流れ",
+  "home.flow.image": "イメージを開く",
+  "home.flow.image.detail": "boot、init_boot、vendor_boot をドロップします。",
+  "home.flow.choose": "方法を選択",
+  "home.flow.choose.detail": "このイメージが対応する方法を確認します。",
+  "home.flow.patch": "パッチと検証",
+  "home.flow.patch.detail": "処理は Web Worker 内で実行されます。",
+  "home.flow.download": "結果をダウンロード",
+  "home.flow.download.detail": "端末への書き込みは自動では行いません。",
+  "home.more.description": "イメージとパッケージ向けのローカルツールです。",
   "picker.limit":
     "イメージは Web Worker + WASM のパイプラインで処理され、上限は {size} です。ImageForge はデバイスへの書き込みを一切行いません。",
 

@@ -34,6 +34,18 @@ export const zhHant: Messages = {
   "home.highlight.private.detail": "映像不會被上傳",
   "home.highlight.open": "開放原始碼",
   "home.highlight.open.detail": "AGPL-3.0-or-later",
+  "home.localBadge": "本機工作區",
+  "home.primary.badge": "推薦流程",
+  "home.flow.title": "處理流程",
+  "home.flow.image": "開啟映像",
+  "home.flow.image.detail": "拖入 boot、init_boot 或 vendor_boot。",
+  "home.flow.choose": "選擇修補方式",
+  "home.flow.choose.detail": "查看這個映像實際支援哪些方式。",
+  "home.flow.patch": "修補並驗證",
+  "home.flow.patch.detail": "所有運算都在 Web Worker 內完成。",
+  "home.flow.download": "下載結果",
+  "home.flow.download.detail": "不會自動刷入裝置。",
+  "home.more.description": "更多本機工具，處理映像與安裝包。",
   "picker.limit":
     "映像透過 Web Worker + WASM 流程處理，大小上限為 {size}。ImageForge 從不刷入裝置。",
 

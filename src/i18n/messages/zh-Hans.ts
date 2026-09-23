@@ -34,6 +34,18 @@ export const zhHans: Messages = {
   "home.highlight.private.detail": "镜像不会被上传",
   "home.highlight.open": "开源",
   "home.highlight.open.detail": "AGPL-3.0-or-later",
+  "home.localBadge": "本地工作区",
+  "home.primary.badge": "推荐流程",
+  "home.flow.title": "处理流程",
+  "home.flow.image": "打开镜像",
+  "home.flow.image.detail": "拖入 boot、init_boot 或 vendor_boot。",
+  "home.flow.choose": "选择修补方式",
+  "home.flow.choose.detail": "查看这张镜像实际支持哪些方式。",
+  "home.flow.patch": "修补并校验",
+  "home.flow.patch.detail": "全部计算在 Web Worker 内完成。",
+  "home.flow.download": "下载结果",
+  "home.flow.download.detail": "不会自动刷入设备。",
+  "home.more.description": "更多本地工具，处理镜像与安装包。",
   "picker.limit":
     "镜像通过 Web Worker + WASM 流水线处理，大小上限为 {size}。ImageForge 从不刷入设备。",
 
