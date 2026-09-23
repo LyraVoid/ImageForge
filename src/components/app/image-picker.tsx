@@ -13,7 +13,13 @@ import { useForgeStore } from "@/stores/forge-store";
  * or names the tools that accept what was opened. The tools page and the patcher's first step both
  * use it, so the entry behaves the same wherever a user starts.
  */
-export function ImagePicker({ showLimit = true }: { showLimit?: boolean }) {
+export function ImagePicker({
+  showLimit = true,
+  continueToPatcher = true,
+}: {
+  showLimit?: boolean;
+  continueToPatcher?: boolean;
+}) {
   const t = useT();
   const navigate = useNavigate();
   const analyzeFile = useForgeStore((state) => state.analyzeFile);
@@ -22,7 +28,7 @@ export function ImagePicker({ showLimit = true }: { showLimit?: boolean }) {
 
   const handleFile = async (file: File) => {
     const analysis = await analyzeFile(file);
-    if (analysis) navigate(PATCH_ROUTES.analyze);
+    if (analysis && continueToPatcher) navigate(PATCH_ROUTES.analyze);
   };
 
   return (

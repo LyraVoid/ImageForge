@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { InspectPage } from "@/routes/InspectPage";
@@ -45,6 +45,20 @@ describe("the inspect tool", () => {
     expect(screen.getByText("Patch methods")).toBeInTheDocument();
     // a read-only tool: the analysis is shown, but there is no way to start a patch from here
     expect(screen.queryByRole("button", { name: /Select/ })).toBeNull();
+    expect(screen.getByText(/This tool only looks/)).toBeInTheDocument();
+  });
+
+  it("keeps a dropped boot image in the read-only report", async () => {
+    renderInspect();
+    const input = document.querySelector('input[type="file"]');
+    expect(input).not.toBeNull();
+
+    fireEvent.change(input as HTMLInputElement, {
+      target: { files: [toFile(await buildBootImage({}), "boot.img")] },
+    });
+
+    await waitFor(() => expect(screen.getByText("Digests")).toBeInTheDocument());
+    expect(screen.queryByText("analyze page")).toBeNull();
     expect(screen.getByText(/This tool only looks/)).toBeInTheDocument();
   });
 

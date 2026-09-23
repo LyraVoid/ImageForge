@@ -19,8 +19,8 @@ export function FieldList({ fields, className, columns = 2 }: FieldListProps) {
         className,
       )}
     >
-      {fields.map((entry) => (
-        <div key={entry.label} className="min-w-0 space-y-0.5">
+      {fields.map((entry, index) => (
+        <div key={entry.label + ":" + index} className="min-w-0 space-y-0.5">
           <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             {record(entry.label)}
           </dt>
