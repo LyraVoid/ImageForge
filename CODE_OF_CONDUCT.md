@@ -59,10 +59,11 @@ representative at an online or offline event.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the maintainers. Use the repository's private reporting form
-(*Security* → *Report a vulnerability*) so the report stays between you and the
-maintainers, or contact the maintainer [@matsuzaka-yuki](https://github.com/matsuzaka-yuki)
-directly. All complaints will be reviewed and investigated promptly and fairly.
+reported to the maintainers. Use the private reporting form of the repository
+(<https://github.com/LyraVoid/ImageForge> → *Security* → *Report a vulnerability*) so
+the report stays between you and the maintainers; if that is not possible, open a
+minimal issue asking for a private channel and wait for an answer before writing
+any details. All complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the
 reporter of any incident.

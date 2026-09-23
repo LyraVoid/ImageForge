@@ -4,6 +4,14 @@
   "private": true,
   "type": "module",
   "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LyraVoid/ImageForge.git"
+  },
+  "homepage": "https://github.com/LyraVoid/ImageForge#readme",
+  "bugs": {
+    "url": "https://github.com/LyraVoid/ImageForge/issues"
+  },
   "packageManager": "pnpm@11.25.0",
   "engines": {
     "node": ">=22.13"

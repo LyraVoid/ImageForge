@@ -9,4 +9,4 @@ export const APP_VERSION = __APP_VERSION__;
  * The repository this build came from. The theme menu links to it, and the link is hidden until it is
  * set: shipping a placeholder (`https://github.com/`) produces a link that goes nowhere useful.
  */
-export const SOURCE_URL = "";
+export const SOURCE_URL: string = "https://github.com/LyraVoid/ImageForge";

@@ -2,9 +2,9 @@
 
 ## Reporting a vulnerability
 
-Please **do not open a public issue** for a security problem. Use GitHub's private reporting on this
-repository — *Security* → *Report a vulnerability* — which opens a draft advisory visible only to the
-maintainers. If you cannot use it, open a minimal issue saying that you have something to report
+Please **do not open a public issue** for a security problem. Use GitHub's private reporting on
+<https://github.com/LyraVoid/ImageForge> — *Security* → *Report a vulnerability* — which opens a draft
+advisory visible only to the maintainers. If you cannot use it, open a minimal issue saying that you have something to report
 privately and wait for a reply before writing any details.
 
 Please include what you need to make the report actionable: the version or commit, the browser and

@@ -3,6 +3,9 @@
 > **Universal Android Image Patcher** — analyze, patch, repack, verify and export Android
 > images locally in your browser.
 
+Repository: **<https://github.com/LyraVoid/ImageForge>** — issues and pull requests are welcome there
+(see [CONTRIBUTING.md](CONTRIBUTING.md), and [SECURITY.md](SECURITY.md) for anything sensitive).
+
 ImageForge is a local-first web tool. Image bytes never leave the device: parsing, patching,
 repacking and hashing all run inside a Web Worker with WebAssembly assist.
 
@@ -257,6 +260,9 @@ neither toolchain is required for app development.
   licences are the user's responsibility.
 
 ## Running it yourself
+
+    git clone https://github.com/LyraVoid/ImageForge && cd ImageForge
+    pnpm install && pnpm build
 
 It is a static site: build it and serve the contents of dist over HTTP.
 
