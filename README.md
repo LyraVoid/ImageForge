@@ -47,6 +47,11 @@ by operation into a `Blob` (which browsers keep on disk) rather than a single bu
 `my_stock` can be extracted and downloaded — it used to be impossible, since one `Uint8Array` of that
 size cannot exist in a browser. The page marks such an artifact as blob-backed.
 
+**It installs and it works offline.** Everything runs in the browser, so the app is offered as an
+installable one: the manifest, the icons and a service worker that precaches the shell and the codecs.
+After the first visit the tools open without a network, and what you built is still in the workspace
+when you come back.
+
 **And it says what changed.** The compare tool puts the image that is open next to anything the
 workspace holds and reports where they differ byte by byte — and, when the image is a boot image, it
 names the part each difference falls in: the header, the kernel, the ramdisk. Patching something and

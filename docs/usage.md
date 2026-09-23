@@ -207,6 +207,18 @@ Two notes on sizes: a partition that is not a whole number of blocks is padded u
 real partition is block aligned, so this only affects hand-made files), and the device size defaults to
 what the parts need. The reserved area and the alignment are options.
 
+## Install it and work without a network
+
+Nothing here needs a server: the images never leave the machine and every codec is either JavaScript or
+WebAssembly in the page. The app is therefore installable — use the install button in the address bar
+(Chrome and Edge; on a phone, "Add to home screen") — and after the first visit it opens offline: the
+shell and the codecs are cached, and anything you drop in is read from your own disk.
+
+The workspace survives a reload as well. Artifacts the tools produced come back, along with their bytes
+when they are small (16 MiB), and a source file up to 64 MiB comes back attached. A larger source — an
+8 GiB OTA, say — is not copied; it comes back as a record that asks for the file again, and everything
+derived from it is still there.
+
 ## Change what plays while the device boots
 
 **Boot animation** opens a bootanimation.zip: its parts and frames are listed, the animation plays in the
