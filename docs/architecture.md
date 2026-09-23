@@ -580,6 +580,15 @@ layout of the image itself is unchanged, and the AVB signature is dropped either
 | `public/wasm/imageforge.wasm` | Rust crate: CRC32, LZ4 block decoding (windowed) and LZ4 block compression, with an identical TypeScript fallback |
 | `public/wasm/kptools.wasm` | Upstream KernelPatch kptools compiled to `wasm32-wasip1` |
 | `public/wasm/lz4.wasm` | Upstream liblz4 1.10.0 (BSD-2-Clause) compiled to `wasm32-wasip1` in reactor mode: the reference block codec, so container bytes match the official patchers |
+| `public/wasm/bzip2.wasm` | Upstream bzip2 1.0.8's decompressor plus a small shim, compiled to `wasm32-wasip1`: real OTA payloads store partitions as `REPLACE_BZ` blobs |
+
+Every module in that table is digest verified before it is instantiated, and none of them is
+streamed: the bytes are read first so the digest can be seen, and a module is a fifth of a megabyte.
+The ones the WebAssembly layer fetches itself are registered in `src/wasm/assets.ts` with the
+register in `THIRD_PARTY_LICENSES/` that documents the same path; `kptools.wasm` is registered in
+the artifact catalog because a provider compiles it, and a mismatch there refuses the run. For the
+codecs a mismatch is not fatal — they have fallbacks — but it is not silent either: the loader
+reports why the module is not in use.
 
 `kptools.wasm` is driven by `src/wasm/wasi-runner.ts` on top of
 `@bjorn3/browser_wasi_shim`, which provides an in-memory file system. Upstream sources are

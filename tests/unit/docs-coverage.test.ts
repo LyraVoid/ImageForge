@@ -21,7 +21,12 @@ describe("documentation coverage", () => {
    */
   it("documents every environment variable the tests read for material", () => {
     const tests = readTree(join(process.cwd(), "tests"));
-    const variables = [...new Set(tests.match(/IMAGEFORGE_[A-Z0-9_]+/g) ?? [])].sort();
+    // Only an environment read counts, so a comment that mentions a variable does not demand a row
+    // and an ordinary constant that happens to start with IMAGEFORGE_ is not mistaken for material.
+    const reads = [...tests.matchAll(/process\.env(?:\.|\[\s*")(IMAGEFORGE_[A-Z0-9_]+)/g)].map(
+      (match) => match[1],
+    );
+    const variables = [...new Set(reads)].sort();
     expect(variables.length).toBeGreaterThan(10);
 
     const page = readFileSync(join(process.cwd(), "docs", "testing.md"), "utf8");

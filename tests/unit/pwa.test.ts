@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { WASM_ASSETS } from "@/wasm/assets";
 
 /**
  * The offline side of the app is files rather than code: a manifest, a service worker and the icons it
@@ -43,7 +44,10 @@ describe("the installable app", () => {
 
   it("precaches the shell and the codecs, and falls back to the shell offline", () => {
     const worker = read("public/sw.js");
-    for (const needed of ["/", "/manifest.webmanifest", "/wasm/imageforge.wasm", "/wasm/lz4.wasm", "/wasm/bzip2.wasm"]) {
+    // The codec paths come from the registry, so a newly registered module cannot be forgotten here.
+    const codecs = WASM_ASSETS.map((asset) => asset.path);
+    expect(codecs.length).toBeGreaterThanOrEqual(3);
+    for (const needed of ["/", "/manifest.webmanifest", ...codecs]) {
       expect(worker, needed).toContain(needed);
     }
     // a navigation goes to the network first and to the cached shell when there is none

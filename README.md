@@ -314,8 +314,11 @@ Every produced image is verified before it is offered for download:
 
 * Images are validated before parsing (magic, header version, size limits, section bounds).
 * No `eval`, no `new Function`, no execution of user supplied scripts.
-* The WASM module is a local build artifact with no third-party dependencies.
-* The wasm loader degrades to a TypeScript implementation instead of failing the app.
+* Every WebAssembly module is digest verified against the record in `src/wasm/assets.ts` (the
+  provider's `kptools` against the artifact catalog) before it is instantiated; bytes that do not
+  match the record are never executed.
+* The wasm loader degrades to a TypeScript implementation instead of failing the app, and reports
+  why the module is not in use.
 
 ## License
 

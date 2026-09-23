@@ -1,3 +1,5 @@
+import { IMAGEFORGE_WASM } from "./assets";
+
 export interface WasmStatus {
   available: boolean;
   path: string;
@@ -24,4 +26,5 @@ export interface WasmImageModule {
   xzCompress(input: Uint8Array): Uint8Array;
 }
 
-export const WASM_PATH = "/wasm/imageforge.wasm";
+/** The path the module is registered under in ./assets. */
+export const WASM_PATH = IMAGEFORGE_WASM.path;

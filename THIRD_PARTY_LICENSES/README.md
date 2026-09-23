@@ -10,7 +10,9 @@ third-party component that ImageForge links, embeds, bundles or downloads at run
     ├── kernelsu/
     ├── apatch/
     ├── kernelpatch/
-    └── lz4/
+    ├── lz4/
+    ├── bzip2/
+    └── rust-crates/
 
 Each subdirectory must contain, for the exact revision that ImageForge integrates:
 
@@ -38,7 +40,13 @@ Bundled third-party components, each with its own directory, pinned revision and
 | KernelSU `ksuinit` and the loadable modules | separate, unmodified programs | GPL-3.0-or-later / GPL-2.0-only |
 | Magisk payloads (`public/artifacts/magisk/*`) | bundled artifact | GPL-3.0 |
 | lz4 (`public/wasm/lz4.wasm`) | bundled codec | BSD-2-Clause |
+| bzip2 (`public/wasm/bzip2.wasm`) | bundled codec | BSD-like |
+| Rust crates linked into `public/wasm/imageforge.wasm` | linked into our own module | Apache-2.0 / MIT |
 
-`src/core/artifacts/catalog.ts` holds the digests that are verified before any of these payloads is
-used, and `tests/unit/third-party-registry.test.ts` refuses a bundled provider artifact that has no
-record here.
+Two files hold the digests that are verified before any of these payloads is used. Provider
+artifacts are in `src/core/artifacts/catalog.ts` (including `kptools.wasm`, which a provider
+compiles), and the codecs the WebAssembly layer fetches itself are in `src/wasm/assets.ts`. Each
+record names the register in this directory that documents the same path, and the tests keep all
+three in step: `tests/unit/third-party-registry.test.ts` refuses a bundled artifact with no record
+here, and `tests/unit/wasm-assets.test.ts` hashes `public/wasm/` so a rebuilt module cannot leave a
+stale digest behind.

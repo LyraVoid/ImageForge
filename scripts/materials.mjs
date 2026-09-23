@@ -90,13 +90,21 @@ function readTree(directory) {
   return files;
 }
 
-/** Which test files read each variable, as tests/unit/package rather than a path. */
+/**
+ * Which test files read each variable, as tests/unit/package rather than a path.
+ *
+ * Only an environment read counts. Matching the bare name would also catch an ordinary constant
+ * that happens to start with IMAGEFORGE_, such as the identifier the wasm registry exports.
+ */
 function usage() {
   const used = new Map();
   for (const path of readTree(TESTS)) {
     const text = readFileSync(path, "utf8");
     const name = path.replace(/^tests\//, "").replace(/\.tsx?$/, "");
-    for (const variable of new Set(text.match(/IMAGEFORGE_[A-Z0-9_]+/g) ?? [])) {
+    const reads = [...text.matchAll(/process\.env(?:\.|\[\s*")(IMAGEFORGE_[A-Z0-9_]+)/g)].map(
+      (match) => match[1],
+    );
+    for (const variable of new Set(reads)) {
       if (!used.has(variable)) used.set(variable, new Set());
       used.get(variable).add(name);
     }

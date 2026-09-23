@@ -1,5 +1,6 @@
 import { WASM_PATH } from "./abi";
 import type { WasmImageModule, WasmStatus } from "./abi";
+import { IMAGEFORGE_WASM, fetchWasmAsset } from "./assets";
 import { createTypeScriptModule } from "./fallback";
 
 interface WasmExports {
@@ -50,20 +51,28 @@ function versionString(raw: number): string {
   return major + "." + minor + "." + patch;
 }
 
+/** Why the module is not in use, in the words the status reports to the diagnostics page. */
+let unavailableReason: string | undefined;
+
 async function instantiate(): Promise<WasmExports | null> {
-  if (typeof WebAssembly === "undefined" || typeof fetch === "undefined") return null;
+  if (typeof WebAssembly === "undefined") {
+    unavailableReason = "This runtime has no WebAssembly support.";
+    return null;
+  }
+  // Verified against the record before it runs, and read as bytes rather than streamed: the digest
+  // has to be seen first, and the module is a fifth of a megabyte.
+  const loaded = await fetchWasmAsset(IMAGEFORGE_WASM);
+  if (!loaded.ok) {
+    unavailableReason = loaded.reason;
+    return null;
+  }
   try {
-    const response = await fetch(WASM_PATH);
-    if (!response.ok) return null;
-    const contentType = response.headers.get("content-type") ?? "";
-    if (typeof WebAssembly.instantiateStreaming === "function" && contentType.includes("application/wasm")) {
-      const streamed = await WebAssembly.instantiateStreaming(response, {});
-      return streamed.instance.exports as unknown as WasmExports;
-    }
-    const buffer = await response.arrayBuffer();
-    const result = await WebAssembly.instantiate(buffer, {});
+    const result = await WebAssembly.instantiate(loaded.bytes as unknown as BufferSource, {});
     return result.instance.exports as unknown as WasmExports;
-  } catch {
+  } catch (error) {
+    unavailableReason =
+      "The WebAssembly module could not be instantiated: " +
+      (error instanceof Error ? error.message : String(error));
     return null;
   }
 }
@@ -236,8 +245,12 @@ let pending: Promise<WasmImageModule> | null = null;
 export function loadWasmModule(): Promise<WasmImageModule> {
   if (!pending) {
     pending = instantiate()
-      .then((exports) => (exports ? createWasmModule(exports) : createTypeScriptModule()))
-      .catch(() => createTypeScriptModule());
+      .then((exports) => (exports ? createWasmModule(exports) : createTypeScriptModule(unavailableReason)))
+      .catch((error) =>
+        createTypeScriptModule(
+          unavailableReason ?? (error instanceof Error ? error.message : String(error)),
+        ),
+      );
   }
   return pending;
 }

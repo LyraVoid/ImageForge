@@ -6,9 +6,12 @@
  * CPH2723 full OTA that the reference tool reads without complaint, so the reference implementation
  * is what decodes them: `public/wasm/bzip2.wasm` is built from bzip2 1.0.8 plus a small shim by
  * `scripts/build-bzip2-wasm.sh`, the same way `lz4.wasm` is built from liblz4. The Rust decoder
- * stays as the fallback for a browser that cannot load the module.
+ * stays as the fallback for a browser that cannot load the module, or whose bytes do not match the
+ * digest the module is registered with in ./assets.
  */
-export const BZIP2_WASM_PATH = "/wasm/bzip2.wasm";
+import { BZIP2_WASM, fetchWasmAsset } from "./assets";
+
+export const BZIP2_WASM_PATH = BZIP2_WASM.path;
 export const BZIP2_REFERENCE_VERSION = "1.0.8";
 
 interface Bzip2Exports {
@@ -32,15 +35,13 @@ export interface Bzip2Codec {
 }
 
 async function instantiateBzip2(): Promise<Bzip2Codec | null> {
-  if (typeof WebAssembly === "undefined" || typeof fetch === "undefined") return null;
+  if (typeof WebAssembly === "undefined") return null;
+  // Verified against the record before it runs, and read as bytes rather than streamed: the digest
+  // has to be seen first.
+  const loaded = await fetchWasmAsset(BZIP2_WASM);
+  if (!loaded.ok) return null;
   try {
-    const response = await fetch(BZIP2_WASM_PATH);
-    if (!response.ok) return null;
-    const contentType = response.headers.get("content-type") ?? "";
-    const result =
-      typeof WebAssembly.instantiateStreaming === "function" && contentType.includes("application/wasm")
-        ? await WebAssembly.instantiateStreaming(response, {})
-        : await WebAssembly.instantiate(await response.arrayBuffer(), {});
+    const result = await WebAssembly.instantiate(loaded.bytes as unknown as BufferSource, {});
     const exports = result.instance.exports as unknown as Bzip2Exports;
     // The module is built with the WASI reactor model, so libc has to be initialised once.
     exports._initialize?.();

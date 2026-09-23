@@ -6,10 +6,12 @@
  * reimplementation: `public/wasm/lz4.wasm` is built from the pinned v1.10.0 sources by
  * `scripts/build-lz4-wasm.sh`, the same revision magiskboot links (lz4-sys 1.11.1+lz4-1.10.0 in
  * Magisk v30.7). Compression is therefore byte for byte what `lz4 -12` produces; where the module
- * cannot be loaded, `encodeLz4` falls back to the hand written encoder in the Rust module.
+ * cannot be loaded — including when the bytes do not match the digest it is registered with in
+ * ./assets — `encodeLz4` falls back to the hand written encoder in the Rust module.
  */
+import { LZ4_WASM, fetchWasmAsset } from "./assets";
 
-export const LZ4_WASM_PATH = "/wasm/lz4.wasm";
+export const LZ4_WASM_PATH = LZ4_WASM.path;
 
 /** magiskboot passes LZ4HC_CLEVEL_MAX (12); the reference tool's `-12` is the same setting. */
 export const LZ4_HC_MAX_LEVEL = 12;
@@ -47,15 +49,13 @@ function versionString(raw: number): string {
 }
 
 async function instantiateLz4(): Promise<Lz4Codec | null> {
-  if (typeof WebAssembly === "undefined" || typeof fetch === "undefined") return null;
+  if (typeof WebAssembly === "undefined") return null;
+  // Verified against the record before it runs, and read as bytes rather than streamed: the digest
+  // has to be seen first.
+  const loaded = await fetchWasmAsset(LZ4_WASM);
+  if (!loaded.ok) return null;
   try {
-    const response = await fetch(LZ4_WASM_PATH);
-    if (!response.ok) return null;
-    const contentType = response.headers.get("content-type") ?? "";
-    const result =
-      typeof WebAssembly.instantiateStreaming === "function" && contentType.includes("application/wasm")
-        ? await WebAssembly.instantiateStreaming(response, {})
-        : await WebAssembly.instantiate(await response.arrayBuffer(), {});
+    const result = await WebAssembly.instantiate(loaded.bytes as unknown as BufferSource, {});
     const exports = result.instance.exports as unknown as Lz4Exports;
     // The module is built with the WASI reactor model, so libc has to be initialised once.
     exports._initialize?.();

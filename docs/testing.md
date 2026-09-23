@@ -35,7 +35,7 @@ fails when it is stale, and the test suite runs the check, so a table that drift
 
 | Variable | Supplies | Used by | Default when unset |
 |---|---|---|---|
-| `IMAGEFORGE_OTA_PACKAGE` | a full OTA package (the one used here is a CPH2723 full OTA, 8.2 GB) | `fixtures/erofs`, `unit/bzip2-reference.test`, `unit/package.test`, `unit/partition.test`, `unit/payload-source.test`, `unit/sparse-write.test`, `unit/splash-bmp.test`, `unit/splash.test`, `unit/super-write.test` | those tests skip |
+| `IMAGEFORGE_OTA_PACKAGE` | a full OTA package (the one used here is a CPH2723 full OTA, 8.2 GB) | `unit/bzip2-reference.test`, `unit/package.test`, `unit/partition.test`, `unit/payload-source.test`, `unit/sparse-write.test`, `unit/splash-bmp.test`, `unit/splash.test`, `unit/super-write.test` | those tests skip |
 | `IMAGEFORGE_OTA_INIT_BOOT_SHA256` | the digest the OTA's init_boot must have, an independent cross-check of the extraction | `unit/package.test` | the test skips |
 | `IMAGEFORGE_ASTER_DUMP`, `IMAGEFORGE_STOCK_IMAGE`, `IMAGEFORGE_INIT_BOOT`, `IMAGEFORGE_VENDOR_BOOT` | device dumps of the boot partitions | `fixtures/artifacts`, `integration/ramdisk.test`, `unit/diff.test`, `unit/lz4.test`, `unit/vendor-repack.test` | `.research/aster-validation/{boot,init_boot,vendor_boot}.img` |
 | `IMAGEFORGE_EROFS_DIGESTS`, `IMAGEFORGE_PAYLOAD_DIGESTS`, `IMAGEFORGE_EXT4_DIGESTS` | sha256sum output captured on the device for files inside erofs and ext4 images, and for payload partitions | `unit/partition.test`, `unit/payload-source.test` | `.research/aster-validation/erofs-product-digests.txt, erofs-payload-digests.txt, ext4-vendor_dlkm-digests.txt` |
@@ -65,6 +65,7 @@ vendor image, or the reference implementation itself.
 | splash | the real splash partition of the OTA |
 | MediaTek logo | a real logo.img from the public dataset named above |
 | the lz4 and bzip2 codecs | the reference C compiled to wasm, checked against the command line tools |
+| the WebAssembly modules themselves | their built bytes, hashed against the digest pinned in `src/wasm/assets.ts` and the `THIRD_PARTY_LICENSES/` record for the same path |
 
 ## How the material was captured
 

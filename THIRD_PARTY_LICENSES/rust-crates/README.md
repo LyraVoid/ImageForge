@@ -12,3 +12,7 @@ is pinned by version and by the checksum `crates/imageforge-wasm/Cargo.lock` rec
 
 Neither crate is patched: they are used exactly as published, and `cargo tree --manifest-path
 crates/imageforge-wasm/Cargo.toml` lists the transitive set.
+
+The module they end up in is `public/wasm/imageforge.wasm`, 181833 bytes, sha256
+`0605b7ae822158da860108de44ced14cea5d3f775dc67d30c065ccfadce19b31` (`pnpm wasm:build`). Its digest is
+pinned in `src/wasm/assets.ts`, which every loader verifies before instantiating the module.

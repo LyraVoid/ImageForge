@@ -2,6 +2,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ARTIFACT_CATALOG } from "@/core";
+import { WASM_ASSETS } from "@/wasm/assets";
 
 const root = join(process.cwd(), "THIRD_PARTY_LICENSES");
 
@@ -54,6 +55,15 @@ describe("third-party licence register", () => {
       // a commit, a tag or a release number: something that can be looked up again
       expect(readme, entry.name).toMatch(/Pinned (revision|release)|[0-9a-f]{40}|v\d+\.\d+/);
       expect(readme.length).toBeGreaterThan(500);
+    }
+  });
+
+  it("registers every WebAssembly module the wasm layer fetches itself", () => {
+    // Those modules are not provider artifacts, so they are not in the catalog above; their record
+    // is the register each one names, and it has to be one of the files read here.
+    const text = licenceText();
+    for (const asset of WASM_ASSETS) {
+      expect(text, asset.id).toContain(asset.path);
     }
   });
 });
