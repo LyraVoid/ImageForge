@@ -25,6 +25,9 @@
   --color-info: var(--info);
   --color-info-muted: var(--info-muted);
   --color-ring: var(--ring);
+  --color-brand-tile: var(--brand-tile);
+  --color-brand-cell: var(--brand-cell);
+  --color-brand-accent: var(--brand-accent);
 
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);

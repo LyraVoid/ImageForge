@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LanguageMenu } from "@/components/ui/language-menu";
 import { StepIndicator } from "@/components/ui/step-indicator";
+import { BrandMark } from "@/components/app/brand-mark";
 import { useT } from "@/i18n/use-translation";
 import { APP_VERSION } from "@/lib/app-meta";
 import { useForgeStore } from "@/stores/forge-store";
@@ -44,9 +45,7 @@ export function Header() {
     <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
       <div className="mx-auto flex w-full max-w-5xl items-center gap-4 px-4 py-2.5 sm:px-6 lg:px-8">
         <Link to="/" className="flex items-center gap-2 rounded-md px-1 py-0.5 transition-colors hover:bg-surface-muted">
-          <span className="flex size-6 items-center justify-center rounded-md border border-primary-border bg-primary-muted text-[11px] font-semibold text-primary">
-            IF
-          </span>
+          <BrandMark className="size-7" />
           <span className="text-sm font-semibold tracking-tight">ImageForge</span>
           <Badge variant="neutral" className="hidden sm:inline-flex">
             v{APP_VERSION}
