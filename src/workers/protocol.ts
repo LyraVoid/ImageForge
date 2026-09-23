@@ -389,6 +389,8 @@ export interface PatchWorkerApi {
   extractEntries(sourceId: string, entryIds: string[]): Promise<WorkspaceArtifact[]>;
   /** Keeps a file read out of a filesystem image as an artifact, so a tool can open it. */
   extractFilesystemFileAs(sourceId: string, path: string, inside?: string): Promise<WorkspaceArtifact>;
+  /** Brings back the workspace a previous visit left behind. */
+  restoreWorkspace(): Promise<WorkspaceSnapshot>;
   /** Opens an artifact as a source of its own, which is how a tool takes a zip out of an image. */
   openArtifactSource(artifactId: string): Promise<WorkspaceSourceRecord>;
   /** Reads one file out of a filesystem image. */

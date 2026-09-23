@@ -73,6 +73,7 @@ Comlink.expose({
   extractEntries: (sourceId: string, entryIds: string[]) => session.extractEntries(sourceId, entryIds),
   extractFilesystemFileAs: (sourceId: string, path: string, inside?: string) =>
     session.extractFilesystemFileAs(sourceId, path, inside),
+  restoreWorkspace: () => session.restoreWorkspace(),
   openArtifactSource: (artifactId: string) => session.openArtifactSource(artifactId),
   readFilesystemFile: (sourceId: string, path: string, inside?: string) =>
     session.readFilesystemFile(sourceId, path, inside),

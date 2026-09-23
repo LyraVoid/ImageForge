@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { Outlet, useLocation } from "react-router";
+import { useForgeStore } from "@/stores/forge-store";
 import { StepIndicator } from "@/components/ui/step-indicator";
 import { useT } from "@/i18n/use-translation";
 import { Header } from "./Header";
@@ -11,6 +13,12 @@ export function AppShell() {
   const location = useLocation();
   const steps = useWorkflowSteps();
   const stepIndex = stepIndexForPath(location.pathname);
+  const restoreWorkspace = useForgeStore((state) => state.restoreWorkspace);
+
+  // what a previous visit built is still here: the artifacts, and a source small enough to keep
+  useEffect(() => {
+    void restoreWorkspace();
+  }, [restoreWorkspace]);
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">

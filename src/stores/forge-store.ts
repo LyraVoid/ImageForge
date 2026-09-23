@@ -44,6 +44,9 @@ export interface SplashReplacement {
 /** The longest side of a preview the editor builds in the page. */
 const SPLASH_PREVIEW_MAX = 240;
 
+/** The restore runs once per session, the first time the shell mounts. */
+let restored = false;
+
 /** The task progress subscription is made once per session, the first time a file is opened. */
 let progressSubscribed = false;
 import { mergePlanOptions } from "./plan-options";
@@ -177,6 +180,8 @@ interface ForgeState {
   /** The last comparison, and what it compared. */
   diff: DiffSummary | null;
   diffArtifactId: string | null;
+  /** Brings back what a previous visit left in the workspace. Runs once per session. */
+  restoreWorkspace: () => Promise<void>;
   /** Compares the open source with an artifact of the workspace. */
   compareWithArtifact: (artifactId: string) => Promise<DiffSummary | null>;
   clearDiff: () => void;
@@ -749,6 +754,24 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     } catch (error) {
       set({ error: toImageForgeError(error).toJSON() });
       return null;
+    }
+  },
+
+  restoreWorkspace: async () => {
+    if (restored) return;
+    restored = true;
+    try {
+      const snapshot = await getClient().restoreWorkspace();
+      const first = snapshot.sources[0];
+      set({
+        artifacts: snapshot.artifacts,
+        ...(first ? { source: first } : {}),
+        ...(first ? { stage: "empty" as const } : {}),
+        error: null,
+      });
+    } catch (error) {
+      // a workspace that cannot be read is not a reason for the tools to stop working
+      console.warn("imageforge: could not restore the workspace", error);
     }
   },
 

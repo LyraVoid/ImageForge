@@ -1,4 +1,13 @@
 import { WorkerError } from "../core/errors";
+import {
+  KEEP_ARTIFACT_BYTES,
+  clearWorkspace,
+  forgetArtifact,
+  forgetSource,
+  loadWorkspace,
+  saveArtifact,
+  saveSource,
+} from "./persistence";
 import { sha256Hex } from "../core/hash";
 import { buildZip, parseImage } from "../core/image";
 import { animationFrames, packAnimation, readAnimationZip } from "../core/animation";
@@ -120,8 +129,12 @@ interface SessionState {
 
 interface HeldSource {
   record: WorkspaceSourceRecord;
-  /** Ranged access to the file the user opened. An 8 GiB package stays on disk. */
-  source: ByteSource;
+  /**
+   * Ranged access to the file the user opened. An 8 GiB package stays on disk. Null for a source
+   * restored from a previous session whose bytes were too big to keep: the file has to be attached
+   * again, and everything derived from it is still in the workspace.
+   */
+  source: ByteSource | null;
 }
 
 interface HeldArtifact {
@@ -165,6 +178,8 @@ export class PatchWorkerSession implements PatchWorkerApi {
   /** The workspace is metadata plus bytes; nothing here is ever sent to the main thread unasked. */
   private workspaceState: Workspace = emptyWorkspace();
   private readonly sources = new Map<string, HeldSource>();
+  /** The Blob a source was opened from, while it is small enough to keep between visits. */
+  private readonly sourceBlobs = new Map<string, Blob | null>();
   private readonly artifacts = new Map<string, HeldArtifact>();
   private nextSourceId = 1;
 
@@ -195,6 +210,9 @@ export class PatchWorkerSession implements PatchWorkerApi {
       detected,
     };
     this.nextSourceId += 1;
+    const keepable = file instanceof Blob ? file : new Blob([file]);
+    this.sourceBlobs.set(record.id, keepable);
+    void saveSource(record, keepable);
     this.sources.set(record.id, { record, source });
     this.workspaceState = addSource(this.workspaceState, record);
     return record;
@@ -242,6 +260,12 @@ export class PatchWorkerSession implements PatchWorkerApi {
   async readArtifact(id: string, offset = 0, length?: number): Promise<ArrayBuffer> {
     const held = this.sources.get(id);
     if (held) {
+      if (held.source === null) {
+        throw new WorkerError(
+          "Source " + id + " came back from an earlier visit and its file was too big to keep.",
+          "Attach that file again to work with it; everything built from it is still here.",
+        );
+      }
       const size = held.source.size;
       const start = Math.max(0, Math.min(offset, size));
       const take = length === undefined ? size - start : Math.max(0, length);
@@ -282,6 +306,7 @@ export class PatchWorkerSession implements PatchWorkerApi {
       detected,
     };
     this.artifacts.set(record.id, { record, bytes, blob: null });
+    void saveArtifact(record, bytes.length <= KEEP_ARTIFACT_BYTES ? new Blob([bytes as BlobPart]) : null);
     this.workspaceState = addArtifact(this.workspaceState, record);
     return record;
   }
@@ -308,6 +333,7 @@ export class PatchWorkerSession implements PatchWorkerApi {
       detected,
     };
     this.artifacts.set(record.id, { record, bytes: null, blob });
+    void saveArtifact(record, blob);
     this.workspaceState = addArtifact(this.workspaceState, record);
     return record;
   }
@@ -325,7 +351,15 @@ export class PatchWorkerSession implements PatchWorkerApi {
   async digestArtifact(id: string): Promise<string> {
     // A source is digested by reading it; only images are ever digested this way.
     const held = this.sources.get(id);
-    if (held) return sha256Hex(await readAll(held.source, MAX_ANALYZABLE_BYTES));
+    if (held) {
+      if (held.source === null) {
+        throw new WorkerError(
+          "Source " + id + " came back from an earlier visit and its file was too big to keep.",
+          "Attach that file again to work with it; everything built from it is still here.",
+        );
+      }
+      return sha256Hex(await readAll(held.source, MAX_ANALYZABLE_BYTES));
+    }
     const artifact = this.artifacts.get(id);
     if (artifact?.blob) {
       throw new WorkerError(
@@ -1230,19 +1264,76 @@ export class PatchWorkerSession implements PatchWorkerApi {
   async closeSource(sourceId: string): Promise<void> {
     this.requireSource(sourceId);
     for (const artifact of this.workspaceState.artifacts) {
-      if (artifact.sourceId === sourceId) this.artifacts.delete(artifact.id);
+      if (artifact.sourceId === sourceId) {
+        this.artifacts.delete(artifact.id);
+        void forgetArtifact(artifact.id);
+      }
     }
     this.sources.delete(sourceId);
+    this.sourceBlobs.delete(sourceId);
+    void forgetSource(sourceId);
     this.workspaceState = removeSource(this.workspaceState, sourceId);
     if (this.state?.sourceId === sourceId) this.state = null;
   }
 
-  private requireSource(sourceId: string): HeldSource {
+  /**
+   * Brings back what a previous visit built: the artifact records with whatever bytes were small
+   * enough to keep, and the sources. A source whose file was too big to copy comes back as a record
+   * that asks to be attached again, and everything derived from it is still here.
+   */
+  async restoreWorkspace(): Promise<WorkspaceSnapshot> {
+    const stored = await loadWorkspace();
+    let highestSource = 0;
+    for (const entry of stored.sources) {
+      const record: WorkspaceSourceRecord = {
+        id: entry.id,
+        name: entry.name,
+        sizeBytes: entry.sizeBytes,
+        kind: entry.kind,
+        detected: entry.detected,
+      };
+      this.sources.set(entry.id, { record, source: entry.bytes ? blobSource(entry.bytes) : null });
+      this.workspaceState = addSource(this.workspaceState, record);
+      if (entry.bytes) this.sourceBlobs.set(entry.id, entry.bytes);
+      const parsed = Number(entry.id.replace(/^source-/, ""));
+      if (Number.isFinite(parsed)) highestSource = Math.max(highestSource, parsed + 1);
+    }
+    this.nextSourceId = Math.max(this.nextSourceId, highestSource);
+
+    for (const entry of stored.artifacts) {
+      const record: WorkspaceArtifact = {
+        id: entry.id,
+        sourceId: entry.sourceId,
+        parentId: entry.parentId,
+        tool: entry.tool,
+        name: entry.name,
+        params: entry.params,
+        sizeBytes: entry.sizeBytes,
+        kind: entry.kind,
+        detected: entry.detected,
+      };
+      this.artifacts.set(entry.id, {
+        record,
+        bytes: entry.bytes ? null : new Uint8Array(0),
+        blob: entry.bytes ?? null,
+      });
+      this.workspaceState = addArtifact(this.workspaceState, record);
+    }
+    return this.workspaceState;
+  }
+
+  private requireSource(sourceId: string): HeldSource & { source: ByteSource } {
     const source = this.sources.get(sourceId);
     if (!source) {
       throw new WorkerError("Source " + sourceId + " is not open.", "Open the file again.");
     }
-    return source;
+    if (source.source === null) {
+      throw new WorkerError(
+        "Source " + sourceId + " came back from an earlier visit and its file was too big to keep.",
+        "Attach that file again to work with it; everything built from it is still here.",
+      );
+    }
+    return source as HeldSource & { source: ByteSource };
   }
 
   private bytesOf(id: string): Uint8Array {
@@ -1307,6 +1398,7 @@ export class PatchWorkerSession implements PatchWorkerApi {
     this.controller?.abort();
     this.controller = null;
     this.state = null;
+    void clearWorkspace();
     // One reset for the whole session: the workspace is what the patcher reads its image from.
     this.workspaceState = emptyWorkspace();
     this.sources.clear();
