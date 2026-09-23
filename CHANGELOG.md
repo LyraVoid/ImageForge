@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0
 
 A round of adding managers, and of making the register behind them hold up.
 
@@ -36,6 +36,15 @@ A round of adding managers, and of making the register behind them hold up.
   `scripts/scan-embedded-elf.py`, validated against a manager whose archives are published, and each
   module is filed under the KMI its own `vermagic` names — which the provider checks again at patch
   time.
+
+**Before publishing**
+
+- `NOTICE` was wrong: it still listed Magisk and KernelSU as "referenced but not bundled" after both
+  had become bundled, and it did not mention the forks. It now lists every bundled component, its
+  licence and the fact that none of them is affiliated with this project.
+- `CONTRIBUTING.md` (how to work here, and the checklist for adding a manager or an artifact) and
+  `SECURITY.md` (what is in scope, and what to report upstream instead) exist now.
+- The readme opens with what flashing a patched image can cost you, and the version is 0.2.0.
 
 **Corrections**
 

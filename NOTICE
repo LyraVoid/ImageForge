@@ -19,14 +19,39 @@ Third-party components
 The distributed npm dependencies keep their own licenses; their license texts ship inside
 node_modules and are not modified by this project.
 
-ImageForge bundles the following upstream artifacts, each recorded with its pinned
-revision and SHA-256 digest in THIRD_PARTY_LICENSES/:
+ImageForge bundles the upstream artifacts listed below. Each one is **unmodified**, its SHA-256
+digest is pinned in the registry and verified before use, and its upstream revision, license text
+and reproduction steps are recorded in THIRD_PARTY_LICENSES/ under the project it comes from.
 
-  * KernelPatch (GPL-2.0-or-later) - public/wasm/kptools.wasm, compiled from
-    revision 72a904c412754e25f54353c30f31f5c884ed0673
-  * APatch (GPL-3.0-or-later) - public/artifacts/apatch/kpimg, taken from release 11224
-  * liblz4 1.10.0 (BSD-2-Clause) - public/wasm/lz4.wasm, the reference LZ4 codec
-  * bzip2 1.0.8 (BSD-like) - public/wasm/bzip2.wasm, the reference bzip2 decompressor
+Root managers and their ramdisk payloads, all GPL:
+
+  * Magisk         - https://github.com/topjohnwu/Magisk          (GPL-3.0)
+  * WeaveMask      - https://github.com/Seyud/WeaveMask           (GPL-3.0, a fork of Magisk)
+  * MagisKube      - https://github.com/SunRayEx/Magisk-Metro     (GPL-3.0, a fork of Magisk)
+  * KernelSU       - https://github.com/tiann/KernelSU            (wrapper GPL-3.0-or-later,
+                                                                   kernel modules GPL-2.0-only)
+  * SukiSU-Ultra   - https://github.com/SukiSU-Ultra/SukiSU-Ultra (same split)
+  * ReSukiSU       - https://github.com/ReSukiSU/ReSukiSU         (same split)
+  * YukiSU         - https://github.com/Rouyashiki/YukiSU         (same split)
+  * KowSU          - https://github.com/zaominn/KowSU             (same split, built from
+                                                                   KOWX712/KernelSU)
+  * APatch         - https://github.com/bmax121/APatch            (GPL-3.0-or-later)
+  * KernelPatch    - https://github.com/bmax121/KernelPatch       (GPL-2.0-or-later)
+  * KernelPatch-Aster - https://github.com/LyraVoid/KernelPatch-Aster (GPL-2.0-or-later)
+  * LyraVoid/KernelPatch - https://github.com/LyraVoid/KernelPatch    (GPL-2.0-or-later, the
+                                                                       branch FolkPatch ships)
+
+The components whose upstream is GPL-3.0-or-later or GPL-2.0-or-later are bundled as separate
+programs and are compatible with this project's license. The KernelSU family's kernel modules are
+GPL-2.0-only, which **cannot** be combined with AGPL-3.0-or-later: they are therefore neither
+linked nor merged into this project. They are redistributed exactly as their projects distribute
+them — as separate, unmodified programs, each under its own license, each with the upstream
+revision and the corresponding source named in THIRD_PARTY_LICENSES/.
+
+Codecs and libraries:
+
+  * liblz4 1.10.0  (BSD-2-Clause) - public/wasm/lz4.wasm, the reference LZ4 codec
+  * bzip2 1.0.8    (BSD-like)    - public/wasm/bzip2.wasm, the reference bzip2 decompressor
 
 Our own WebAssembly module (public/wasm/imageforge.wasm) is compiled from crates/imageforge-wasm
 and links two permissively licensed Rust crates:
@@ -36,12 +61,17 @@ and links two permissively licensed Rust crates:
 
 See THIRD_PARTY_LICENSES/rust-crates/README.md for details.
 
-The following upstream projects are referenced but not bundled:
+Nothing else is bundled: no other third-party code, binary or dataset is part of this repository
+or of the produced site.
 
-  * Magisk       - https://github.com/topjohnwu/Magisk
-  * KernelSU     - https://github.com/tiann/KernelSU
-  * APatch       - https://github.com/bmax121/APatch
-  * KernelPatch  - https://github.com/bmax121/KernelPatch
+------------------------------------------------------------------------------
+Not affiliated
+------------------------------------------------------------------------------
+
+ImageForge is an independent project. It is not affiliated with, endorsed by or sponsored by any of
+the projects named above, and their names, package identifiers and marks belong to their respective
+authors. The names are used only to say which upstream release a bundled artifact came from and
+which manager app a produced image requires.
 
 Whenever code, binaries or artifacts from any of these projects are added to this
 repository, the original LICENSE file, copyright notices and the exact upstream revision

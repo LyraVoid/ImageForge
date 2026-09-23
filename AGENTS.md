@@ -1,16 +1,11 @@
-# Working notes for agents
+# Working agreements
 
-Read the local working memory before changing anything. It is deliberately **not committed**
-(`.research/` is ignored) because it contains machine specific paths and material:
-
-* `.research/docs.md` — the phase one specification these sources implement.
-* `.research/memory/` — current state, architecture invariants, decisions and their reasons,
-  known pitfalls (including mistakes already made), artifact digests and provenance,
-  environment quirks, and next steps.
+How this repository is changed, whether by a person or by a tool. The rules below are the short
+version of the **Hard rules** in [docs/architecture.md](docs/architecture.md) and of the testing
+conventions in [docs/testing.md](docs/testing.md); [CONTRIBUTING.md](CONTRIBUTING.md) says how to
+work with them in practice.
 
 ## Rules this repository follows
-
-The full list is in `docs/architecture.md`; the short version:
 
 * Providers never parse boot containers. The Image Engine hands them the sections they need and
   repacks the container afterwards.

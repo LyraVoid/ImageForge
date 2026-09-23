@@ -11,6 +11,12 @@ repacking and hashing all run inside a Web Worker with WebAssembly assist.
 User guide: [docs/usage.md](docs/usage.md) — which image a method needs, what the checklist means,
 and what to do when it goes wrong.
 
+> **Read this before you flash anything.** ImageForge never touches a device: it hands you a file, and
+> what you do with it is yours. Writing a patched image to the wrong partition, or one built for a
+> different device or kernel, can leave a phone unable to boot. Keep a stock copy of every partition
+> you patch, know how to restore it with fastboot, and read the checklist on the result page — it
+> names the partition, the manager app the image needs and the fact that the AVB signature is gone.
+
 ## Tools
 
 The start page is a set of tools; the patcher is the first one, and the only one with steps.
@@ -108,7 +114,7 @@ the interface only ever holds metadata.
 ImageForge does **not** flash devices, does not talk to fastboot or ADB, and never uploads
 an image to a server.
 
-## Status (v0.1)
+## Status (v0.2)
 
 Four providers are implemented and self-verifying. Three of them cover a family of managers, because
 managers fork each other and a fork's payloads are built against its own signing certificate, so the
@@ -341,5 +347,10 @@ Every produced image is verified before it is offered for download:
 
 ImageForge is licensed under **AGPL-3.0-or-later**. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
-Third-party code keeps its own license and is never re-licensed. See
-[THIRD_PARTY_LICENSES/](THIRD_PARTY_LICENSES/README.md).
+Third-party code keeps its own license and is never re-licensed, and the projects whose releases are
+bundled are named for provenance only: ImageForge is an independent project and is **not affiliated
+with, endorsed by or sponsored by** Magisk, KernelSU, APatch, KernelPatch or any of the manager
+projects listed in [NOTICE](NOTICE). See [THIRD_PARTY_LICENSES/](THIRD_PARTY_LICENSES/README.md) for
+what is bundled, under which license and from which pinned revision.
+
+Found a security problem? [SECURITY.md](SECURITY.md) says how to report it.
