@@ -40,6 +40,7 @@ export function UnpackPage() {
   const [deviceSize, setDeviceSize] = useState("");
   const [alignment, setAlignment] = useState(1024 * 1024);
   const [packing, setPacking] = useState(false);
+  const [metadataOnly, setMetadataOnly] = useState(false);
   const imageArtifacts = artifacts.filter((artifact) => /\.img$/i.test(artifact.name));
   const sendToPatcher = useForgeStore((state) => state.sendToPatcher);
   const [busy, setBusy] = useState<string | null>(null);
@@ -316,6 +317,15 @@ export function UnpackPage() {
                       <option value={1024 * 1024}>{t("super.alignment.mib")}</option>
                       <option value={4096}>{t("super.alignment.block")}</option>
                     </select>
+                    <label className="flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        aria-label={t("super.metadataOnly")}
+                        checked={metadataOnly}
+                        onChange={() => setMetadataOnly(!metadataOnly)}
+                      />
+                      {t("super.metadataOnly")}
+                    </label>
                     <Button
                       variant="primary"
                       size="sm"
@@ -326,6 +336,7 @@ export function UnpackPage() {
                           artifactIds: selected,
                           deviceSize: Number(deviceSize) > 0 ? Number(deviceSize) : undefined,
                           alignment,
+                          metadataOnly,
                         });
                         setPacking(false);
                       }}

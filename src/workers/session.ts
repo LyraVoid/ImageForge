@@ -823,17 +823,19 @@ export class PatchWorkerSession implements PatchWorkerApi {
       metadataSlots: request.metadataSlots,
       alignment: request.alignment,
       groups: request.groups,
+      metadataOnly: request.metadataOnly,
     });
     return this.registerStreamedArtifact(
       {
         sourceId: firstSourceId,
         parentId: request.partitions[0].artifactId,
         tool: "super",
-        name: "super.img",
+        name: request.metadataOnly ? "super_empty.img" : "super.img",
         params: {
           super: "true",
           partitions: String(inputs.length),
           alignment: String(request.alignment ?? 1024 * 1024),
+          ...(request.metadataOnly ? { metadataOnly: "true" } : {}),
         },
       },
       stream,

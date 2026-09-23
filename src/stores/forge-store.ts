@@ -141,6 +141,7 @@ interface ForgeState {
     artifactIds: string[];
     deviceSize?: number;
     alignment?: number;
+    metadataOnly?: boolean;
   }) => Promise<WorkspaceArtifact | null>;
   /** Points the tools at one entry inside the opened package, or at the file itself (null). */
   openInside: (entryId: string | null) => void;
@@ -616,6 +617,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
         partitions: artifacts.map((entry) => ({ artifactId: entry.id })),
         deviceSize: request.deviceSize,
         alignment: request.alignment,
+        metadataOnly: request.metadataOnly,
         groups: [{ name: "main", maximumSize: request.deviceSize ?? 0 }],
       });
       set({ artifacts: [...get().artifacts, artifact], error: null });

@@ -154,6 +154,7 @@ export const zhHans: Messages = {
   "super.alignment.block": "块大小",
   "super.pack": "打包 super",
 
+  "super.metadataOnly": "仅元数据（super_empty）",
   "dropzone.title": "把 Android 镜像拖到这里",
   "dropzone.hint": "或点击选择文件",
   "dropzone.busy": "正在分析镜像",

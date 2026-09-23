@@ -154,6 +154,7 @@ export const ja: Messages = {
   "super.alignment.block": "ブロックサイズ",
   "super.pack": "super を作る",
 
+  "super.metadataOnly": "メタデータのみ（super_empty）",
   "dropzone.title": "Android イメージをここにドロップ",
   "dropzone.hint": "またはクリックしてファイルを選択",
   "dropzone.busy": "イメージを分析しています",

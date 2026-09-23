@@ -154,6 +154,7 @@ export const zhHant: Messages = {
   "super.alignment.block": "區塊大小",
   "super.pack": "打包 super",
 
+  "super.metadataOnly": "僅中繼資料（super_empty）",
   "dropzone.title": "把 Android 映像拖到這裡",
   "dropzone.hint": "或點擊選擇檔案",
   "dropzone.busy": "正在分析映像",

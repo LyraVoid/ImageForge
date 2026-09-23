@@ -49,7 +49,7 @@ size cannot exist in a browser. The page marks such an artifact as blob-backed.
 them can be laid out as a super image the way AOSP's lpmake lays them out (tick them on the unpack
 page and pack) — the tests compare the writer's output with the real tool byte for byte, and lpdump and
 lpunpack read it back. A super image can then be turned sparse with the same one click that works on
-any partition. An extracted partition can be rewritten as an Android sparse image from
+any partition, and a metadata-only switch writes the compact super_empty image fastboot takes. An extracted partition can be rewritten as an Android sparse image from
 the unpack page, and the chunking matches AOSP's own writer: the image it produces is byte for byte
 what img2simg writes for the same input, verified against the real tool and against a 15 MB partition
 taken from an OTA. The result streams into a blob, so a 3 GiB partition can be packed without being

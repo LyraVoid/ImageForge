@@ -157,6 +157,45 @@ describe.skipIf(!hasTools)("against the AOSP tools", () => {
     expect(await sha256Hex(ours)).toBe(await sha256Hex(reference));
   }, 300000);
 
+  it("writes the compact super_empty image lpmake writes", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "imageforge-super-empty-"));
+    const referencePath = join(directory, "empty.img");
+    // no --image: the partitions are declared by size, and lpmake writes metadata only
+    execFileSync(LPMAKE, [
+      "--device-size", String(8 * 1024 * 1024),
+      "--metadata-size", "65536",
+      "--metadata-slots", "2",
+      "--group", "main:" + String(8 * 1024 * 1024),
+      "--partition", "system:readonly:1048576:main",
+      "--partition", "vendor:readonly:2097152:main",
+      "--output", referencePath,
+    ]);
+    const reference = new Uint8Array(readFileSync(referencePath));
+    expect(reference.length).toBe(4096 + 128 + 312);
+
+    const ours = await packSuper(
+      [
+        { name: "system", sizeBytes: 1024 * 1024, group: "main" },
+        { name: "vendor", sizeBytes: 2 * 1024 * 1024, group: "main" },
+      ],
+      {
+        deviceSize: 8 * 1024 * 1024,
+        groups: [{ name: "main", maximumSize: 8 * 1024 * 1024 }],
+        metadataOnly: true,
+      },
+    );
+    expect(ours.length).toBe(reference.length);
+    expect(await sha256Hex(ours)).toBe(await sha256Hex(reference));
+
+    const oursPath = join(directory, "ours-empty.img");
+    writeFileSync(oursPath, ours);
+    const dump = execFileSync("lpdump", [oursPath], { encoding: "utf8" });
+    expect(dump).toContain("Name: system");
+    expect(dump).toContain("Name: vendor");
+    // the metadata still describes a full device, which is the point of the compact form
+    expect(dump).toContain("Size: 8388608 bytes");
+  }, 120000);
+
   it.skipIf(!hasOta)("packs real OTA partitions and lpunpack gets them back", async () => {
     const directory = mkdtempSync(join(tmpdir(), "imageforge-super-real-"));
     const zipSource = fileSource(OTA_PACKAGE);

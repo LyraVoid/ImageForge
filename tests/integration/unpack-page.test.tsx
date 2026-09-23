@@ -82,6 +82,16 @@ describe("the unpack tool", () => {
     expect(superArtifact?.params?.super).toBe("true");
     // the raw image is 16 KiB, so the super image holds it plus the metadata area
     expect(superArtifact?.sizeBytes).toBeGreaterThan(16 * 1024);
+
+    // with the metadata-only switch it writes the compact super_empty image instead
+    fireEvent.click(screen.getByRole("checkbox", { name: /metadata only/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Pack super image/ }));
+    expect((await screen.findAllByText("super_empty.img")).length).toBeGreaterThan(0);
+    const empty = store().artifacts.find((artifact) => artifact.name === "super_empty.img");
+    expect(empty?.params?.metadataOnly).toBe("true");
+    // the geometry and one copy of the metadata, nothing else: a few kilobytes rather than megabytes
+    expect(empty?.sizeBytes).toBeGreaterThan(4096);
+    expect(empty?.sizeBytes).toBeLessThan(8192);
   }, 120000);
 
   it("points a package at the extract tool", async () => {

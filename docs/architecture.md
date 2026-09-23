@@ -243,6 +243,13 @@ for each slot and its backup from 0x3000 on, and the partitions from the first l
 with the geometry's and the header's SHA-256 checksums computed over exactly the ranges AOSP computes
 them over — the 52 byte geometry struct, and the header up to the header_size field it declares.
 
+The same writer also produces the compact form, which AOSP's tooling calls a super_empty image: when
+it is given partition sizes without images, lpmake writes the 52 byte geometry struct at offset 0,
+zeros up to 4096, and one copy of the header and its tables — 4096 + 128 + 312 bytes for two partitions,
+and nothing else. The metadata inside still describes the whole device, which is the point: fastboot
+takes that file and the partitions are created from it. This project's writer matches it byte for byte
+too, which the tests check against the tool.
+
 That last detail was one of two bugs the lpmake oracle found here. The reader in lp.ts had been written
 against a fixture this project made, and the fixture was too forgiving: it wrote the geometry at offset
 0 as well as at LP_PARTITION_RESERVED_BYTES, and it wrote 256 byte headers. So the reader looked for the

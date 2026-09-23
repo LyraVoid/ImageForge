@@ -157,6 +157,7 @@ export const en = {
   "super.alignment.block": "block size",
   "super.pack": "Pack super image",
 
+  "super.metadataOnly": "metadata only (super_empty)",
   "dropzone.title": "Drop an Android image here",
   "dropzone.hint": "or click to browse files",
   "dropzone.busy": "Analyzing image",

@@ -31,7 +31,9 @@ const ATTRIBUTE_READONLY = 1;
 
 export interface SuperPartitionInput {
   name: string;
-  source: ByteSource;
+  /** The partition's bytes. A partition can also be declared with just a size, as a super_empty does. */
+  source?: ByteSource;
+  sizeBytes?: number;
   /** Which group it belongs to; "default" unless a group is given. */
   group?: string;
   writable?: boolean;
@@ -46,6 +48,13 @@ export interface SuperPackOptions {
   alignment?: number;
   groups?: { name: string; maximumSize: number }[];
   superName?: string;
+  /**
+   * Write the metadata by itself, the compact form AOSP's tooling calls a super_empty image: no
+   * partition data at all, just the geometry at offset 0 and the metadata at 4096. That is what
+   * fastboot takes when a device's dynamic partitions are set up, and lpmake produces it when it is
+   * given partition sizes without images.
+   */
+  metadataOnly?: boolean;
 }
 
 interface Placed {
@@ -54,7 +63,8 @@ interface Placed {
   groupIndex: number;
   sizeBytes: number;
   startSector: number;
-  source: ByteSource;
+  /** Absent for a partition that is only declared, as in a super_empty image. */
+  source?: ByteSource;
 }
 
 type Piece = { kind: "zeros"; length: number } | { kind: "source"; source: ByteSource; offset: number; length: number };
@@ -111,10 +121,12 @@ export async function packSuperStream(
   const groupNames = ["default", ...(options.groups ?? []).map((group) => group.name).filter((name) => name !== "default")];
   for (const name of groupNames.slice(1)) checkName(name, "group");
 
+  const bytesOfPartition = (partition: SuperPartitionInput): number =>
+    partition.source?.size ?? partition.sizeBytes ?? 0;
   const placed: Placed[] = [];
   let cursor = firstLogicalSector * SECTOR_SIZE;
   for (const partition of partitions) {
-    const sizeBytes = alignUp(partition.source.size, alignment);
+    const sizeBytes = alignUp(bytesOfPartition(partition), alignment);
     placed.push({
       name: partition.name,
       attributes: partition.writable ? 0 : ATTRIBUTE_READONLY,
@@ -220,6 +232,22 @@ export async function packSuperStream(
   metadata.set(header, 0);
   metadata.set(tables, HEADER_SIZE);
 
+  // the compact form: the bare 52 byte geometry struct at offset 0, zeros up to 4096, then the
+  // header and its tables and nothing else — which is what lpmake writes for a super_empty image
+  if (options.metadataOnly) {
+    const metadataBytes = new Uint8Array(HEADER_SIZE + tablesSize);
+    metadataBytes.set(header, 0);
+    metadataBytes.set(tables, HEADER_SIZE);
+    return new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(geometry.subarray(0, GEOMETRY_STRUCT_SIZE));
+        controller.enqueue(new Uint8Array(FRONT_PADDING - GEOMETRY_STRUCT_SIZE));
+        controller.enqueue(metadataBytes);
+        controller.close();
+      },
+    });
+  }
+
   // the pieces of the image, in order
   const pieces: Piece[] = [{ kind: "zeros", length: FRONT_PADDING }];
   pieces.push({ kind: "source", source: bytesOf(geometry), offset: 0, length: geometry.length });
@@ -236,9 +264,13 @@ export async function packSuperStream(
     written = firstLogicalSector * SECTOR_SIZE;
   }
   for (const partition of placed) {
-    pieces.push({ kind: "source", source: partition.source, offset: 0, length: partition.source.size });
-    const padding = partition.sizeBytes - partition.source.size;
-    if (padding > 0) pieces.push({ kind: "zeros", length: padding });
+    if (partition.source) {
+      pieces.push({ kind: "source", source: partition.source, offset: 0, length: partition.source.size });
+      const padding = partition.sizeBytes - partition.source.size;
+      if (padding > 0) pieces.push({ kind: "zeros", length: padding });
+    } else {
+      pieces.push({ kind: "zeros", length: partition.sizeBytes });
+    }
     written += partition.sizeBytes;
   }
   if (written < deviceSize) pieces.push({ kind: "zeros", length: deviceSize - written });

@@ -198,6 +198,11 @@ AOSP's default, and the block size fits a real partition exactly without padding
 appears as an artifact like any other, and one click turns it into a sparse image, which is what
 lpmake -S produces.
 
+**metadata only (super_empty)** writes the compact form instead: the geometry at offset 0 and one copy
+of the metadata, and nothing else — a few kilobytes, describing the whole device. That is the file
+AOSP's tooling calls a super_empty image, and it is what fastboot takes when a device's dynamic
+partitions are being set up.
+
 Two notes on sizes: a partition that is not a whole number of blocks is padded up to the alignment (a
 real partition is block aligned, so this only affects hand-made files), and the device size defaults to
 what the parts need. The reserved area and the alignment are options.

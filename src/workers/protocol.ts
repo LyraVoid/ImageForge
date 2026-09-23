@@ -169,6 +169,8 @@ export interface SuperPackRequest {
   metadataSlots?: number;
   alignment?: number;
   groups?: { name: string; maximumSize: number }[];
+  /** Write only the metadata, the compact super_empty image fastboot takes. */
+  metadataOnly?: boolean;
 }
 
 export interface SplashReplacementRequest {
