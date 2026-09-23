@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { WorkerError } from "@/core/errors";
 import { sha256Hex } from "@/core/hash";
 import { createPatchWorkerClient } from "@/workers/client";
+import { packAnimation, readAnimationZip } from "@/core/animation";
 import { bytesSource } from "@/core/package";
 import { logicalPartitionSource, parseSparse, parseSuper, unpackSparse } from "@/core/partition";
 import { PatchWorkerSession } from "@/workers/session";
@@ -276,6 +277,51 @@ describe("PatchWorkerSession", () => {
     const sparseParsed = await parseSparse(bytesSource(sparseBytes));
     expect(sparseParsed.header.totalBlocks).toBe(Math.ceil(bytes.length / 4096));
     expect(await sha256Hex(await unpackSparse(bytesSource(sparseBytes), sparseParsed))).toBe(await sha256Hex(bytes));
+
+    await session.closeSource(source.id);
+  });
+
+  it("reads a boot animation, replaces a frame and keeps the rest", async () => {
+    const session = new PatchWorkerSession();
+    const frameA = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 1, 1, 1]);
+    const frameB = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 2, 2, 2, 2]);
+    const desc = "8 4 24\np 1 0 part0\n";
+    const zip = await packAnimation([
+      { name: "desc.txt", data: new TextEncoder().encode(desc) },
+      { name: "part0/", data: new Uint8Array(0) },
+      { name: "part0/a.png", data: frameA },
+      { name: "part0/b.png", data: frameB },
+    ]);
+    const source = await session.openSource(toArrayBuffer(zip), "bootanimation.zip");
+
+    const summary = await session.inspectAnimation(source.id);
+    expect(summary.dialect).toBe("standard");
+    expect([summary.width, summary.height, summary.fps]).toEqual([8, 4, 24]);
+    expect(summary.parts.map((part) => [part.path, part.frames.length])).toEqual([["part0", 2]]);
+    expect(summary.otherEntries).toEqual(["part0/"]);
+
+    const bytes = new Uint8Array(await session.readAnimationFrame(source.id, undefined, "part0/a.png"));
+    expect(await sha256Hex(bytes)).toBe(await sha256Hex(frameA));
+
+    // replace the second frame and change the frame rate, then check what the packer claims
+    const replacement = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 9, 9, 9, 9]);
+    const artifact = await session.packAnimationArchive(source.id, undefined, {
+      desc: "8 4 30\np 1 0 part0\n",
+      replacements: [{ name: "part0/b.png", data: toArrayBuffer(replacement) }],
+    });
+    expect(artifact.name).toBe("bootanimation.zip");
+    expect(artifact.params?.verified).toBe("entries-intact");
+    expect(artifact.params?.replaced).toBe("1");
+    expect(artifact.params?.descRewritten).toBe("true");
+
+    // the artifact is read back through the same reader the tool uses
+    const packedBytes = new Uint8Array(await session.readArtifact(artifact.id, 0, artifact.sizeBytes));
+    const again = await readAnimationZip(bytesSource(packedBytes));
+    expect(again.animation.fps).toBe(30);
+    const frameOf = (name: string): Uint8Array =>
+      again.entries.find((entry) => entry.name === name)?.data as Uint8Array;
+    expect(await sha256Hex(frameOf("part0/a.png"))).toBe(await sha256Hex(frameA));
+    expect(await sha256Hex(frameOf("part0/b.png"))).toBe(await sha256Hex(replacement));
 
     await session.closeSource(source.id);
   });

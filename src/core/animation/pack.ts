@@ -16,6 +16,9 @@ export interface AnimationEntry {
   name: string;
   /** Absent for a directory entry, which vendor archives carry. */
   data?: Uint8Array;
+  /** What the archive says about the entry, for the interface to show. */
+  sizeBytes?: number;
+  compressedSize?: number;
 }
 
 export interface AnimationArchive {
@@ -44,6 +47,8 @@ export async function readAnimationZip(source: ByteSource): Promise<AnimationArc
     archiveEntries.push({
       name: entry.name,
       data: isDirectory ? undefined : await readZipEntry(source, entry),
+      sizeBytes: entry.uncompressedSize,
+      compressedSize: entry.compressedSize,
     });
   }
   return { desc, animation, entries: archiveEntries };

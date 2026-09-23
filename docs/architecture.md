@@ -303,6 +303,12 @@ anyway: entries are stored, never compressed, with desc.txt first. One honest di
 archive of that device deflates some of its entries, so a repack stores them instead. The contents are
 identical either way, the system reads both, and storing is what the document asks for.
 
+The tool page (src/routes/BootAnimationPage.tsx) plays the animation on a canvas at the frame rate
+desc.txt declares, shows a window of a part's frames with the replaced ones marked, and sends the desc
+text plus the replaced frames to the worker, which rebuilds the archive and reads the result back to
+check that every entry the user did not touch kept its bytes. Nothing writes to a device: the output is
+an archive to download.
+
 ## Hard rules
 
 1. **Providers never parse boot images.** A provider receives the normalized object

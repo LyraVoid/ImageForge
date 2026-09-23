@@ -1,6 +1,8 @@
 import { WorkerError } from "../core/errors";
 import { sha256Hex } from "../core/hash";
 import { buildZip, parseImage } from "../core/image";
+import { animationFrames, packAnimation, readAnimationZip } from "../core/animation";
+import type { AnimationEntry } from "../core/animation";
 import { DEFAULT_SPARSE_BLOCK_SIZE, packSparseStream, packSuperStream } from "../core/partition";
 import type { SuperPartitionInput } from "../core/partition";
 import type { ParsedImage } from "../core/image";
@@ -79,6 +81,8 @@ import type { Workspace, WorkspaceArtifact } from "../core/workspace";
 import { loadWasmModule } from "../wasm/loader";
 import type {
   AnalyzeResponse,
+  AnimationPackRequest,
+  AnimationSummary,
   ImageSummary,
   PatchRequest,
   PatchResponse,
@@ -840,6 +844,106 @@ export class PatchWorkerSession implements PatchWorkerApi {
       },
       stream,
     );
+  }
+
+  async inspectAnimation(sourceId: string, inside?: string): Promise<AnimationSummary> {
+    const { source } = await this.viewSource(sourceId, inside);
+    const archive = await readAnimationZip(source);
+    const parts = archive.animation.parts.map((part) => ({
+      path: part.path,
+      type: part.type,
+      count: part.count,
+      pause: part.pause,
+      frames: animationFrames(archive, part.path).map((frame) => ({
+        name: frame.name,
+        sizeBytes: frame.sizeBytes ?? frame.data?.length ?? 0,
+        compressedSize: frame.compressedSize ?? frame.data?.length ?? 0,
+      })),
+    }));
+    const frameNames = new Set(parts.flatMap((part) => part.frames.map((frame) => frame.name)));
+    return {
+      desc: archive.desc,
+      width: archive.animation.width,
+      height: archive.animation.height,
+      fps: archive.animation.fps,
+      dialect:
+        archive.animation.lines.find((line) => line.kind === "global")?.dialect === "vendor-g"
+          ? "vendor-g"
+          : "standard",
+      parts,
+      otherEntries: archive.entries
+        .filter((entry) => entry.name !== "desc.txt" && !frameNames.has(entry.name))
+        .map((entry) => entry.name),
+      sizeBytes: source.size,
+    };
+  }
+
+  async readAnimationFrame(
+    sourceId: string,
+    inside: string | undefined,
+    name: string,
+  ): Promise<ArrayBuffer> {
+    const { source } = await this.viewSource(sourceId, inside);
+    const archive = await readAnimationZip(source);
+    const entry = archive.entries.find((candidate) => candidate.name === name);
+    if (!entry?.data) {
+      throw new WorkerError(
+        "The archive has no frame called " + name + ".",
+        "Pick a frame from the list.",
+      );
+    }
+    return toStandaloneBuffer(entry.data);
+  }
+
+  async packAnimationArchive(
+    sourceId: string,
+    inside: string | undefined,
+    request: AnimationPackRequest,
+  ): Promise<WorkspaceArtifact> {
+    const { source } = await this.viewSource(sourceId, inside);
+    const archive = await readAnimationZip(source);
+    const replacements = new Map(request.replacements.map((entry) => [entry.name, entry.data]));
+
+    const entries: AnimationEntry[] = archive.entries.map((entry) => {
+      const replacement = replacements.get(entry.name);
+      if (replacement === undefined) return entry;
+      return { ...entry, data: new Uint8Array(replacement) };
+    });
+    if (request.desc !== undefined) {
+      const descEntry = entries.find((entry) => entry.name === "desc.txt");
+      if (descEntry) descEntry.data = new TextEncoder().encode(request.desc);
+    }
+
+    const packed = await packAnimation(entries);
+
+    // Check what the packer claims: every entry the user did not touch has to come back byte for byte.
+    const check = await readAnimationZip(bytesSource(packed));
+    let intact = true;
+    for (const entry of archive.entries) {
+      const replacement = replacements.get(entry.name);
+      if (replacement !== undefined) continue;
+      const after = check.entries.find((candidate) => candidate.name === entry.name);
+      const before = entry.data ?? new Uint8Array(0);
+      const now = after?.data ?? new Uint8Array(0);
+      if (before.length !== now.length || !before.every((byte, index) => byte === now[index])) {
+        intact = false;
+        break;
+      }
+    }
+
+    return this.registerArtifact({
+      sourceId,
+      parentId: sourceId,
+      tool: "animation",
+      name: "bootanimation.zip",
+      params: {
+        animation: "true",
+        replaced: String(request.replacements.length),
+        descRewritten: String(request.desc !== undefined),
+        verified: intact ? "entries-intact" : "different",
+      },
+      bytes: toStandaloneBuffer(packed),
+    });
   }
 
   /** Zips files a tool built in the page (pictures, a manifest) and keeps the archive as an artifact. */

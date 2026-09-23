@@ -11,7 +11,19 @@ import type {
 } from "@/core";
 import type { OpenedPackage } from "@/core/package";
 import type { WorkspaceArtifact } from "@/core/workspace";
-import type { FilesystemListing, PartitionView, SplashSummary, WorkspaceSourceRecord } from "@/workers/protocol";
+import type {
+  AnimationSummary,
+  FilesystemListing,
+  PartitionView,
+  SplashSummary,
+  WorkspaceSourceRecord,
+} from "@/workers/protocol";
+import {
+  parseAnimationDesc,
+  serializeAnimationDesc,
+  setAnimationGlobal,
+  setAnimationPart,
+} from "@/core/animation";
 import { adaptImage, encodeBmp, encodeMtkPixels, fitRgba } from "@/core/logo";
 import type { SplashResolutionMode } from "@/core/logo";
 
@@ -136,6 +148,30 @@ interface ForgeState {
   artifactBlob: (artifactId: string) => Promise<Blob | null>;
   /** Rewrites an artifact as an Android sparse image and keeps it in the workspace. */
   packSparse: (artifactId: string) => Promise<WorkspaceArtifact | null>;
+  /** The boot animation that is open, and the source it came from. */
+  animation: AnimationSummary | null;
+  animationSourceId: string | null;
+  /** Which part the frame strip shows. */
+  animationPart: string | null;
+  /** Frames the user replaced, by their name inside the archive. */
+  animationReplacements: Record<string, { data: Uint8Array; sourceName: string; width: number; height: number }>;
+  /** The desc.txt to write. Null while nothing has been edited, which keeps the original byte for byte. */
+  animationDescDraft: string | null;
+  /** Reads the open source as a boot animation: its parts and their frames. */
+  loadAnimation: () => Promise<AnimationSummary | null>;
+  selectAnimationPart: (path: string) => void;
+  /** One frame's bytes, which is what the preview draws. */
+  readAnimationFrame: (name: string) => Promise<Uint8Array | null>;
+  replaceAnimationFrame: (
+    name: string,
+    replacement: { data: Uint8Array; sourceName: string; width: number; height: number },
+  ) => void;
+  clearAnimationReplacement: (name: string) => void;
+  /** Edits the animation's own fields; the desc.txt is only rewritten when something changes. */
+  editAnimationGlobal: (fields: { width?: number; height?: number; fps?: number }) => void;
+  editAnimationPart: (path: string, fields: { count?: number; pause?: number; type?: string }) => void;
+  /** Writes the animation again, keeping every frame the user did not touch. */
+  packAnimation: () => Promise<WorkspaceArtifact | null>;
   /** Lays several artifacts out as a super image, the way AOSP's lpmake does. */
   packSuper: (request: {
     artifactIds: string[];
@@ -197,6 +233,11 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
   splash: null,
   splashPreviews: {},
   splashReplacements: {},
+  animation: null,
+  animationSourceId: null,
+  animationPart: null,
+  animationReplacements: {},
+  animationDescDraft: null,
   splashMode: "followOriginal",
   splashCustomWidth: null,
   splashCustomHeight: null,
@@ -602,6 +643,109 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
   packSparse: async (artifactId) => {
     try {
       const artifact = await getClient().packSparseArtifact(artifactId);
+      set({ artifacts: [...get().artifacts, artifact], error: null });
+      return artifact;
+    } catch (error) {
+      set({ error: toImageForgeError(error).toJSON() });
+      return null;
+    }
+  },
+
+  loadAnimation: async () => {
+    const state = get();
+    if (!state.source) return null;
+    try {
+      const summary = await getClient().inspectAnimation(state.source.id, state.insideEntry ?? undefined);
+      set({
+        animation: summary,
+        animationSourceId: state.source.id,
+        animationPart: summary.parts[0]?.path ?? null,
+        animationReplacements: {},
+        animationDescDraft: null,
+        error: null,
+      });
+      return summary;
+    } catch (error) {
+      set({
+        animation: null,
+        animationSourceId: state.source.id,
+        error: toImageForgeError(error).toJSON(),
+      });
+      return null;
+    }
+  },
+
+  selectAnimationPart: (path) => set({ animationPart: path }),
+
+  readAnimationFrame: async (name) => {
+    const state = get();
+    if (!state.source) return null;
+    try {
+      return new Uint8Array(
+        await getClient().readAnimationFrame(state.source.id, state.insideEntry ?? undefined, name),
+      );
+    } catch (error) {
+      set({ error: toImageForgeError(error).toJSON() });
+      return null;
+    }
+  },
+
+  replaceAnimationFrame: (name, replacement) => {
+    set({ animationReplacements: { ...get().animationReplacements, [name]: replacement }, error: null });
+  },
+
+  clearAnimationReplacement: (name) => {
+    const next = { ...get().animationReplacements };
+    delete next[name];
+    set({ animationReplacements: next });
+  },
+
+  editAnimationGlobal: (fields) => {
+    const state = get();
+    if (!state.animation) return;
+    try {
+      const model = parseAnimationDesc(state.animationDescDraft ?? state.animation.desc);
+      setAnimationGlobal(model, fields);
+      const desc = serializeAnimationDesc(model);
+      set({
+        animationDescDraft: desc,
+        animation: { ...state.animation, width: model.width, height: model.height, fps: model.fps, desc },
+        error: null,
+      });
+    } catch (error) {
+      set({ error: toImageForgeError(error).toJSON() });
+    }
+  },
+
+  editAnimationPart: (path, fields) => {
+    const state = get();
+    if (!state.animation) return;
+    try {
+      const model = parseAnimationDesc(state.animationDescDraft ?? state.animation.desc);
+      setAnimationPart(model, path, fields);
+      const desc = serializeAnimationDesc(model);
+      set({ animationDescDraft: desc, animation: { ...state.animation, desc }, error: null });
+    } catch (error) {
+      set({ error: toImageForgeError(error).toJSON() });
+    }
+  },
+
+  packAnimation: async () => {
+    const state = get();
+    if (!state.source || !state.animation) return null;
+    try {
+      const replacements = Object.entries(state.animationReplacements).map(([name, replacement]) => ({
+        name,
+        data: replacement.data.buffer.slice(
+          replacement.data.byteOffset,
+          replacement.data.byteOffset + replacement.data.byteLength,
+        ) as ArrayBuffer,
+      }));
+      const artifact = await getClient().packAnimationArchive(
+        state.source.id,
+        state.insideEntry ?? undefined,
+        { desc: state.animationDescDraft ?? undefined, replacements },
+      );
       set({ artifacts: [...get().artifacts, artifact], error: null });
       return artifact;
     } catch (error) {

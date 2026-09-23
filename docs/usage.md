@@ -207,6 +207,18 @@ Two notes on sizes: a partition that is not a whole number of blocks is padded u
 real partition is block aligned, so this only affects hand-made files), and the device size defaults to
 what the parts need. The reserved area and the alignment are options.
 
+## Change what plays while the device boots
+
+**Boot animation** opens a bootanimation.zip: its parts and frames are listed, the animation plays in the
+page at the frame rate its desc.txt asks for, any frame can be replaced with a picture of your own, and
+the desc.txt itself — resolution, frame rate, how often each part plays and how many frames it pauses —
+is editable. Packing keeps every frame you did not touch byte for byte; AOSP's own convention of a stored
+archive is what comes out, with desc.txt first. An animation you did not change keeps its desc.txt exactly
+as the device wrote it, including the vendor line some devices use instead of the documented first line.
+
+The archive is usually inside a filesystem image rather than on hand: extract it (or drop it straight
+into the page if you already have it), and the tool reads it from there.
+
 ## Look at a file without patching it
 
 **Inspect an image** is the read-only face of the same workspace: open anything there and the page

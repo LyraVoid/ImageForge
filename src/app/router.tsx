@@ -12,6 +12,9 @@ const PatchImagePage = lazy(() =>
 const ExtractPage = lazy(() =>
   import("@/routes/ExtractPage").then((module) => ({ default: module.ExtractPage })),
 );
+const BootAnimationPage = lazy(() =>
+  import("@/routes/BootAnimationPage").then((module) => ({ default: module.BootAnimationPage })),
+);
 const LogoPage = lazy(() =>
   import("@/routes/LogoPage").then((module) => ({ default: module.LogoPage })),
 );
@@ -57,6 +60,7 @@ export const router = createBrowserRouter([
       { path: "tools/extract", element: lazyRoute(<ExtractPage />) },
       { path: "tools/unpack", element: lazyRoute(<UnpackPage />) },
       { path: "tools/logo", element: lazyRoute(<LogoPage />) },
+      { path: "tools/bootanimation", element: lazyRoute(<BootAnimationPage />) },
       { path: "tools/inspect", element: lazyRoute(<InspectPage />) },
       { path: "settings", element: lazyRoute(<SettingsPage />) },
       { path: "analyze", element: <Navigate to={PATCH_ROUTES.analyze} replace /> },

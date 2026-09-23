@@ -398,6 +398,18 @@ export function UnpackPage() {
                           {t("sparse.pack")}
                         </Button>
                       ) : null}
+                      {/\.zip$/i.test(artifact.name) ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={async () => {
+                            await sendToPatcher(artifact.id);
+                            navigate("/tools/bootanimation");
+                          }}
+                        >
+                          {t("animation.open")}
+                        </Button>
+                      ) : null}
                     </li>
                   ))}
                 </ul>

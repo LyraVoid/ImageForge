@@ -4,6 +4,8 @@ import type { OpenedPackage } from "@/core/package";
 import type { WorkspaceArtifact } from "@/core/workspace";
 import type {
   AnalyzeResponse,
+  AnimationPackRequest,
+  AnimationSummary,
   PatchRequest,
   PatchResponse,
   PatchWorkerApi,
@@ -43,6 +45,13 @@ export interface PatchWorkerClient {
   artifactBlob(id: string): Promise<Blob>;
   packSparseArtifact(artifactId: string, options?: { blockSize?: number }): Promise<WorkspaceArtifact>;
   packSuperImage(request: SuperPackRequest): Promise<WorkspaceArtifact>;
+  inspectAnimation(sourceId: string, inside?: string): Promise<AnimationSummary>;
+  readAnimationFrame(sourceId: string, inside: string | undefined, name: string): Promise<ArrayBuffer>;
+  packAnimationArchive(
+    sourceId: string,
+    inside: string | undefined,
+    request: AnimationPackRequest,
+  ): Promise<WorkspaceArtifact>;
   analyzeArtifact(artifactId: string): Promise<AnalyzeResponse>;
   inspectPartition(sourceId: string, inside?: string): Promise<PartitionView>;
   unpackSparseSource(sourceId: string): Promise<WorkspaceArtifact>;
@@ -112,6 +121,14 @@ function createWorkerBackedClient(worker: Worker): PatchWorkerClient {
     artifactBlob: (id) => remote.artifactBlob(id),
     packSparseArtifact: (artifactId, options) => remote.packSparseArtifact(artifactId, options),
     packSuperImage: (request) => remote.packSuperImage(request),
+    inspectAnimation: (sourceId, inside) => remote.inspectAnimation(sourceId, inside),
+    readAnimationFrame: (sourceId, inside, name) => remote.readAnimationFrame(sourceId, inside, name),
+    packAnimationArchive: (sourceId, inside, request) =>
+      remote.packAnimationArchive(
+        sourceId,
+        inside,
+        { ...request, replacements: request.replacements.map((entry) => Comlink.transfer(entry, [entry.data])) },
+      ),
     analyzeArtifact: (artifactId) => remote.analyzeArtifact(artifactId),
     inspectPartition: (sourceId, inside) => remote.inspectPartition(sourceId, inside),
     unpackSparseSource: (sourceId) => remote.unpackSparseSource(sourceId),
@@ -179,6 +196,11 @@ function createInlineClient(): PatchWorkerClient {
     packSparseArtifact: async (artifactId, options) =>
       (await load()).packSparseArtifact(artifactId, options),
     packSuperImage: async (request) => (await load()).packSuperImage(request),
+    inspectAnimation: async (sourceId, inside) => (await load()).inspectAnimation(sourceId, inside),
+    readAnimationFrame: async (sourceId, inside, name) =>
+      (await load()).readAnimationFrame(sourceId, inside, name),
+    packAnimationArchive: async (sourceId, inside, request) =>
+      (await load()).packAnimationArchive(sourceId, inside, request),
     analyzeArtifact: async (artifactId) => (await load()).analyzeArtifact(artifactId),
     inspectPartition: async (sourceId, inside) => (await load()).inspectPartition(sourceId, inside),
     unpackSparseSource: async (sourceId) => (await load()).unpackSparseSource(sourceId),

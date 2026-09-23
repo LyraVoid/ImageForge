@@ -161,6 +161,43 @@ export interface SplashPreview {
   rgba: ArrayBuffer;
 }
 
+/** One frame of a boot animation, as the archive holds it. */
+export interface AnimationFrameSummary {
+  name: string;
+  sizeBytes: number;
+  compressedSize: number;
+}
+
+/** One part of a boot animation: a directory of frames and how the system plays it. */
+export interface AnimationPartSummary {
+  path: string;
+  type: string;
+  count: number;
+  pause: number;
+  frames: AnimationFrameSummary[];
+}
+
+export interface AnimationSummary {
+  /** The desc.txt exactly as it is stored, and what it parses to. */
+  desc: string;
+  width: number;
+  height: number;
+  fps: number;
+  /** "vendor-g" when the file uses the offset carrying line a real device ships. */
+  dialect: string;
+  parts: AnimationPartSummary[];
+  /** Entries that are neither desc.txt nor a frame: the part directories, mostly. */
+  otherEntries: string[];
+  sizeBytes: number;
+}
+
+export interface AnimationPackRequest {
+  /** The desc.txt to write. Omitted keeps the one the source has, byte for byte. */
+  desc?: string;
+  /** Frames to replace, named as they are inside the archive. */
+  replacements: { name: string; data: ArrayBuffer }[];
+}
+
 /** What the super image builder needs: which artifacts, and how to lay them out. */
 export interface SuperPackRequest {
   partitions: { artifactId: string; name?: string; group?: string; writable?: boolean }[];
@@ -277,6 +314,16 @@ export interface PatchWorkerApi {
     index: number,
     resolution?: { width: number; height: number },
   ): Promise<SplashPreview>;
+  /** Reads a boot animation: its desc.txt, its parts and their frames. */
+  inspectAnimation(sourceId: string, inside?: string): Promise<AnimationSummary>;
+  /** One frame's bytes, which is what the preview draws. */
+  readAnimationFrame(sourceId: string, inside: string | undefined, name: string): Promise<ArrayBuffer>;
+  /** Writes the animation again with the given frames replaced, and keeps it as an artifact. */
+  packAnimationArchive(
+    sourceId: string,
+    inside: string | undefined,
+    request: AnimationPackRequest,
+  ): Promise<WorkspaceArtifact>;
   /** Zips files a tool built in the page and keeps the archive as an artifact. */
   exportFilesAsZip(
     sourceId: string,

@@ -21,6 +21,7 @@ The start page is a set of tools; the patcher is the first one, and the only one
 | **Extract from a package** — OTA `payload.bin` and vendor archives (`/tools/extract`) | available |
 | **Unpack partitions** — sparse images, `super.img` logical partitions, erofs and ext4 browsing (`/tools/unpack`) | available |
 | **Boot logo (first screen)** — read, view and replace splash and MediaTek logo images (`/tools/logo`) | available |
+| **Boot animation** — open `bootanimation.zip`, play it, replace frames, edit desc.txt, pack it again (`/tools/bootanimation`) | available |
 | **Inspect an image** — read-only look at anything you open: what it is, its report and digests (`/tools/inspect`) | available |
 
 Adding one is a data change (`src/app/tools.ts`) plus its own route; the tools page, the header and

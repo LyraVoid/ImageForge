@@ -79,6 +79,16 @@ export const TOOLS: ToolDefinition[] = [
     produces: ["logo-container"],
   },
   {
+    id: "animation",
+    path: "/tools/bootanimation",
+    titleKey: "tool.animation.title",
+    descriptionKey: "tool.animation.description",
+    status: "available",
+    flow: "single",
+    accepts: ["package"],
+    produces: ["package"],
+  },
+  {
     id: "inspect",
     path: "/tools/inspect",
     titleKey: "tool.inspect.title",

@@ -25,6 +25,14 @@ Comlink.expose({
     session.packSparseArtifact(artifactId, options),
   packSuperImage: (request: Parameters<typeof session.packSuperImage>[0]) =>
     session.packSuperImage(request),
+  inspectAnimation: (sourceId: string, inside?: string) => session.inspectAnimation(sourceId, inside),
+  readAnimationFrame: (sourceId: string, inside: string | undefined, name: string) =>
+    session.readAnimationFrame(sourceId, inside, name),
+  packAnimationArchive: (
+    sourceId: string,
+    inside: string | undefined,
+    request: Parameters<typeof session.packAnimationArchive>[2],
+  ) => session.packAnimationArchive(sourceId, inside, request),
   analyzeArtifact: (artifactId: string) => session.analyzeArtifact(artifactId),
   inspectPartition: (sourceId: string, inside?: string) => session.inspectPartition(sourceId, inside),
   unpackSparseSource: (sourceId: string) => session.unpackSparseSource(sourceId),
