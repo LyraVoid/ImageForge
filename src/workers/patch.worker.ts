@@ -26,11 +26,16 @@ Comlink.expose({
   unpackSparseSource: (sourceId: string) => session.unpackSparseSource(sourceId),
   extractLogicalPartition: (sourceId: string, partitionName: string, options?: { stream?: boolean }) =>
     session.extractLogicalPartition(sourceId, partitionName, options),
-  inspectSplash: (sourceId: string, inside?: string) => session.inspectSplash(sourceId, inside),
+  inspectSplash: (sourceId: string, inside?: string, resolution?: { width: number; height: number }) =>
+    session.inspectSplash(sourceId, inside, resolution),
   readSplashFrameBmp: (sourceId: string, inside: string | undefined, index: number) =>
     session.readSplashFrameBmp(sourceId, inside, index),
-  readSplashFramePreview: (sourceId: string, inside: string | undefined, index: number) =>
-    session.readSplashFramePreview(sourceId, inside, index),
+  readSplashFramePreview: (
+    sourceId: string,
+    inside: string | undefined,
+    index: number,
+    resolution?: { width: number; height: number },
+  ) => session.readSplashFramePreview(sourceId, inside, index, resolution),
   exportFilesAsZip: (
     sourceId: string,
     name: string,
@@ -40,7 +45,8 @@ Comlink.expose({
     sourceId: string,
     inside: string | undefined,
     replacements: Parameters<typeof session.packSplashImage>[2],
-  ) => session.packSplashImage(sourceId, inside, replacements),
+    resolution?: { width: number; height: number },
+  ) => session.packSplashImage(sourceId, inside, replacements, resolution),
   browseFilesystem: (sourceId: string, path: string, inside?: string) =>
     session.browseFilesystem(sourceId, path, inside),
   readFilesystemFile: (sourceId: string, path: string, inside?: string) =>

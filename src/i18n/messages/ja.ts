@@ -137,6 +137,12 @@ export const ja: Messages = {
   "logo.batchResult": "{matched}／{count} 枚を適用しました。",
   "logo.batchUnmatched": "一致するフレームがありません: {names}",
 
+  "logo.format.mtk-logo": "MediaTek logo（Xiaomi など MTK 端末）",
+  "logo.frameName": "フレーム {index}",
+  "logo.resolution": "画面解像度",
+  "logo.resolutionHint": "MediaTek の logo は画面サイズを記録しておらず、同じブロック長が複数の解像度に当てはまります。絵が正しく見えるものを選んでください。候補は最大ブロックのサイズから出しています。",
+  "logo.resolutionApply": "このサイズを使う",
+
   "dropzone.title": "Android イメージをここにドロップ",
   "dropzone.hint": "またはクリックしてファイルを選択",
   "dropzone.busy": "イメージを分析しています",

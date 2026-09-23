@@ -197,6 +197,18 @@ entry plus its own parser rather than a rewrite of the tool. Exporting uses the 
 writer (`src/core/image/zip-write.ts`, stored entries, fixed timestamps so the archive is
 reproducible), which the system `unzip` reads back entry for entry.
 
+A second container is in that table already: MediaTek's logo.img, which is a 512 byte header (with a
+logo magic at offset 8) followed by a block table and one zlib stream per block, each holding raw
+pixels — 2 bytes per pixel is RGB565 with red in the low five bits, 3 bytes is BGR, 4 bytes is BGRA,
+with a row stride that may be aligned and an optional prefix. None of that is recorded, so a block's
+layout is inferred from its length and the screen resolution, which the container does not carry
+either: the tool asks for it, suggests the sizes the biggest block could be, and the preview decides.
+Blocks whose length the resolution does not explain, typically small icons, are left alone. The
+structure came from two independent implementations — YetAnotherMediaTekLogoPatcher (MIT,
+utils/binary.py:6,23,35,39,48,52,60 and utils/images.py:36,47,51) and mtk-tools (Apache-2.0) — and was
+checked against a real 2.8 MB Xiaomi image: parsing it, decoding its largest block to the actual boot
+screen, and rebuilding it byte for byte with nothing replaced. See .research/mtk-logo/NOTES.md.
+
 Repacking follows the rule the rest of the project uses: the packer starts from the image's own bytes
 and writes only the metadata entries and the frame streams, so a repack of an unmodified image is
 byte for byte the input (verified against a real 15 MB partition, frames included), a replaced frame

@@ -137,6 +137,12 @@ export const zhHans: Messages = {
   "logo.batchResult": "已应用 {matched}／{count} 张图片。",
   "logo.batchUnmatched": "没有匹配的帧：{names}",
 
+  "logo.format.mtk-logo": "联发科（MTK）logo（小米等机型）",
+  "logo.frameName": "第 {index} 帧",
+  "logo.resolution": "屏幕分辨率",
+  "logo.resolutionHint": "MTK 的 logo 不记录屏幕尺寸，而同一块长度可能对应好几种分辨率。选一个图看着对的即可；候选来自最大那一块的尺寸。",
+  "logo.resolutionApply": "使用这个尺寸",
+
   "dropzone.title": "把 Android 镜像拖到这里",
   "dropzone.hint": "或点击选择文件",
   "dropzone.busy": "正在分析镜像",

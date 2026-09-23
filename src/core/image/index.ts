@@ -51,6 +51,7 @@ export {
 export type { CompressionDescriptor, CompressionFormat } from "./compression";
 export { decodeBzip2 } from "./bzip2";
 export { GZIP_HEADER, decodeGzip, encodeGzip } from "./gzip";
+export { decodeZlib, encodeZlib } from "./zlib";
 export { buildZip } from "./zip-write";
 export type { ZipWriteEntry } from "./zip-write";
 export { decodeLz4, encodeLz4, parseLz4Settings, xxh32 } from "./lz4";

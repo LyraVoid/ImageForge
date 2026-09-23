@@ -126,6 +126,11 @@ export interface SplashFrameSummary {
   pixelsPerMeter: number;
   /** Bytes the vendor's file carries after the pixels; their size fields count them. */
   trailingBytes: number;
+  /**
+   * How a MediaTek block's pixels are laid out, or null when the length does not fit the resolution
+   * that was given (a small icon, or a resolution that is not the device's). Splash frames have none.
+   */
+  layout?: { bytesPerPixel: number; stride: number; prefixBytes: number } | null;
 }
 
 export interface SplashSummary {
@@ -137,6 +142,13 @@ export interface SplashSummary {
   headerHeight: number;
   hasDdph: boolean;
   sizeBytes: number;
+  /**
+   * True for a container whose resolution is not recorded, so the page has to ask for it. MediaTek's
+   * logo is the one: the same block length fits several screen sizes and only the right one decodes
+   * to a picture, so the page shows these candidates and the preview settles it.
+   */
+  needsResolution?: boolean;
+  suggestions?: { width: number; height: number }[];
 }
 
 /** A frame scaled down for display: the pixels plus the size they should be drawn at. */
@@ -151,8 +163,11 @@ export interface SplashPreview {
 
 export interface SplashReplacementRequest {
   index: number;
-  /** The replacement frame, already a BMP the format accepts. */
-  bmp: ArrayBuffer;
+  /**
+   * The replacement frame as the container stores it: a BMP for a splash image, raw pixels in the
+   * frame's own layout for a MediaTek logo.
+   */
+  payload: ArrayBuffer;
   name?: string;
 }
 
@@ -221,15 +236,23 @@ export interface PatchWorkerApi {
    * opened file — a zip entry, or a payload partition like `payload.bin::system` — which is read in
    * ranges instead of being extracted first.
    */
-  /** Lists the frames of an OPPO/Realme/OnePlus splash image, with the size of each BMP. */
-  inspectSplash(sourceId: string, inside?: string): Promise<SplashSummary>;
-  /** One frame's BMP, which is what an export hands out and what a replacement is measured against. */
+  /**
+   * Lists the frames of a logo image, whichever container it is. A MediaTek logo needs the screen
+   * resolution to make sense of its blocks, which is what `resolution` is for.
+   */
+  inspectSplash(
+    sourceId: string,
+    inside?: string,
+    resolution?: { width: number; height: number },
+  ): Promise<SplashSummary>;
+  /** One frame as the container stores it: a BMP for splash, raw pixels for a MediaTek logo. */
   readSplashFrameBmp(sourceId: string, inside: string | undefined, index: number): Promise<ArrayBuffer>;
   /** A frame as a small RGBA preview, so the editor never holds a ten megabyte image in the page. */
   readSplashFramePreview(
     sourceId: string,
     inside: string | undefined,
     index: number,
+    resolution?: { width: number; height: number },
   ): Promise<SplashPreview>;
   /** Zips files a tool built in the page and keeps the archive as an artifact. */
   exportFilesAsZip(
@@ -242,6 +265,7 @@ export interface PatchWorkerApi {
     sourceId: string,
     inside: string | undefined,
     replacements: SplashReplacementRequest[],
+    resolution?: { width: number; height: number },
   ): Promise<WorkspaceArtifact>;
   browseFilesystem(sourceId: string, path: string, inside?: string): Promise<FilesystemListing>;
   /** Reads one file out of a filesystem image. */

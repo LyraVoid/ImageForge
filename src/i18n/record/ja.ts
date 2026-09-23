@@ -1,4 +1,6 @@
 export const ja: Record<string, string> = {
+  // logo containers
+  "MediaTek logo (Xiaomi and other MTK devices)": "MediaTek logo（Xiaomi など MTK 端末）",
   // analysis report
   Image: "イメージ",
   Boot: "ブート",

@@ -41,14 +41,20 @@ import {
 } from "../core/partition";
 import {
   decodeBmp,
+  decodeMtkPixels,
   detectLogoFormat,
   fitRgba,
   packSplash,
   parseSplash,
   readBmpInfo,
   readSplashFrameBmp,
+  parseMtkLogo,
+  packMtkLogo,
+  readMtkFrameRaw,
   readSplashFrameCompressed,
+  suggestMtkResolutions,
 } from "../core/logo";
+import type { MtkPackEntry } from "../core/logo";
 
 /** The longest side of a frame preview the editor asks for. */
 const SPLASH_PREVIEW_MAX = 240;
@@ -471,8 +477,50 @@ export class PatchWorkerSession implements PatchWorkerApi {
 
   // ---------------------------------------------------------------- splash images
 
-  async inspectSplash(sourceId: string, inside?: string): Promise<SplashSummary> {
+  async inspectSplash(
+    sourceId: string,
+    inside?: string,
+    resolution?: { width: number; height: number },
+  ): Promise<SplashSummary> {
     const { source } = await this.viewSource(sourceId, inside);
+    const format = await detectLogoFormat(source);
+    if (format?.id === "mtk-logo") {
+      const screen = resolution ?? { width: 0, height: 0 };
+      const parsed = await parseMtkLogo(source, screen);
+      const frames = parsed.frames.map((frame) => ({
+        index: frame.index,
+        // the container records no names; the page labels them by index
+        name: "",
+        realSize: frame.rawSize,
+        compressedSize: frame.compressedSize,
+        width: frame.layout?.width ?? 0,
+        height: frame.layout?.height ?? 0,
+        bitsPerPixel: (frame.layout?.bytesPerPixel ?? 0) * 8,
+        pixelsPerMeter: 0,
+        trailingBytes: 0,
+        layout: frame.layout
+          ? {
+              bytesPerPixel: frame.layout.bytesPerPixel,
+              stride: frame.layout.stride,
+              prefixBytes: frame.layout.prefixBytes,
+            }
+          : null,
+      }));
+      const largest = parsed.frames.reduce(
+        (best, frame) => (frame.rawSize > best.rawSize ? frame : best),
+        parsed.frames[0],
+      );
+      return {
+        format: format.id,
+        frames,
+        headerWidth: screen.width,
+        headerHeight: screen.height,
+        hasDdph: false,
+        sizeBytes: source.size,
+        needsResolution: frames.every((frame) => frame.layout === null),
+        suggestions: suggestMtkResolutions(largest.rawSize).map(({ width, height }) => ({ width, height })),
+      };
+    }
     const parsed = await parseSplash(source);
     const frames: SplashSummary["frames"] = [];
     for (const frame of parsed.frames) {
@@ -493,7 +541,6 @@ export class PatchWorkerSession implements PatchWorkerApi {
         trailingBytes: Math.max(0, bmp.length - (54 + rowSize * info.height)),
       });
     }
-    const format = await detectLogoFormat(source);
     return {
       format: format?.id ?? "unknown",
       frames,
@@ -506,6 +553,15 @@ export class PatchWorkerSession implements PatchWorkerApi {
 
   async readSplashFrameBmp(sourceId: string, inside: string | undefined, index: number): Promise<ArrayBuffer> {
     const { source } = await this.viewSource(sourceId, inside);
+    const format = await detectLogoFormat(source);
+    if (format?.id === "mtk-logo") {
+      const mtk = await parseMtkLogo(source, { width: 0, height: 0 });
+      const entry = mtk.frames[index];
+      if (!entry) {
+        throw new WorkerError("This logo image has no block " + index + ".", "Pick a frame from the list.");
+      }
+      return toStandaloneBuffer(await readMtkFrameRaw(source, entry));
+    }
     const parsed = await parseSplash(source);
     const frame = parsed.frames[index];
     if (!frame) {
@@ -518,8 +574,28 @@ export class PatchWorkerSession implements PatchWorkerApi {
     sourceId: string,
     inside: string | undefined,
     index: number,
+    resolution?: { width: number; height: number },
   ): Promise<SplashPreview> {
     const { source } = await this.viewSource(sourceId, inside);
+    const format = await detectLogoFormat(source);
+    if (format?.id === "mtk-logo") {
+      if (!resolution) {
+        throw new WorkerError(
+          "A MediaTek logo needs the screen resolution before its blocks can be read.",
+          "Give the screen resolution first.",
+        );
+      }
+      const parsed = await parseMtkLogo(source, resolution);
+      const frame = parsed.frames[index];
+      if (!frame?.layout) {
+        throw new WorkerError(
+          "Block " + index + " is " + (frame?.rawSize ?? 0) + " bytes, which " + resolution.width + "x" + resolution.height + " does not explain.",
+          "This block is not the resolution you gave.",
+        );
+      }
+      const rgba = decodeMtkPixels(await readMtkFrameRaw(source, frame), frame.layout);
+      return this.previewOf(rgba, frame.layout.width, frame.layout.height);
+    }
     const parsed = await parseSplash(source);
     const frame = parsed.frames[index];
     if (!frame) {
@@ -527,25 +603,34 @@ export class PatchWorkerSession implements PatchWorkerApi {
     }
     const bmp = await readSplashFrameBmp(source, frame);
     const decoded = decodeBmp(bmp);
-    if (decoded.width <= SPLASH_PREVIEW_MAX && decoded.height <= SPLASH_PREVIEW_MAX) {
+    return this.previewOf(decoded.rgba, decoded.width, decoded.height);
+  }
+
+  /** Scales a frame's pixels down to what a list needs, keeping the aspect ratio. */
+  private previewOf(rgba: Uint8Array, width: number, height: number): SplashPreview {
+    if (width <= SPLASH_PREVIEW_MAX && height <= SPLASH_PREVIEW_MAX) {
       return {
-        width: decoded.width,
-        height: decoded.height,
-        fullWidth: decoded.width,
-        fullHeight: decoded.height,
-        rgba: toStandaloneBuffer(decoded.rgba),
+        width,
+        height,
+        fullWidth: width,
+        fullHeight: height,
+        rgba: toStandaloneBuffer(rgba),
       };
     }
-    // Scale the longest side down to the preview size, keeping the aspect ratio.
-    const scale = SPLASH_PREVIEW_MAX / Math.max(decoded.width, decoded.height);
-    const width = Math.max(1, Math.round(decoded.width * scale));
-    const height = Math.max(1, Math.round(decoded.height * scale));
-    const scaled = fitRgba(decoded.rgba, decoded.width, decoded.height, width, height, "stretch");
-    return {
+    const scale = SPLASH_PREVIEW_MAX / Math.max(width, height);
+    const scaled = fitRgba(
+      rgba,
       width,
       height,
-      fullWidth: decoded.width,
-      fullHeight: decoded.height,
+      Math.max(1, Math.round(width * scale)),
+      Math.max(1, Math.round(height * scale)),
+      "stretch",
+    );
+    return {
+      width: scaled.width,
+      height: scaled.height,
+      fullWidth: width,
+      fullHeight: height,
       rgba: toStandaloneBuffer(scaled.rgba),
     };
   }
@@ -554,10 +639,67 @@ export class PatchWorkerSession implements PatchWorkerApi {
     sourceId: string,
     inside: string | undefined,
     replacements: SplashReplacementRequest[],
+    resolution?: { width: number; height: number },
   ): Promise<WorkspaceArtifact> {
     const { source } = await this.viewSource(sourceId, inside);
-    const parsed = await parseSplash(source);
+    const detected = await detectLogoFormat(source);
     const byIndex = new Map(replacements.map((entry) => [entry.index, entry]));
+
+    if (detected?.id === "mtk-logo") {
+      if (!resolution) {
+        throw new WorkerError(
+          "A MediaTek logo needs the screen resolution to be rebuilt.",
+          "Give the screen resolution first.",
+        );
+      }
+      const mtk = await parseMtkLogo(source, resolution);
+      const mtkEntries: MtkPackEntry[] = mtk.frames.map((frame) => {
+        const replacement = byIndex.get(frame.index);
+        if (!replacement || !frame.layout) return { kind: "keep", frame };
+        const raw = new Uint8Array(replacement.payload);
+        if (raw.length !== frame.rawSize) {
+          throw new WorkerError(
+            "A replacement for block " + frame.index + " is " + raw.length + " bytes, not " + frame.rawSize + ".",
+            "That frame was built for a different size.",
+          );
+        }
+        return { kind: "replace", frame, raw };
+      });
+      const packedMtk = await packMtkLogo(source, mtk, mtkEntries);
+      const check = bytesSource(packedMtk.bytes);
+      const reparsed = await parseMtkLogo(check, resolution);
+      let mtkIntact = true;
+      for (const frame of mtk.frames) {
+        if (byIndex.has(frame.index) && frame.layout) continue;
+        const before = await readMtkFrameRaw(source, frame);
+        const after = await readMtkFrameRaw(check, reparsed.frames[frame.index]);
+        if (before.length !== after.length || !before.every((byte, index) => byte === after[index])) {
+          mtkIntact = false;
+          break;
+        }
+      }
+      const mtkIdentical =
+        packedMtk.replaced === 0 &&
+        packedMtk.bytes.length === source.size &&
+        (await sha256Hex(packedMtk.bytes)) === (await sha256Hex(await readAll(source)));
+      const mtkName =
+        (this.sources.get(sourceId)?.record.name ?? "logo.img").replace(/\.[a-z]+$/i, "") + "-patched.img";
+      return this.registerArtifact({
+        sourceId,
+        parentId: sourceId,
+        tool: "logo",
+        name: mtkName,
+        params: {
+          replaced: String(packedMtk.replaced),
+          sizeDelta: String(packedMtk.sizeDelta),
+          verified: mtkIdentical ? "identical" : mtkIntact ? "frames-intact" : "different",
+          format: "mtk-logo",
+        },
+        bytes: toStandaloneBuffer(packedMtk.bytes),
+      });
+    }
+
+    const parsed = await parseSplash(source);
     const entries = parsed.frames.map((frame) => {
       const replacement = byIndex.get(frame.index);
       return replacement === undefined
@@ -565,7 +707,7 @@ export class PatchWorkerSession implements PatchWorkerApi {
         : ({
             kind: "replace",
             index: frame.index,
-            bmp: new Uint8Array(replacement.bmp),
+            bmp: new Uint8Array(replacement.payload),
             name: replacement.name,
           } as const);
     });

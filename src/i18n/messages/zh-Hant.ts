@@ -137,6 +137,12 @@ export const zhHant: Messages = {
   "logo.batchResult": "已套用 {matched}／{count} 張圖片。",
   "logo.batchUnmatched": "沒有相符的幀：{names}",
 
+  "logo.format.mtk-logo": "聯發科（MTK）logo（小米等機型）",
+  "logo.frameName": "第 {index} 幀",
+  "logo.resolution": "螢幕解析度",
+  "logo.resolutionHint": "MTK 的 logo 不記錄螢幕尺寸，而同一塊長度可能對應好幾種解析度。選一個圖看起來正確的即可；候選來自最大那塊的尺寸。",
+  "logo.resolutionApply": "使用這個尺寸",
+
   "dropzone.title": "把 Android 映像拖到這裡",
   "dropzone.hint": "或點擊選擇檔案",
   "dropzone.busy": "正在分析映像",

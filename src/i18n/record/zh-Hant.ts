@@ -1,4 +1,6 @@
 export const zhHant: Record<string, string> = {
+  // logo containers
+  "MediaTek logo (Xiaomi and other MTK devices)": "MediaTek logo（小米等 MTK 機型）",
   // analysis report
   Image: "映像",
   Boot: "開機",

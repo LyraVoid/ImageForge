@@ -143,6 +143,12 @@ end.
 
 ## Change the picture the device shows when it boots
 
+Two containers are supported: an OPPO / Realme / OnePlus splash.img (Qualcomm) and MediaTek's logo.img
+(Xiaomi and other MTK devices). A MediaTek image does not record its screen resolution and its frames
+have no names, so the page starts by asking for the resolution, offering the ones its biggest block
+could be; pick the one whose preview looks like a boot screen. Its frames are then listed and edited
+by number.
+
 **Splash screen** edits an OPPO / Realme / OnePlus `splash.img` (Qualcomm devices). Open the image — or
 the `splash` partition of an OTA package, with **Browse** in the extract tool — and it lists every
 frame with a thumbnail: `boot`, `fastboot`, `verify`, the carrier logos and the rest. Pick one,

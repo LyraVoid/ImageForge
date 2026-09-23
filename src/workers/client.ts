@@ -48,12 +48,17 @@ export interface PatchWorkerClient {
     partitionName: string,
     options?: { stream?: boolean },
   ): Promise<WorkspaceArtifact>;
-  inspectSplash(sourceId: string, inside?: string): Promise<SplashSummary>;
+  inspectSplash(
+    sourceId: string,
+    inside?: string,
+    resolution?: { width: number; height: number },
+  ): Promise<SplashSummary>;
   readSplashFrameBmp(sourceId: string, inside: string | undefined, index: number): Promise<ArrayBuffer>;
   readSplashFramePreview(
     sourceId: string,
     inside: string | undefined,
     index: number,
+    resolution?: { width: number; height: number },
   ): Promise<SplashPreview>;
   exportFilesAsZip(
     sourceId: string,
@@ -64,6 +69,7 @@ export interface PatchWorkerClient {
     sourceId: string,
     inside: string | undefined,
     replacements: SplashReplacementRequest[],
+    resolution?: { width: number; height: number },
   ): Promise<WorkspaceArtifact>;
   browseFilesystem(sourceId: string, path: string, inside?: string): Promise<FilesystemListing>;
   readFilesystemFile(sourceId: string, path: string, inside?: string): Promise<Uint8Array>;
@@ -105,21 +111,22 @@ function createWorkerBackedClient(worker: Worker): PatchWorkerClient {
     inspectPartition: (sourceId, inside) => remote.inspectPartition(sourceId, inside),
     unpackSparseSource: (sourceId) => remote.unpackSparseSource(sourceId),
     extractLogicalPartition: (sourceId, name, options) => remote.extractLogicalPartition(sourceId, name, options),
-    inspectSplash: (sourceId, inside) => remote.inspectSplash(sourceId, inside),
+    inspectSplash: (sourceId, inside, resolution) => remote.inspectSplash(sourceId, inside, resolution),
     readSplashFrameBmp: (sourceId, inside, index) => remote.readSplashFrameBmp(sourceId, inside, index),
-    readSplashFramePreview: (sourceId, inside, index) =>
-      remote.readSplashFramePreview(sourceId, inside, index),
+    readSplashFramePreview: (sourceId, inside, index, resolution) =>
+      remote.readSplashFramePreview(sourceId, inside, index, resolution),
     exportFilesAsZip: (sourceId, name, files) =>
       remote.exportFilesAsZip(
         sourceId,
         name,
         files.map((file) => Comlink.transfer(file, [file.data])),
       ),
-    packSplashImage: (sourceId, inside, replacements) =>
+    packSplashImage: (sourceId, inside, replacements, resolution) =>
       remote.packSplashImage(
         sourceId,
         inside,
-        replacements.map((entry) => Comlink.transfer(entry, [entry.bmp])),
+        replacements.map((entry) => Comlink.transfer(entry, [entry.payload])),
+        resolution,
       ),
     browseFilesystem: (sourceId, path, inside) => remote.browseFilesystem(sourceId, path, inside),
     readFilesystemFile: (sourceId, path, inside) => remote.readFilesystemFile(sourceId, path, inside),
@@ -169,14 +176,15 @@ function createInlineClient(): PatchWorkerClient {
     unpackSparseSource: async (sourceId) => (await load()).unpackSparseSource(sourceId),
     extractLogicalPartition: async (sourceId, name, options) =>
       (await load()).extractLogicalPartition(sourceId, name, options),
-    inspectSplash: async (sourceId, inside) => (await load()).inspectSplash(sourceId, inside),
+    inspectSplash: async (sourceId, inside, resolution) =>
+      (await load()).inspectSplash(sourceId, inside, resolution),
     readSplashFrameBmp: async (sourceId, inside, index) =>
       (await load()).readSplashFrameBmp(sourceId, inside, index),
-    readSplashFramePreview: async (sourceId, inside, index) =>
-      (await load()).readSplashFramePreview(sourceId, inside, index),
+    readSplashFramePreview: async (sourceId, inside, index, resolution) =>
+      (await load()).readSplashFramePreview(sourceId, inside, index, resolution),
     exportFilesAsZip: async (sourceId, name, files) => (await load()).exportFilesAsZip(sourceId, name, files),
-    packSplashImage: async (sourceId, inside, replacements) =>
-      (await load()).packSplashImage(sourceId, inside, replacements),
+    packSplashImage: async (sourceId, inside, replacements, resolution) =>
+      (await load()).packSplashImage(sourceId, inside, replacements, resolution),
     browseFilesystem: async (sourceId, path, inside) => (await load()).browseFilesystem(sourceId, path, inside),
     readFilesystemFile: async (sourceId, path, inside) => (await load()).readFilesystemFile(sourceId, path, inside),
     closeSource: async (sourceId) => {

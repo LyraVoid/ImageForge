@@ -140,6 +140,12 @@ export const en = {
   "logo.batchResult": "Applied {matched} of {count} pictures.",
   "logo.batchUnmatched": "No frame matches: {names}",
 
+  "logo.format.mtk-logo": "MediaTek logo (Xiaomi and other MTK devices)",
+  "logo.frameName": "Frame {index}",
+  "logo.resolution": "Screen resolution",
+  "logo.resolutionHint": "A MediaTek logo does not record the screen size, and the same block length fits several. Pick the one whose picture looks right; the candidates come from the size of the biggest block.",
+  "logo.resolutionApply": "Use this size",
+
   "dropzone.title": "Drop an Android image here",
   "dropzone.hint": "or click to browse files",
   "dropzone.busy": "Analyzing image",

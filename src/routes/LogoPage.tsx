@@ -1,4 +1,4 @@
-import { ArrowRight, Download, ImageIcon, LoaderCircle, RotateCcw, Wand2 } from "lucide-react";
+import { ArrowRight, Download, ImageIcon, LoaderCircle, MonitorSmartphone, RotateCcw, Wand2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ErrorPanel } from "@/components/app/error-panel";
 import { ImagePicker } from "@/components/app/image-picker";
@@ -36,6 +36,7 @@ export function LogoPage() {
   const replaceSplashFrame = useForgeStore((state) => state.replaceSplashFrame);
   const clearSplashReplacement = useForgeStore((state) => state.clearSplashReplacement);
   const replaceSplashFramesFromFiles = useForgeStore((state) => state.replaceSplashFramesFromFiles);
+  const setLogoScreen = useForgeStore((state) => state.setLogoScreen);
   const setSplashMode = useForgeStore((state) => state.setSplashMode);
   const packSplash = useForgeStore((state) => state.packSplash);
   const exportSplashFrames = useForgeStore((state) => state.exportSplashFrames);
@@ -44,6 +45,7 @@ export function LogoPage() {
   const [busy, setBusy] = useState(false);
   const [uploadError, setUploadError] = useState(false);
   const [batch, setBatch] = useState<{ matched: number; count: number; unmatched: string[] } | null>(null);
+  const [screen, setScreen] = useState({ width: "", height: "" });
   const input = useRef<HTMLInputElement | null>(null);
   const batchInput = useRef<HTMLInputElement | null>(null);
 
@@ -98,6 +100,7 @@ export function LogoPage() {
       for (const frame of splash.frames) {
         if (cancelled) return;
         if (useForgeStore.getState().splashPreviews[frame.index]) continue;
+        if (frame.width === 0) continue;
         await readSplashFramePreview(frame.index);
       }
     };
@@ -167,6 +170,63 @@ export function LogoPage() {
               </div>
             </CardHeader>
           </Card>
+
+          {splash.needsResolution ? (
+            <Card>
+              <CardHeader className="flex-row items-center gap-2">
+                <MonitorSmartphone className="size-3.5 text-muted-foreground" aria-hidden />
+                <div className="min-w-0 flex-1">
+                  <CardTitle>{t("logo.resolution")}</CardTitle>
+                  <CardDescription>{t("logo.resolutionHint")}</CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                  <input
+                    aria-label={t("logo.width")}
+                    className="w-20 rounded border border-border bg-surface px-2 py-1 font-mono text-[11px]"
+                    type="number"
+                    min={1}
+                    placeholder={t("logo.width")}
+                    value={screen.width}
+                    onChange={(event) => setScreen({ ...screen, width: event.target.value })}
+                  />
+                  ×
+                  <input
+                    aria-label={t("logo.height")}
+                    className="w-20 rounded border border-border bg-surface px-2 py-1 font-mono text-[11px]"
+                    type="number"
+                    min={1}
+                    placeholder={t("logo.height")}
+                    value={screen.height}
+                    onChange={(event) => setScreen({ ...screen, height: event.target.value })}
+                  />
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    disabled={Number(screen.width) <= 0 || Number(screen.height) <= 0}
+                    onClick={() => void setLogoScreen({ width: Number(screen.width), height: Number(screen.height) })}
+                  >
+                    {t("logo.resolutionApply")}
+                  </Button>
+                </div>
+                {splash.suggestions && splash.suggestions.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {splash.suggestions.map((candidate) => (
+                      <Button
+                        key={candidate.width + "x" + candidate.height}
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => void setLogoScreen(candidate)}
+                      >
+                        {candidate.width}×{candidate.height}
+                      </Button>
+                    ))}
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
+          ) : null}
 
           <Card>
             <CardHeader className="flex-row items-center gap-2">
@@ -255,14 +315,18 @@ export function LogoPage() {
                     <li key={frame.index} className="flex flex-wrap items-center gap-3 py-2 first:pt-0 last:pb-0">
                       <FrameThumb preview={replacement ? replacement.preview : preview} />
                       <div className="min-w-0 flex-1 space-y-0.5">
-                        <p className="truncate font-mono text-[11px] text-foreground">{frame.name.trim()}</p>
+                        <p className="truncate font-mono text-[11px] text-foreground">
+                          {frame.name.trim() || t("logo.frameName", { index: String(frame.index) })}
+                        </p>
                         <p className="text-[11px] text-muted-foreground">
-                          {t("logo.stored", {
-                            width: String(frame.width),
-                            height: String(frame.height),
-                            compressed: formatBytes(frame.compressedSize),
-                            real: formatBytes(frame.realSize),
-                          })}
+                          {frame.width === 0
+                            ? formatBytes(frame.compressedSize) + " → " + formatBytes(frame.realSize)
+                            : t("logo.stored", {
+                                width: String(frame.width),
+                                height: String(frame.height),
+                                compressed: formatBytes(frame.compressedSize),
+                                real: formatBytes(frame.realSize),
+                              })}
                         </p>
                       </div>
                       {replacement ? (

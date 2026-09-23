@@ -8,7 +8,7 @@ import type { ByteSource } from "../package/source";
  * parser instead of a rewrite of the tool.
  */
 export interface LogoFormat {
-  id: "oppo-qualcomm";
+  id: "oppo-qualcomm" | "mtk-logo";
   /** Engine prose: the interface translates it through the record table. */
   label: string;
   /** Where the magic sits and what it is. */
@@ -20,6 +20,12 @@ export const LOGO_FORMATS: LogoFormat[] = [
     id: "oppo-qualcomm",
     label: "OPPO / Realme / OnePlus splash (Qualcomm)",
     magic: { offset: SPLASH_MAGIC_OFFSET, text: SPLASH_MAGIC },
+  },
+  {
+    id: "mtk-logo",
+    label: "MediaTek logo (Xiaomi and other MTK devices)",
+    // the 512 byte header starts with this magic at offset 8
+    magic: { offset: 8, text: "logo" },
   },
 ];
 

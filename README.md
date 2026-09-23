@@ -20,7 +20,7 @@ The start page is a set of tools; the patcher is the first one, and the only one
 | **Patch an image** — analyze, plan, patch, verify, download (`/tools/patch/*`) | available |
 | **Extract from a package** — OTA `payload.bin` and vendor archives (`/tools/extract`) | available |
 | **Unpack partitions** — sparse images, `super.img` logical partitions, erofs and ext4 browsing (`/tools/unpack`) | available |
-| **Boot logo (first screen)** — read, view and replace the splash images (`/tools/logo`) | available |
+| **Boot logo (first screen)** — read, view and replace splash and MediaTek logo images (`/tools/logo`) | available |
 | **Inspect an image** — read-only look at anything you open: what it is, its report and digests (`/tools/inspect`) | available |
 
 Adding one is a data change (`src/app/tools.ts`) plus its own route; the tools page, the header and
@@ -45,7 +45,14 @@ by operation into a `Blob` (which browsers keep on disk) rather than a single bu
 `my_stock` can be extracted and downloaded — it used to be impossible, since one `Uint8Array` of that
 size cannot exist in a browser. The page marks such an artifact as blob-backed.
 
-**The boot screen is editable too.** A splash image's frames are listed with thumbnails, any frame
+**The boot screen is editable too.** Two containers are read and written: OPPO / Realme / OnePlus
+splash.img (Qualcomm) and MediaTek's logo.img (Xiaomi and other MTK devices). A splash image's frames
+are named; a MediaTek one has no frame names and does not record its screen size, so the page asks for
+it and offers the sizes its biggest block could be, with the preview settling which one is right. Both
+containers are repacked the same way — frames you did not touch keep their exact bytes, rebuilding
+without changes reproduces the file byte for byte, and the page says which check it ran.
+
+A splash image's frames are listed with thumbnails, any frame
 can be replaced with a picture of your own (kept as it is, cropped or stretched to the frame, or a
 size you name), and the image is packed again: frames you did not touch keep their exact bytes, and
 repacking without changes reproduces the partition byte for byte — which the page checks and says so

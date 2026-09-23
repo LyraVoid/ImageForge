@@ -12,13 +12,13 @@ import type {
 import type { OpenedPackage } from "@/core/package";
 import type { WorkspaceArtifact } from "@/core/workspace";
 import type { FilesystemListing, PartitionView, SplashSummary, WorkspaceSourceRecord } from "@/workers/protocol";
-import { adaptImage, encodeBmp, fitRgba } from "@/core/logo";
+import { adaptImage, encodeBmp, encodeMtkPixels, fitRgba } from "@/core/logo";
 import type { SplashResolutionMode } from "@/core/logo";
 
 /** A frame the user replaced: adapted, encoded, and previewed at display size. */
 export interface SplashReplacement {
-  /** The BMP that goes into the image. */
-  bmp: Uint8Array;
+  /** The frame as the container stores it: a BMP for splash, raw pixels for a MediaTek logo. */
+  payload: Uint8Array;
   /** The adapted pixels, scaled down for display. */
   preview: { width: number; height: number; rgba: Uint8Array };
   mode: SplashResolutionMode;
@@ -113,6 +113,11 @@ interface ForgeState {
   splashMode: SplashResolutionMode;
   splashCustomWidth: number | null;
   splashCustomHeight: number | null;
+  /**
+   * The screen resolution of a MediaTek logo, which its container does not record. Null until the
+   * user gives one; the page offers candidates taken from the size of the image's biggest block.
+   */
+  logoScreen: { width: number; height: number } | null;
   analysis: AnalyzeResponse | null;
   selectedProviderId: string | null;
   planResponse: PlanResponse | null;
@@ -150,6 +155,8 @@ interface ForgeState {
   ) => { matched: string[]; unmatched: string[] };
   clearSplashReplacement: (index: number) => void;
   setSplashMode: (mode: SplashResolutionMode, custom?: { width?: number; height?: number }) => void;
+  /** Says what the screen is, which is what a MediaTek logo needs before it can be read. */
+  setLogoScreen: (screen: { width: number; height: number }) => Promise<void>;
   /** Packs the image with every replacement in place, and keeps the result as an artifact. */
   packSplash: () => Promise<WorkspaceArtifact | null>;
   /** Exports every frame as the BMP the device stores, plus a manifest, in one archive. */
@@ -184,6 +191,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
   splashMode: "followOriginal",
   splashCustomWidth: null,
   splashCustomHeight: null,
+  logoScreen: null,
   analysis: null,
   selectedProviderId: null,
   planResponse: null,
@@ -360,7 +368,11 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     const state = get();
     if (!state.source) return null;
     try {
-      const summary = await getClient().inspectSplash(state.source.id, state.insideEntry ?? undefined);
+      const summary = await getClient().inspectSplash(
+        state.source.id,
+        state.insideEntry ?? undefined,
+        state.logoScreen ?? undefined,
+      );
       set({ splash: summary, splashPreviews: {}, splashReplacements: {}, error: null });
       return summary;
     } catch (error) {
@@ -379,6 +391,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
         state.source.id,
         state.insideEntry ?? undefined,
         index,
+        state.logoScreen ?? undefined,
       );
       const value = {
         width: preview.width,
@@ -413,11 +426,27 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
         customWidth: state.splashCustomWidth ?? undefined,
         customHeight: state.splashCustomHeight ?? undefined,
       });
-      const bmp = encodeBmp(adapted.rgba, adapted.width, adapted.height, {
-        // keep the vendor's own header details: the resolution field and any trailing bytes
-        pixelsPerMeter: frame.pixelsPerMeter,
-        trailingBytes: frame.trailingBytes,
-      });
+      // A MediaTek logo stores raw pixels in the frame's own layout; a splash frame stores a BMP.
+      const payload =
+        state.splash?.format === "mtk-logo"
+          ? frame.layout
+            ? encodeMtkPixels(adapted.rgba, {
+                bytesPerPixel: frame.layout.bytesPerPixel,
+                stride: frame.layout.stride,
+                prefixBytes: frame.layout.prefixBytes,
+                width: frame.width,
+                height: frame.height,
+              })
+            : null
+          : encodeBmp(adapted.rgba, adapted.width, adapted.height, {
+              // keep the vendor's own header details: the resolution field and any trailing bytes
+              pixelsPerMeter: frame.pixelsPerMeter,
+              trailingBytes: frame.trailingBytes,
+            });
+      if (!payload) {
+        set({ error: toImageForgeError(new Error("This block's resolution is unknown.")).toJSON() });
+        return null;
+      }
       const scale = Math.min(1, SPLASH_PREVIEW_MAX / Math.max(adapted.width, adapted.height));
       const preview = fitRgba(
         adapted.rgba,
@@ -428,7 +457,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
         "stretch",
       );
       const replacement: SplashReplacement = {
-        bmp,
+        payload,
         preview: { width: preview.width, height: preview.height, rgba: preview.rgba },
         mode: state.splashMode,
         fit: adapted.fit,
@@ -468,6 +497,11 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     set({ splashReplacements: next });
   },
 
+  setLogoScreen: async (screen) => {
+    set({ logoScreen: screen, splash: null, splashPreviews: {} });
+    await get().loadSplash();
+  },
+
   setSplashMode: (mode, custom) => {
     set({
       splashMode: mode,
@@ -482,15 +516,16 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     try {
       const replacements = Object.entries(state.splashReplacements).map(([index, replacement]) => ({
         index: Number(index),
-        bmp: replacement.bmp.buffer.slice(
-          replacement.bmp.byteOffset,
-          replacement.bmp.byteOffset + replacement.bmp.byteLength,
+        payload: replacement.payload.buffer.slice(
+          replacement.payload.byteOffset,
+          replacement.payload.byteOffset + replacement.payload.byteLength,
         ) as ArrayBuffer,
       }));
       const artifact = await getClient().packSplashImage(
         state.source.id,
         state.insideEntry ?? undefined,
         replacements,
+        state.logoScreen ?? undefined,
       );
       set({ artifacts: [...get().artifacts, artifact], error: null });
       return artifact;
@@ -512,7 +547,9 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
           frame.index,
         );
         const safe = frame.name.trim().replace(/[^A-Za-z0-9._-]+/g, "_") || String(frame.index);
-        files.push({ name: "frames/" + safe + ".bmp", data: bmp });
+        // a splash frame is a BMP; a MediaTek block is raw pixels, in the layout the manifest names
+        const extension = state.splash?.format === "mtk-logo" ? ".raw" : ".bmp";
+        files.push({ name: "frames/" + safe + extension, data: bmp });
       }
       const manifest = {
         format: state.splash.format,
@@ -526,6 +563,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
           height: frame.height,
           realSize: frame.realSize,
           compressedSize: frame.compressedSize,
+          ...(frame.layout === undefined ? {} : { layout: frame.layout }),
         })),
       };
       files.push({
