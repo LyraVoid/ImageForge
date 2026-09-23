@@ -1,8 +1,11 @@
 # Testing
 
-Every stage has to pass before a commit:
+Every stage has to pass before a commit, in one command:
 
-    pnpm typecheck && pnpm lint && pnpm test && pnpm build
+    pnpm verify
+
+which runs pnpm typecheck, pnpm lint, pnpm test and pnpm build in that order. CI runs the same four,
+in .github/workflows/ci.yml.
 
 `pnpm test` runs under vitest. Tests that need material which cannot live in this repository — a real
 OTA package, a device dump, a third party module — **skip themselves**, and this page says where each
@@ -74,6 +77,33 @@ format are in `.research/memory/` and `.research/mtk-logo/NOTES.md`.
 
 The application never touches a device, and ImageForge never flashes one: a run ends at a downloaded
 image. The capture steps above are what produced the fixtures, not something the tools do.
+
+## Damaged input
+
+The suite does not only check that a reader understands the files it was written for; it checks what it
+does with files that were damaged. tests/unit/robustness.test.ts truncates and byte-flips a copy of
+every fixture, across eleven formats, and holds two rules: a reader either produces a result that agrees
+with the whole file, or it refuses the file with an error of its own. A TypeError, a RangeError, an
+out-of-range read, or a result that quietly lost something is a failure.
+
+The numbers it prints are the evidence: of 116 truncations, 91 were refused with an error of this
+project's own, and the 25 that still parsed produced results identical to the whole file's — the
+truncations that only cut trailing padding. The test also asserts that at least twenty are refused, so a
+suite that stopped testing anything could not pass by being quiet.
+
+What each reader refuses, by name, is part of that promise:
+
+| Reader | Refuses, with a reason it can name |
+|---|---|
+| erofs | chunk based files (EROFS_FEATURE_INCOMPAT_CHUNKED_FILE); bad superblock or inode geometry |
+| ext4 | features this build does not implement (checked in one place, checkExt4Supported) |
+| sparse | chunk types it does not know, and chunks that run past the end of the file |
+| super (liblp) | target types other than linear and zero, and metadata whose checksums or geometry do not add up |
+| boot, init_boot, vendor_boot | header versions it does not know, and truncated headers |
+| zip, payload | an archive or payload that ends before its own tables do; delta partitions with no source |
+| splash | frames that are not 24 or 32 bit uncompressed BMPs |
+| MediaTek logo | blocks whose length no resolution explains (those are left alone rather than guessed at) |
+| boot animation | an archive with no desc.txt, and a desc.txt that declares no animation |
 
 ## Adding a test that needs material
 
