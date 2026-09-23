@@ -324,4 +324,5 @@ export const zhHans: Record<string, string> = {
   "ELF object": "ELF 对象",
   "Unknown content": "未知内容",
 "Logical partition image (super)": "逻辑分区镜像（super）",
+"Splash or logo image": "开机图片（第一屏 / logo）",
 };

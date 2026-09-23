@@ -30,6 +30,7 @@ export type ContentFormat =
   | "f2fs"
   | "dtb"
   | "elf"
+  | "logo"
   | "super"
   | "unknown";
 
@@ -71,6 +72,7 @@ export const CONTENT_LABEL: Record<ContentFormat, string> = {
   f2fs: "F2FS filesystem",
   dtb: "Device tree blob",
   elf: "ELF object",
+  logo: "Splash or logo image",
   super: "Logical partition image (super)",
   unknown: "Unknown content",
 };
@@ -172,6 +174,19 @@ export function detectArtifact(bytes: Uint8Array): DetectedArtifact {
       label: CONTAINER_LABEL[compression],
       packed: true,
     };
+  }
+
+  // A splash image keeps its magic at 0x4000; MediaTek keeps one at offset 8 and a block count
+  // at 0x200. Detecting them here is what stops the logo tool being offered for every unknown file.
+  if (textMatches(bytes, 0x4000, "SPLASH LOGO!")) {
+    return { container: "raw", content: "logo", kind: "logo-container", label: CONTENT_LABEL.logo, packed: false };
+  }
+  if (textMatches(bytes, 8, "logo") && bytes.length >= 0x204) {
+    let blocks = 0;
+    for (let index = 0; index < 4; index += 1) blocks |= bytes[0x200 + index] << (index * 8);
+    if ((blocks >>> 0) > 0 && (blocks >>> 0) <= 4096) {
+      return { container: "raw", content: "logo", kind: "logo-container", label: CONTENT_LABEL.logo, packed: false };
+    }
   }
 
   if (matches(bytes, EXT4_MAGIC_OFFSET, EXT4_MAGIC)) {

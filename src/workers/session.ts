@@ -201,7 +201,8 @@ export class PatchWorkerSession implements PatchWorkerApi {
       throw new WorkerError("The opened file is empty.", "Choose a file that is not empty.");
     }
     // Detection only ever needs a prefix: headers, magics and filesystem superblocks live there.
-    const detected = detectArtifact(await readPrefix(source, 8192));
+    // 0x4200 rather than 8 KiB: a splash image keeps its magic at 0x4000, past a shorter prefix
+    const detected = detectArtifact(await readPrefix(source, 0x4200));
     const record: WorkspaceSourceRecord = {
       id: "source-" + String(this.nextSourceId),
       name,

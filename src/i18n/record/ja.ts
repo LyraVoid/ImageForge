@@ -326,4 +326,5 @@ export const ja: Record<string, string> = {
   "ELF object": "ELF オブジェクト",
   "Unknown content": "不明な内容",
 "Logical partition image (super)": "論理パーティションイメージ（super）",
+"Splash or logo image": "起動ロゴ・スプラッシュ画像",
 };

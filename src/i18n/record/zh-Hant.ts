@@ -324,4 +324,5 @@ export const zhHant: Record<string, string> = {
   "ELF object": "ELF 物件",
   "Unknown content": "未知內容",
 "Logical partition image (super)": "邏輯分割映像（super）",
+"Splash or logo image": "開機圖片（第一屏 / logo）",
 };

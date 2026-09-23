@@ -5,6 +5,8 @@ import { SourcePanel } from "@/components/app/source-panel";
 import { detectArtifact } from "@/core/workspace";
 import type { WorkspaceSourceRecord } from "@/workers/protocol";
 import { buildBootImage } from "../fixtures/bootimg";
+import { buildSparse } from "../fixtures/sparse";
+import { buildSplash } from "../fixtures/splash";
 
 function source(name: string, bytes: Uint8Array): WorkspaceSourceRecord {
   const detected = detectArtifact(bytes);
@@ -51,5 +53,31 @@ describe("the source panel", () => {
     expect(screen.getByText("Raw bytes")).toBeInTheDocument();
     expect(screen.getByText("Unknown content")).toBeInTheDocument();
     expect(screen.getByText("Inspect an image")).toBeInTheDocument();
+  });
+});
+
+describe("only files that are boot images get the boot image tools", () => {
+  it("does not offer the logo tool for something it could not name", () => {
+    render(<SourcePanel source={source("mystery.img", new Uint8Array(64 * 1024).fill(0x11))} />);
+
+    expect(screen.queryByText("Boot logo (first screen)")).toBeNull();
+  });
+
+  it("does not offer it for a partition image that is not a logo either", async () => {
+    const sparse = buildSparse([
+      { type: "raw", blockCount: 2, data: new Uint8Array(8192).fill(0x41) },
+      { type: "dont-care", blockCount: 1 },
+    ]);
+    render(<SourcePanel source={source("super.sparse.img", sparse)} />);
+    expect(screen.getByText("Android sparse image")).toBeInTheDocument();
+    expect(screen.queryByText("Boot logo (first screen)")).toBeNull();
+  });
+
+  it("offers it for a splash image, which it can now name", async () => {
+    const splash = await buildSplash([{ name: "boot", width: 8, height: 4, color: [1, 2, 3] }]);
+    render(<SourcePanel source={source("splash.img", splash)} />);
+
+    expect(screen.getByText("Splash or logo image")).toBeInTheDocument();
+    expect(screen.getByText("Boot logo (first screen)")).toBeInTheDocument();
   });
 });
