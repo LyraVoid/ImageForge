@@ -34,6 +34,7 @@ export function ExtractPage() {
   const sendToPatcher = useForgeStore((state) => state.sendToPatcher);
   const openInside = useForgeStore((state) => state.openInside);
   const artifactBlob = useForgeStore((state) => state.artifactBlob);
+  const packSparse = useForgeStore((state) => state.packSparse);
   const [busyEntry, setBusyEntry] = useState<string | null>(null);
 
   const isPackage = source !== null && source.kind === "package";
@@ -183,6 +184,11 @@ export function ExtractPage() {
                         <Download />
                         {t("extract.download")}
                       </Button>
+                      {artifact.name.endsWith(".img") ? (
+                        <Button variant="ghost" size="sm" onClick={() => void packSparse(artifact.id)}>
+                          {t("sparse.pack")}
+                        </Button>
+                      ) : null}
                     </li>
                   ))}
                 </ul>
