@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -26,6 +27,16 @@ describe("documentation coverage", () => {
     const page = readFileSync(join(process.cwd(), "docs", "testing.md"), "utf8");
     const missing = variables.filter((name) => !page.includes(name));
     expect(missing, "docs/testing.md is missing: " + missing.join(" | ")).toEqual([]);
+  });
+
+  /**
+   * The material table is generated from the tests rather than kept by hand, and the generator fails
+   * in both directions: a variable the tests read but the table does not declare, and a declared
+   * variable nothing reads any more. Running it here means CI checks the table cannot drift.
+   */
+  it("keeps the material table generated rather than handwritten", () => {
+    const output = execFileSync("node", ["scripts/materials.mjs", "--check"], { encoding: "utf8" });
+    expect(output).toContain("up to date");
   });
 
   it("keeps the gate command in the testing page and the readme in step", () => {
