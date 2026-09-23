@@ -161,6 +161,13 @@ export type { ZipEntry } from "./zip";
 export { OPERATION_TYPE, PAYLOAD_MAGIC, extractPayloadPartition, parsePayload } from "./payload";
 export type { ParsedPayload, PayloadOperation, PayloadPartition } from "./payload";
 export {
+  decodePayloadOperation,
+  logicalPartitionStream,
+  partitionSegments,
+  payloadPartitionStream,
+} from "./payload-stream";
+export type { PartitionSegment } from "./payload-stream";
+export {
   describeOperationTypes,
   payloadPartitionSource,
   payloadSupportsOperation,

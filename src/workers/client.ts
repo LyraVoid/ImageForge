@@ -38,11 +38,16 @@ export interface PatchWorkerClient {
   registerArtifact(request: RegisterArtifactRequest): Promise<WorkspaceArtifact>;
   digestArtifact(id: string): Promise<string>;
   listPackage(sourceId: string): Promise<OpenedPackage>;
-  extractPackageEntry(sourceId: string, entryId: string): Promise<WorkspaceArtifact>;
+  extractPackageEntry(sourceId: string, entryId: string, options?: { stream?: boolean }): Promise<WorkspaceArtifact>;
+  artifactBlob(id: string): Promise<Blob>;
   analyzeArtifact(artifactId: string): Promise<AnalyzeResponse>;
   inspectPartition(sourceId: string, inside?: string): Promise<PartitionView>;
   unpackSparseSource(sourceId: string): Promise<WorkspaceArtifact>;
-  extractLogicalPartition(sourceId: string, partitionName: string): Promise<WorkspaceArtifact>;
+  extractLogicalPartition(
+    sourceId: string,
+    partitionName: string,
+    options?: { stream?: boolean },
+  ): Promise<WorkspaceArtifact>;
   inspectSplash(sourceId: string, inside?: string): Promise<SplashSummary>;
   readSplashFrameBmp(sourceId: string, inside: string | undefined, index: number): Promise<ArrayBuffer>;
   readSplashFramePreview(
@@ -94,11 +99,12 @@ function createWorkerBackedClient(worker: Worker): PatchWorkerClient {
       remote.registerArtifact(Comlink.transfer(request, [request.bytes])),
     digestArtifact: (id) => remote.digestArtifact(id),
     listPackage: (sourceId) => remote.listPackage(sourceId),
-    extractPackageEntry: (sourceId, entryId) => remote.extractPackageEntry(sourceId, entryId),
+    extractPackageEntry: (sourceId, entryId, options) => remote.extractPackageEntry(sourceId, entryId, options),
+    artifactBlob: (id) => remote.artifactBlob(id),
     analyzeArtifact: (artifactId) => remote.analyzeArtifact(artifactId),
     inspectPartition: (sourceId, inside) => remote.inspectPartition(sourceId, inside),
     unpackSparseSource: (sourceId) => remote.unpackSparseSource(sourceId),
-    extractLogicalPartition: (sourceId, name) => remote.extractLogicalPartition(sourceId, name),
+    extractLogicalPartition: (sourceId, name, options) => remote.extractLogicalPartition(sourceId, name, options),
     inspectSplash: (sourceId, inside) => remote.inspectSplash(sourceId, inside),
     readSplashFrameBmp: (sourceId, inside, index) => remote.readSplashFrameBmp(sourceId, inside, index),
     readSplashFramePreview: (sourceId, inside, index) =>
@@ -155,11 +161,14 @@ function createInlineClient(): PatchWorkerClient {
     registerArtifact: async (request) => (await load()).registerArtifact(request),
     digestArtifact: async (id) => (await load()).digestArtifact(id),
     listPackage: async (sourceId) => (await load()).listPackage(sourceId),
-    extractPackageEntry: async (sourceId, entryId) => (await load()).extractPackageEntry(sourceId, entryId),
+    extractPackageEntry: async (sourceId, entryId, options) =>
+      (await load()).extractPackageEntry(sourceId, entryId, options),
+    artifactBlob: async (id) => (await load()).artifactBlob(id),
     analyzeArtifact: async (artifactId) => (await load()).analyzeArtifact(artifactId),
     inspectPartition: async (sourceId, inside) => (await load()).inspectPartition(sourceId, inside),
     unpackSparseSource: async (sourceId) => (await load()).unpackSparseSource(sourceId),
-    extractLogicalPartition: async (sourceId, name) => (await load()).extractLogicalPartition(sourceId, name),
+    extractLogicalPartition: async (sourceId, name, options) =>
+      (await load()).extractLogicalPartition(sourceId, name, options),
     inspectSplash: async (sourceId, inside) => (await load()).inspectSplash(sourceId, inside),
     readSplashFrameBmp: async (sourceId, inside, index) =>
       (await load()).readSplashFrameBmp(sourceId, inside, index),

@@ -70,6 +70,7 @@ export const zhHant: Messages = {
   "extract.reading": "正在讀取安裝包…",
   "extract.extract": "取出",
   "extract.needsSource": "這個項目是差分儲存的：取出它需要它產生時對應的來源映像。",
+  "artifact.streamed": "以 blob 保存（不佔記憶體）：下載時從 worker 邊產生邊流出。",
   "extract.extracted": "已取出的檔案",
   "extract.empty": "還沒有取出任何內容，先在上方選一個項目。",
   "extract.useInPatcher": "用它開始修補",

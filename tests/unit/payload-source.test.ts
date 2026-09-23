@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   bytesSource,
   extractPackageEntry,
+  extractPayloadPartition,
   listZip,
   parsePayload,
   payloadPartitionSource,
+  payloadPartitionStream,
   storedEntrySource,
 } from "@/core/package";
 import { parseErofs, readDirectory, readInodeData, resolveErofsPath } from "@/core/partition";
@@ -17,6 +19,23 @@ import { repoPath } from "../fixtures/artifacts";
 const OTA_PACKAGE = process.env.IMAGEFORGE_OTA_PACKAGE ?? "";
 const hasOtaPackage = OTA_PACKAGE !== "" && existsSync(OTA_PACKAGE);
 const DIGESTS = process.env.IMAGEFORGE_PAYLOAD_DIGESTS ?? repoPath(".research", "aster-validation", "erofs-payload-digests.txt");
+
+async function collect(stream: ReadableStream<Uint8Array>): Promise<Uint8Array> {
+  const chunks: Uint8Array[] = [];
+  const reader = stream.getReader();
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value as Uint8Array);
+  }
+  const out = new Uint8Array(chunks.reduce((sum, chunk) => sum + chunk.length, 0));
+  let offset = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return out;
+}
 
 async function openPayload(zipPath: string) {
   const zipSource = fileSource(zipPath);
@@ -66,6 +85,18 @@ describe.skipIf(!hasOtaPackage)("a payload partition as a range source", () => {
       expect(await sha256Hex(data), file).toBe(digest);
     }
     expect(ranged.stats.decodedBytes).toBeLessThan(64 * 1024 * 1024);
+  }, 900000);
+
+  it("streams a real partition to exactly the bytes the materializing reader produces", async () => {
+    const { payloadSource, payload } = await openPayload(OTA_PACKAGE);
+    const partition = payload.partitions.find((entry) => entry.name === "splash");
+    expect(partition).toBeDefined();
+
+    const streamed = await collect(payloadPartitionStream(payloadSource, payload, "splash"));
+    const inMemory = await extractPayloadPartition(payloadSource, payload, "splash");
+
+    expect(streamed.length).toBe(inMemory.length);
+    expect(await sha256Hex(streamed)).toBe(await sha256Hex(inMemory));
   }, 900000);
 
   it("refuses a partition that is stored as a delta", async () => {

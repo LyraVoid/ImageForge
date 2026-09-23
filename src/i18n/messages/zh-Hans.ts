@@ -70,6 +70,7 @@ export const zhHans: Messages = {
   "extract.reading": "正在读取安装包…",
   "extract.extract": "提取",
   "extract.needsSource": "这个条目是差分存储的：提取它需要它生成时对应的源镜像。",
+  "artifact.streamed": "以 blob 保存（不占内存）：下载时从 worker 边生成边流出。",
   "extract.extracted": "已提取的文件",
   "extract.empty": "还没有提取任何内容，先在上方选一个条目。",
   "extract.useInPatcher": "用它开始修补",

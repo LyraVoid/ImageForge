@@ -18,13 +18,14 @@ Comlink.expose({
   registerArtifact: (request: Parameters<typeof session.registerArtifact>[0]) => session.registerArtifact(request),
   digestArtifact: (id: string) => session.digestArtifact(id),
   listPackage: (sourceId: string) => session.listPackage(sourceId),
-  extractPackageEntry: (sourceId: string, entryId: string) =>
-    session.extractPackageEntry(sourceId, entryId),
+  extractPackageEntry: (sourceId: string, entryId: string, options?: { stream?: boolean }) =>
+    session.extractPackageEntry(sourceId, entryId, options),
+  artifactBlob: (id: string) => session.artifactBlob(id),
   analyzeArtifact: (artifactId: string) => session.analyzeArtifact(artifactId),
   inspectPartition: (sourceId: string, inside?: string) => session.inspectPartition(sourceId, inside),
   unpackSparseSource: (sourceId: string) => session.unpackSparseSource(sourceId),
-  extractLogicalPartition: (sourceId: string, partitionName: string) =>
-    session.extractLogicalPartition(sourceId, partitionName),
+  extractLogicalPartition: (sourceId: string, partitionName: string, options?: { stream?: boolean }) =>
+    session.extractLogicalPartition(sourceId, partitionName, options),
   inspectSplash: (sourceId: string, inside?: string) => session.inspectSplash(sourceId, inside),
   readSplashFrameBmp: (sourceId: string, inside: string | undefined, index: number) =>
     session.readSplashFrameBmp(sourceId, inside, index),

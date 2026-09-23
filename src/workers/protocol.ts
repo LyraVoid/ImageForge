@@ -197,8 +197,13 @@ export interface PatchWorkerApi {
   registerArtifact(request: RegisterArtifactRequest): Promise<WorkspaceArtifact>;
   /** Lists what a package holds (zip entries or payload partitions) without extracting anything. */
   listPackage(sourceId: string): Promise<OpenedPackage>;
-  /** Extracts one entry and keeps it in the workspace as an artifact. */
-  extractPackageEntry(sourceId: string, entryId: string): Promise<WorkspaceArtifact>;
+  /**
+   * Extracts one entry and keeps it in the workspace as an artifact. Partitions above the streaming
+   * threshold are produced operation by operation into a `Blob`; `stream` forces that path.
+   */
+  extractPackageEntry(sourceId: string, entryId: string, options?: { stream?: boolean }): Promise<WorkspaceArtifact>;
+  /** The artifact as a `Blob`, which is what a browser can download without a copy in memory. */
+  artifactBlob(id: string): Promise<Blob>;
   /** Hands an artifact to the patcher, which reads its bytes where they already are. */
   analyzeArtifact(artifactId: string): Promise<AnalyzeResponse>;
   /** What kind of partition container the open source is, and what it holds. */
@@ -206,7 +211,11 @@ export interface PatchWorkerApi {
   /** Unpacks a sparse image and keeps the raw image as an artifact. */
   unpackSparseSource(sourceId: string): Promise<WorkspaceArtifact>;
   /** Reads one logical partition out of a super image into an artifact. */
-  extractLogicalPartition(sourceId: string, partitionName: string): Promise<WorkspaceArtifact>;
+  extractLogicalPartition(
+    sourceId: string,
+    partitionName: string,
+    options?: { stream?: boolean },
+  ): Promise<WorkspaceArtifact>;
   /**
    * Lists a directory of a filesystem image (erofs or ext4). `inside` names an entry within the
    * opened file — a zip entry, or a payload partition like `payload.bin::system` — which is read in

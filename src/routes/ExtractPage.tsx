@@ -12,6 +12,7 @@ import { kindLabel } from "@/core/workspace";
 import { PackageError } from "@/core/errors";
 import { useRecordText, useT } from "@/i18n/use-translation";
 import { formatBytes } from "@/lib/format";
+import { downloadBlob } from "@/lib/download";
 import { useForgeStore } from "@/stores/forge-store";
 
 /**
@@ -32,7 +33,7 @@ export function ExtractPage() {
   const extractEntry = useForgeStore((state) => state.extractEntry);
   const sendToPatcher = useForgeStore((state) => state.sendToPatcher);
   const openInside = useForgeStore((state) => state.openInside);
-  const readArtifactBytes = useForgeStore((state) => state.readArtifactBytes);
+  const artifactBlob = useForgeStore((state) => state.artifactBlob);
   const [busyEntry, setBusyEntry] = useState<string | null>(null);
 
   const isPackage = source !== null && source.kind === "package";
@@ -48,16 +49,8 @@ export function ExtractPage() {
   };
 
   const handleDownload = async (artifactId: string, name: string) => {
-    const bytes = await readArtifactBytes(artifactId);
-    if (bytes === null) return;
-    const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/octet-stream" }));
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = name;
-    document.body.append(anchor);
-    anchor.click();
-    anchor.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const blob = await artifactBlob(artifactId);
+    if (blob) downloadBlob(blob, name);
   };
 
   return (
@@ -166,6 +159,9 @@ export function ExtractPage() {
                       <span className="font-mono text-[11px] text-muted-foreground">
                         {formatBytes(artifact.sizeBytes)}
                       </span>
+                      {artifact.params?.streamed === "true" ? (
+                        <span className="text-[11px] text-muted-foreground">{t("artifact.streamed")}</span>
+                      ) : null}
                       {artifact.kind === "boot-container" ? (
                         <Button
                           variant="primary"

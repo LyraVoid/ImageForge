@@ -73,6 +73,7 @@ export const en = {
   "extract.reading": "Reading the package…",
   "extract.extract": "Extract",
   "extract.needsSource": "This entry is stored as a delta: extracting it needs the image it was generated against.",
+  "artifact.streamed": "Kept as a blob, not in memory: downloading streams it from the worker.",
   "extract.extracted": "Extracted files",
   "extract.empty": "Nothing extracted yet. Pick an entry above.",
   "extract.useInPatcher": "Use in the patcher",

@@ -70,6 +70,7 @@ export const ja: Messages = {
   "extract.reading": "パッケージを読んでいます…",
   "extract.extract": "取り出す",
   "extract.needsSource": "この項目は差分として保存されています。取り出すには元になったイメージが必要です。",
+  "artifact.streamed": "blob として保持（メモリに載せません）。ダウンロード時に worker から順次流します。",
   "extract.extracted": "取り出したファイル",
   "extract.empty": "まだ何も取り出していません。上の一覧から選んでください。",
   "extract.useInPatcher": "これでパッチする",

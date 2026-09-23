@@ -191,6 +191,31 @@ describe("PatchWorkerSession", () => {
     expect(await session.digestArtifact(artifact.id)).toBe(await sha256Hex(image));
   });
 
+  it("streams a partition into a blob backed artifact when it is too big to hold", async () => {
+    const session = new PatchWorkerSession();
+    const image = await buildBootImage({ kernel: null });
+    const payload = await buildPayload([{ name: "init_boot", data: image, compress: "xz" }]);
+    const zip = await buildZip([{ name: "payload.bin", data: payload }]);
+    const source = await session.openSource(toArrayBuffer(zip), "ota.zip");
+
+    const artifact = await session.extractPackageEntry(source.id, "payload.bin::init_boot", { stream: true });
+
+    expect(artifact.params?.streamed).toBe("true");
+    expect(artifact.sizeBytes).toBe(image.length);
+    expect(artifact.kind).toBe("boot-container");
+
+    // the blob holds the same bytes, ranged reads work on it, and hashing it here is refused
+    const blob = await session.artifactBlob(artifact.id);
+    expect(await sha256Hex(new Uint8Array(await blob.arrayBuffer()))).toBe(await sha256Hex(image));
+    const head = new Uint8Array(await session.readArtifact(artifact.id, 0, 8));
+    expect(new TextDecoder().decode(head)).toBe("ANDROID!");
+    await expect(session.digestArtifact(artifact.id)).rejects.toThrowError(WorkerError);
+
+    // and closing the source takes the streamed artifact with it
+    await session.closeSource(source.id);
+    expect((await session.workspace()).artifacts).toHaveLength(0);
+  });
+
   it("refuses to extract something the package does not have", async () => {
     const session = new PatchWorkerSession();
     const source = await session.openSource(

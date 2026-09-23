@@ -9,6 +9,7 @@ import type { SplashResolutionMode } from "@/core/logo";
 import { useT } from "@/i18n/use-translation";
 import { formatBytes } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { downloadBlob } from "@/lib/download";
 import { useForgeStore } from "@/stores/forge-store";
 
 const MODES: SplashResolutionMode[] = ["direct", "followOriginal", "autoAdapt", "custom"];
@@ -37,7 +38,7 @@ export function LogoPage() {
   const setSplashMode = useForgeStore((state) => state.setSplashMode);
   const packSplash = useForgeStore((state) => state.packSplash);
   const exportSplashFrames = useForgeStore((state) => state.exportSplashFrames);
-  const readArtifactBytes = useForgeStore((state) => state.readArtifactBytes);
+  const artifactBlob = useForgeStore((state) => state.artifactBlob);
   const [target, setTarget] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [uploadError, setUploadError] = useState(false);
@@ -310,16 +311,8 @@ export function LogoPage() {
                         variant="ghost"
                         size="sm"
                         onClick={async () => {
-                          const bytes = await readArtifactBytes(artifact.id);
-                          if (!bytes) return;
-                          const url = URL.createObjectURL(new Blob([bytes as BlobPart]));
-                          const anchor = document.createElement("a");
-                          anchor.href = url;
-                          anchor.download = artifact.name;
-                          document.body.append(anchor);
-                          anchor.click();
-                          anchor.remove();
-                          window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+                          const blob = await artifactBlob(artifact.id);
+                          if (blob) downloadBlob(blob, artifact.name);
                         }}
                       >
                         <Download />

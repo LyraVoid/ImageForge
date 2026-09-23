@@ -127,6 +127,8 @@ interface ForgeState {
   /** Hands an artifact to the patcher; named without a leading "use" so it is not mistaken for a hook. */
   sendToPatcher: (artifactId: string) => Promise<AnalyzeResponse | null>;
   readArtifactBytes: (artifactId: string) => Promise<Uint8Array | null>;
+  /** The artifact as a `Blob`: for a streamed partition this is the only copy that exists. */
+  artifactBlob: (artifactId: string) => Promise<Blob | null>;
   /** Points the tools at one entry inside the opened package, or at the file itself (null). */
   openInside: (entryId: string | null) => void;
   inspectPartition: () => Promise<PartitionView | null>;
@@ -509,6 +511,15 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       const artifact = await getClient().exportFilesAsZip(state.source.id, base + "-frames.zip", files);
       set({ artifacts: [...get().artifacts, artifact], error: null });
       return artifact;
+    } catch (error) {
+      set({ error: toImageForgeError(error).toJSON() });
+      return null;
+    }
+  },
+
+  artifactBlob: async (artifactId) => {
+    try {
+      return await getClient().artifactBlob(artifactId);
     } catch (error) {
       set({ error: toImageForgeError(error).toJSON() });
       return null;

@@ -40,6 +40,11 @@ never loaded, and a payload stored inside it is descended into rather than extra
 exists compressed, an entry past the in-memory limit, a partition stored as a delta that needs the
 source image — are refused by name instead of guessed at.
 
+**Big partitions stream instead of being held.** A partition larger than 256 MiB is produced operation
+by operation into a `Blob` (which browsers keep on disk) rather than a single buffer, so a 3 GiB
+`my_stock` can be extracted and downloaded — it used to be impossible, since one `Uint8Array` of that
+size cannot exist in a browser. The page marks such an artifact as blob-backed.
+
 **The boot screen is editable too.** A splash image's frames are listed with thumbnails, any frame
 can be replaced with a picture of your own (kept as it is, cropped or stretched to the frame, or a
 size you name), and the image is packed again: frames you did not touch keep their exact bytes, and

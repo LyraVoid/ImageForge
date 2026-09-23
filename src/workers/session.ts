@@ -10,9 +10,11 @@ import {
   bytesSource,
   extractPackageEntry as extractEntryFrom,
   listZip,
+  logicalPartitionStream,
   openPackage,
   parsePayload,
   payloadPartitionSource,
+  payloadPartitionStream,
   readAll,
   readPrefix,
   storedEntrySource,
@@ -50,6 +52,13 @@ import {
 
 /** The longest side of a frame preview the editor asks for. */
 const SPLASH_PREVIEW_MAX = 240;
+
+/**
+ * Partitions above this size are produced as a stream and kept as a blob instead of being
+ * materialized: 256 MiB is comfortably more than any boot image, and far less than the partitions
+ * that used to fail (a 759 MB `system`, a 3 GB `my_stock`).
+ */
+const STREAM_ARTIFACT_BYTES = 256 * 1024 * 1024;
 import {
   addArtifact,
   addSource,
@@ -100,7 +109,13 @@ interface HeldSource {
 
 interface HeldArtifact {
   record: WorkspaceArtifact;
-  bytes: Uint8Array;
+  /** Small artifacts live in memory as bytes. */
+  bytes: Uint8Array | null;
+  /**
+   * Big ones are a `Blob` built from a stream: browsers keep those on disk, so a three gigabyte
+   * partition can be produced operation by operation and never exist as one buffer.
+   */
+  blob: Blob | null;
 }
 
 export function toImageSummary(image: ParsedImage): ImageSummary {
@@ -213,6 +228,13 @@ export class PatchWorkerSession implements PatchWorkerApi {
       const take = length === undefined ? size - start : Math.max(0, length);
       return toStandaloneBuffer(await held.source.read(start, take));
     }
+    const artifact = this.artifacts.get(id);
+    if (artifact?.blob) {
+      const size = artifact.blob.size;
+      const start = Math.max(0, Math.min(offset, size));
+      const end = length === undefined ? size : Math.max(start, Math.min(start + length, size));
+      return toStandaloneBuffer(new Uint8Array(await artifact.blob.slice(start, end).arrayBuffer()));
+    }
     const bytes = this.bytesOf(id);
     const start = Math.max(0, Math.min(offset, bytes.length));
     const end = length === undefined ? bytes.length : Math.max(start, Math.min(start + length, bytes.length));
@@ -240,15 +262,58 @@ export class PatchWorkerSession implements PatchWorkerApi {
       kind: detected.kind,
       detected,
     };
-    this.artifacts.set(record.id, { record, bytes });
+    this.artifacts.set(record.id, { record, bytes, blob: null });
     this.workspaceState = addArtifact(this.workspaceState, record);
     return record;
+  }
+
+  /**
+   * Keeps a partition that is being produced as a stream. The bytes of a `Blob` live outside the
+   * JavaScript heap in a browser, which is what makes extracting a three gigabyte partition possible.
+   */
+  private async registerStreamedArtifact(
+    request: { sourceId: string; parentId: string; tool: string; name: string; params: Record<string, string> },
+    stream: ReadableStream<Uint8Array>,
+  ): Promise<WorkspaceArtifact> {
+    const blob = await new Response(stream).blob();
+    const detected = detectArtifact(new Uint8Array(await blob.slice(0, 8192).arrayBuffer()));
+    const record: WorkspaceArtifact = {
+      id: derivedArtifactId(request.sourceId, request.tool, request.name),
+      sourceId: request.sourceId,
+      parentId: request.parentId,
+      tool: request.tool,
+      params: { ...request.params, streamed: "true" },
+      name: request.name,
+      sizeBytes: blob.size,
+      kind: detected.kind,
+      detected,
+    };
+    this.artifacts.set(record.id, { record, bytes: null, blob });
+    this.workspaceState = addArtifact(this.workspaceState, record);
+    return record;
+  }
+
+  /** The `Blob` behind an artifact, so the page can hand it to the browser as a download. */
+  async artifactBlob(id: string): Promise<Blob> {
+    const artifact = this.artifacts.get(id);
+    if (!artifact) {
+      throw new WorkerError("Nothing in the workspace has the id " + id + ".", "Extract it first.");
+    }
+    if (artifact.blob) return artifact.blob;
+    return new Blob([(artifact.bytes as Uint8Array) as BlobPart]);
   }
 
   async digestArtifact(id: string): Promise<string> {
     // A source is digested by reading it; only images are ever digested this way.
     const held = this.sources.get(id);
     if (held) return sha256Hex(await readAll(held.source, MAX_ANALYZABLE_BYTES));
+    const artifact = this.artifacts.get(id);
+    if (artifact?.blob) {
+      throw new WorkerError(
+        "Artifact " + id + " is " + artifact.blob.size + " bytes and is kept as a blob, not in memory.",
+        "This artifact is too large to hash here; download it and check it on your own machine.",
+      );
+    }
     return sha256Hex(this.bytesOf(id));
   }
 
@@ -256,7 +321,11 @@ export class PatchWorkerSession implements PatchWorkerApi {
     return openPackage(this.requireSource(sourceId).source);
   }
 
-  async extractPackageEntry(sourceId: string, entryId: string): Promise<WorkspaceArtifact> {
+  async extractPackageEntry(
+    sourceId: string,
+    entryId: string,
+    options: { stream?: boolean } = {},
+  ): Promise<WorkspaceArtifact> {
     const source = this.requireSource(sourceId);
     const opened = await openPackage(source.source);
     const entry = opened.entries.find((candidate) => candidate.id === entryId);
@@ -266,6 +335,23 @@ export class PatchWorkerSession implements PatchWorkerApi {
         "Pick an entry from the listing.",
       );
     }
+    // A partition inside a payload that is too big to hold is streamed into a blob instead.
+    const separator = entryId.indexOf("::");
+    if (separator >= 0 && (options.stream === true || entry.sizeBytes > STREAM_ARTIFACT_BYTES)) {
+      const containerName = entryId.slice(0, separator);
+      const partitionName = entryId.slice(separator + 2);
+      const zipEntry = (await listZip(source.source)).find((candidate) => candidate.name === containerName);
+      if (!zipEntry) {
+        throw new WorkerError("The archive has no entry " + containerName + ".", "Open the package again.");
+      }
+      const payloadSource = storedEntrySource(source.source, zipEntry);
+      const payload = await parsePayload(payloadSource);
+      return this.registerStreamedArtifact(
+        { sourceId, parentId: sourceId, tool: "extract", name: entry.name, params: { entry: entryId } },
+        payloadPartitionStream(payloadSource, payload, partitionName),
+      );
+    }
+
     const bytes = await extractEntryFrom(source.source, entryId);
     return this.registerArtifact({
       sourceId,
@@ -357,9 +443,20 @@ export class PatchWorkerSession implements PatchWorkerApi {
     });
   }
 
-  async extractLogicalPartition(sourceId: string, partitionName: string): Promise<WorkspaceArtifact> {
+  async extractLogicalPartition(
+    sourceId: string,
+    partitionName: string,
+    options: { stream?: boolean } = {},
+  ): Promise<WorkspaceArtifact> {
     const { source } = this.requireSource(sourceId);
     const parsed = await parseSuper(source);
+    const declared = parsed.partitions.find((entry) => entry.name === partitionName);
+    if (options.stream === true || (declared?.sizeBytes ?? 0) > STREAM_ARTIFACT_BYTES) {
+      return this.registerStreamedArtifact(
+        { sourceId, parentId: sourceId, tool: "unpack", name: partitionName + ".img", params: { partition: partitionName } },
+        logicalPartitionStream(source, parsed, partitionName),
+      );
+    }
     const logical = logicalPartitionSource(source, parsed, partitionName);
     const bytes = await readAll(logical, MAX_ANALYZABLE_BYTES);
     return this.registerArtifact({
@@ -596,7 +693,16 @@ export class PatchWorkerSession implements PatchWorkerApi {
     if (!artifact) {
       throw new WorkerError("Artifact " + artifactId + " is not in this workspace.", "Extract it first.");
     }
-    const bytes = artifact.bytes;
+    // Analyzing means parsing and hashing, so the artifact has to be in memory: a boot image is a
+    // few megabytes, and anything bigger is refused by the same limit the sources use.
+    const bytes =
+      artifact.bytes ?? new Uint8Array(await (artifact.blob as Blob).arrayBuffer());
+    if (bytes.length > MAX_ANALYZABLE_BYTES) {
+      throw new WorkerError(
+        "Artifact " + artifactId + " is " + bytes.length + " bytes.",
+        "This artifact is too large to analyze.",
+      );
+    }
     const wasm = await loadWasmModule();
     const image = parseImage(bytes);
     const sha256 = await sha256Hex(bytes);
@@ -644,8 +750,11 @@ export class PatchWorkerSession implements PatchWorkerApi {
 
   private bytesOf(id: string): Uint8Array {
     const artifact = this.artifacts.get(id);
-    if (artifact) return artifact.bytes;
-    throw new WorkerError("Nothing in the workspace has the id " + id + ".", "Open the file again.");
+    if (artifact?.bytes) return artifact.bytes;
+    throw new WorkerError(
+      "Nothing in the workspace holds " + id + " in memory.",
+      "Open the file again.",
+    );
   }
 
   async plan(request: PlanRequest): Promise<PlanResponse> {

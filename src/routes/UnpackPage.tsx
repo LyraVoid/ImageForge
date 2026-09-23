@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { EXTRACT_TOOL, PATCH_ROUTES } from "@/app/tools";
 import { useT } from "@/i18n/use-translation";
 import { formatBytes } from "@/lib/format";
+import { downloadBlob } from "@/lib/download";
 import { useForgeStore } from "@/stores/forge-store";
 
 /**
@@ -32,7 +33,7 @@ export function UnpackPage() {
   const extractLogicalPartition = useForgeStore((state) => state.extractLogicalPartition);
   const browseFilesystem = useForgeStore((state) => state.browseFilesystem);
   const extractFilesystemFile = useForgeStore((state) => state.extractFilesystemFile);
-  const readArtifactBytes = useForgeStore((state) => state.readArtifactBytes);
+  const artifactBlob = useForgeStore((state) => state.artifactBlob);
   const sendToPatcher = useForgeStore((state) => state.sendToPatcher);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -43,9 +44,8 @@ export function UnpackPage() {
   }, [source, isPackage, stage, view, inspectPartition, insideEntry]);
 
   const handleDownload = async (artifactId: string, name: string) => {
-    const bytes = await readArtifactBytes(artifactId);
-    if (bytes === null) return;
-    download(name, bytes);
+    const blob = await artifactBlob(artifactId);
+    if (blob) downloadBlob(blob, name);
   };
 
   const handleErofsFile = async (path: string) => {
@@ -272,6 +272,9 @@ export function UnpackPage() {
                       <span className="font-mono text-[11px] text-muted-foreground">
                         {formatBytes(artifact.sizeBytes)}
                       </span>
+                      {artifact.params?.streamed === "true" ? (
+                        <span className="text-[11px] text-muted-foreground">{t("artifact.streamed")}</span>
+                      ) : null}
                       {artifact.kind === "boot-container" ? (
                         <Button
                           variant="primary"
