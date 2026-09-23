@@ -84,13 +84,15 @@ describe("patch page re-planning", () => {
 
     fireEvent.change(manager, { target: { value: "weavemask" } });
 
-    await waitFor(() => expect(store().planResponse?.plan.configuration.magiskFlavor).toBe("weavemask"));
+    // Wait for the rebuilt plan rather than the option the page echoes back: options are merged into
+    // the previous plan while the new one is being built, so the two disagree for a moment.
+    await waitFor(() => expect(store().planResponse?.plan.artifact.id).toBe("weavemask-magiskinit"));
     // the plan pins WeaveMask's own payloads and the manager that trusts them
     expect(store().planResponse?.plan.configuration.requiredManager).toBe("io.github.seyud.weave");
-    expect(store().planResponse?.plan.artifact.id).toBe("weavemask-magiskinit");
     expect(store().planResponse?.plan.configuration.magiskArtifacts).toContain("weavemask-magisk");
   }, 60000);
 });
+
 describe("patch page: the KernelSU family", () => {
   beforeEach(async () => {
     await store().reset();
@@ -99,7 +101,9 @@ describe("patch page: the KernelSU family", () => {
   });
 
   it("offers every manager of the family and plans for the chosen one", async () => {
-    await store().selectProvider("kernelsu");
+    // The KMI is chosen here because init_boot-style images carry no kernel to read it from, and a
+    // plan without one is refused: this test is about the flavour, not about that refusal.
+    await store().selectProvider("kernelsu", { configuration: { kmi: "android15-6.6" } });
     renderPatchPage();
 
     const manager = await screen.findByLabelText("Manager");
@@ -112,10 +116,14 @@ describe("patch page: the KernelSU family", () => {
     ]);
 
     fireEvent.change(manager, { target: { value: "koyeb" } });
-    await waitFor(() => expect(store().planResponse?.plan.configuration.kernelsuManager).toBe("kernelsu"));
+    // An unknown flavour is not an error: the plan falls back to the default one.
+    await waitFor(() => expect(store().planResponse?.plan.artifact.id).toBe("kernelsu-ksuinit"));
 
     fireEvent.change(manager, { target: { value: "yukisu" } });
-    await waitFor(() => expect(store().planResponse?.plan.configuration.kernelsuManager).toBe("yukisu"));
+    // Wait for the rebuilt *plan*, not for the option the page echoes back: the options are merged
+    // into the previous plan while the new one is still being built, so the two disagree briefly.
+    await waitFor(() => expect(store().planResponse?.plan.artifact.id).toBe("yukisu-ksuinit"));
     expect(store().planResponse?.plan.configuration.requiredManager).toBe("com.anatdx.yukisu");
+    expect(store().planResponse?.plan.configuration.moduleArtifact).toBe("yukisu-lkm-android15-6.6");
   }, 60000);
 });
