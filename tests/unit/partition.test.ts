@@ -129,7 +129,8 @@ describe("super images", () => {
   it("refuses a damaged geometry instead of reading garbage", async () => {
     const { bytes } = await build();
     const damaged = new Uint8Array(bytes);
-    damaged[40] ^= 0xff; // the metadata max size, covered by the geometry checksum
+    // the geometry lives at LP_PARTITION_RESERVED_BYTES, and this field is covered by its checksum
+    damaged[4096 + 40] ^= 0xff;
 
     await expect(parseSuper(bytesSource(damaged))).rejects.toThrowError(/geometry checksum/);
   });

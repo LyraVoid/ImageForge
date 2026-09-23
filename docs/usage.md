@@ -183,6 +183,19 @@ A note on what is deliberately not emitted: a dont-care chunk means "leave whate
 device", which is a different statement from "this region is zero", and AOSP's own writer does not use
 it either, so neither do we. If a fill or raw image will not do, say so and it can become an option.
 
+## Build a super image out of extracted partitions
+
+A super image is the container Android's dynamic partitions live in, and it is what a flashing tool
+usually wants when a device uses them. The writer here takes partition images and lays them out the way
+AOSP's lpmake does: the reserved area, the geometry and its backup, the metadata for every slot and its
+backup, and then the partitions one after another, aligned, with the metadata's own SHA-256 checksums
+in place. Its output is byte for byte what lpmake writes for the same inputs and options, which the
+tests check against the real tool, and lpdump and lpunpack read it back.
+
+Two notes on sizes: a partition that is not a whole number of blocks is padded up to the alignment (a
+real partition is block aligned, so this only affects hand-made files), and the device size defaults to
+what the parts need. The reserved area and the alignment are options.
+
 ## Look at a file without patching it
 
 **Inspect an image** is the read-only face of the same workspace: open anything there and the page

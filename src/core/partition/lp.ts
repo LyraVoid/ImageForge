@@ -103,12 +103,28 @@ export async function parseSuper(source: ByteSource, slot = 0): Promise<ParsedSu
       "This file is too short to hold logical partition metadata.",
     );
   }
-  const geometryBytes = await source.read(0, LP_METADATA_GEOMETRY_STRUCT_SIZE);
+  // The geometry lives at LP_PARTITION_RESERVED_BYTES, with a second copy right after it, which is
+  // what AOSP's own reader looks at (utility.cpp). Reading offset 0 instead was a bug that a
+  // self-made fixture with a copy at 0 was hiding: an image produced by lpmake did not parse.
+  let geometryBytes = await source.read(LP_PARTITION_RESERVED_BYTES, LP_METADATA_GEOMETRY_STRUCT_SIZE);
   if (readU32(geometryBytes, 0) !== LP_METADATA_GEOMETRY_MAGIC) {
-    throw new PackageError(
-      "The geometry magic is 0x" + readU32(geometryBytes, 0).toString(16) + ", not 0x616c4467.",
-      "This is not a super image with logical partition metadata.",
+    const backup = await source.read(
+      LP_PARTITION_RESERVED_BYTES + LP_METADATA_GEOMETRY_SIZE,
+      LP_METADATA_GEOMETRY_STRUCT_SIZE,
     );
+    if (readU32(backup, 0) !== LP_METADATA_GEOMETRY_MAGIC) {
+      throw new PackageError(
+        "The geometry magic is 0x" +
+          readU32(geometryBytes, 0).toString(16) +
+          " at " +
+          LP_PARTITION_RESERVED_BYTES +
+          " and 0x" +
+          readU32(backup, 0).toString(16) +
+          " at its backup.",
+        "This is not a super image with logical partition metadata.",
+      );
+    }
+    geometryBytes = backup;
   }
   const structSize = readU32(geometryBytes, 4);
   if (structSize !== LP_METADATA_GEOMETRY_STRUCT_SIZE) {
@@ -150,8 +166,16 @@ export async function parseSuper(source: ByteSource, slot = 0): Promise<ParsedSu
   }
 
   const metadataOffset = primaryMetadataOffset(geometry, slot);
-  const headerBytes = await source.read(metadataOffset, LP_METADATA_HEADER_SIZE);
-  if (headerBytes.length < LP_METADATA_HEADER_SIZE) {
+  // The header carries its own size at offset 8, and AOSP's checksum covers exactly that many bytes:
+  // 128 as written by lpmake, 256 when the expanded fields are needed. Reading a fixed 256 and hashing
+  // all of it was wrong, and a fixture that wrote 256 byte headers was hiding that.
+  const prefix = await source.read(metadataOffset, 12);
+  if (prefix.length < 12) {
+    throw new PackageError("The metadata header runs past the end of the file.", "This super image is truncated.");
+  }
+  const headerSize = readU32(prefix, 8);
+  const headerBytes = await source.read(metadataOffset, headerSize);
+  if (headerBytes.length < headerSize) {
     throw new PackageError("The metadata header runs past the end of the file.", "This super image is truncated.");
   }
   if (readU32(headerBytes, 0) !== LP_METADATA_HEADER_MAGIC) {
@@ -168,10 +192,9 @@ export async function parseSuper(source: ByteSource, slot = 0): Promise<ParsedSu
       "This super image uses a metadata revision this build does not know.",
     );
   }
-  const headerSize = readU32(headerBytes, 8);
-  if (headerSize !== LP_METADATA_HEADER_SIZE) {
+  if (headerSize !== 128 && headerSize !== LP_METADATA_HEADER_SIZE) {
     throw new PackageError(
-      "The metadata header is " + headerSize + " bytes, expected " + LP_METADATA_HEADER_SIZE + ".",
+      "The metadata header is " + headerSize + " bytes; this build knows the 128 byte header AOSP writes and the 256 byte expanded one.",
       "This super image uses a metadata revision this build does not know.",
     );
   }

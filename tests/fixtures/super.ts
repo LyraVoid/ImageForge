@@ -168,8 +168,9 @@ export async function buildSuper(
   const metadataOffset = 4096 + 4096 * 2;
   const size = Math.max(metadataOffset + 256 + tablesSize, sector * SECTOR);
   const out = new Uint8Array(padTo(size, SECTOR));
-  out.set(geometry, 0);
+  // exactly where AOSP keeps them: the geometry at LP_PARTITION_RESERVED_BYTES and its backup next
   out.set(geometry, 4096);
+  out.set(geometry, 8192);
   out.set(header, metadataOffset);
   out.set(tables, metadataOffset + 256);
 

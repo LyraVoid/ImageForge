@@ -235,6 +235,22 @@ use one either, and a wrong one can leave stale bytes behind on a device. And it
 stream, so the result is kept as a blob rather than a buffer, which is what makes a three gigabyte
 partition packable at all.
 
+## Writing super images
+
+Packaging partitions into a super image (src/core/partition/super-write.ts) writes what AOSP's lpmake
+writes: 4096 bytes of reserved space, the geometry and its backup at 0x1000 and 0x2000, the metadata
+for each slot and its backup from 0x3000 on, and the partitions from the first logical sector, aligned,
+with the geometry's and the header's SHA-256 checksums computed over exactly the ranges AOSP computes
+them over — the 52 byte geometry struct, and the header up to the header_size field it declares.
+
+That last detail was one of two bugs the lpmake oracle found here. The reader in lp.ts had been written
+against a fixture this project made, and the fixture was too forgiving: it wrote the geometry at offset
+0 as well as at LP_PARTITION_RESERVED_BYTES, and it wrote 256 byte headers. So the reader looked for the
+geometry at offset 0 and hashed a fixed 256 bytes of header, and every test passed — until a real
+lpmake image was put through it. Both are fixed, and the fixture now puts things exactly where AOSP puts
+them. The lesson is worth keeping: a self-made fixture can hide a layout bug for months, and a reference
+implementation is what exposes it.
+
 ## Hard rules
 
 1. **Providers never parse boot images.** A provider receives the normalized object

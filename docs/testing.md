@@ -30,6 +30,7 @@ output is checked against the command line tools in the tests.
 | `IMAGEFORGE_ASTER_DUMP`, `IMAGEFORGE_STOCK_IMAGE`, `IMAGEFORGE_INIT_BOOT`, `IMAGEFORGE_VENDOR_BOOT` | device dumps of the boot partitions | `fixtures/artifacts`, `integration/ramdisk`, `unit/vendor-repack`, `unit/lz4` | `.research/aster-validation/{boot,init_boot,vendor_boot}.img` |
 | `IMAGEFORGE_EROFS_DIGESTS`, `IMAGEFORGE_PAYLOAD_DIGESTS`, `IMAGEFORGE_EXT4_DIGESTS` | `sha256sum` output captured **on the device** for files inside erofs and ext4 images, and for payload partitions | `unit/partition`, `unit/payload-source` | `.research/aster-validation/erofs-product-digests.txt`, `erofs-payload-digests.txt`, `ext4-vendor_dlkm-digests.txt` |
 | `IMAGEFORGE_MTK_LOGO` | a real MediaTek `logo.img` | `unit/mtk-logo` | `.research/mtk-logo/sample-logo.img` |
+| `IMAGEFORGE_LPMAKE` | AOSP's `lpmake`, which the super image writer is compared against byte for byte (`lpdump` and `lpunpack` from the same package read its output back) | `unit/super-write` | `/usr/bin/lpmake` |
 | `IMAGEFORGE_IMG2SIMG` | AOSP's `img2simg`, which the sparse writer is compared against byte for byte | `unit/sparse-write` | `/usr/bin/img2simg` |
 | `IMAGEFORGE_KERNELSU_MODULE`, `IMAGEFORGE_KERNELSU_REFERENCE`, `IMAGEFORGE_MAGISK_REFERENCE`, `IMAGEFORGE_KPM_DIR`, `IMAGEFORGE_TEST_KPM`, `IMAGEFORGE_TEST_IMAGE` | the third party modules and stock images the patch providers are checked against | `fixtures/artifacts` and the provider tests | `.research/kpm`, `.research/images/…` |
 
