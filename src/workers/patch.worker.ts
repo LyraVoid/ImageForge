@@ -61,6 +61,9 @@ Comlink.expose({
   ) => session.packSplashImage(sourceId, inside, replacements, resolution),
   browseFilesystem: (sourceId: string, path: string, inside?: string) =>
     session.browseFilesystem(sourceId, path, inside),
+  extractFilesystemFileAs: (sourceId: string, path: string, inside?: string) =>
+    session.extractFilesystemFileAs(sourceId, path, inside),
+  openArtifactSource: (artifactId: string) => session.openArtifactSource(artifactId),
   readFilesystemFile: (sourceId: string, path: string, inside?: string) =>
     session.readFilesystemFile(sourceId, path, inside),
   closeSource: (sourceId: string) => session.closeSource(sourceId),

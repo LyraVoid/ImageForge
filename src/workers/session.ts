@@ -1002,6 +1002,41 @@ export class PatchWorkerSession implements PatchWorkerApi {
     return { path, kind: "erofs", superblock, entries: detailed };
   }
 
+  /**
+   * Keeps a file read out of a filesystem image as an artifact, so a tool can open it. The archive of
+   * a boot animation, for one: it lives inside the image, and this is what turns it into something the
+   * animation tool can read.
+   */
+  async extractFilesystemFileAs(
+    sourceId: string,
+    path: string,
+    inside?: string,
+  ): Promise<WorkspaceArtifact> {
+    const bytes = await this.readFilesystemFile(sourceId, path, inside);
+    const name = path.split("/").filter((part) => part !== "").pop() ?? "file";
+    return this.registerArtifact({
+      sourceId,
+      parentId: sourceId,
+      tool: "unpack",
+      name,
+      params: { path },
+      bytes: toStandaloneBuffer(bytes),
+    });
+  }
+
+  /**
+   * Opens an artifact as a source of its own, without treating it as an image: an artifact is bytes,
+   * and a plain zip or an animation archive is as good a thing to look at as a boot image.
+   */
+  async openArtifactSource(artifactId: string): Promise<WorkspaceSourceRecord> {
+    const artifact = this.artifacts.get(artifactId);
+    if (!artifact) {
+      throw new WorkerError("Nothing in the workspace has the id " + artifactId + ".", "Extract it first.");
+    }
+    const blob = await this.artifactBlob(artifactId);
+    return this.openSource(blob, artifact.record.name);
+  }
+
   async readFilesystemFile(sourceId: string, path: string, inside?: string): Promise<Uint8Array> {
     const { source, detected } = await this.viewSource(sourceId, inside);
     if (detected.content === "ext4") {

@@ -216,8 +216,10 @@ is editable. Packing keeps every frame you did not touch byte for byte; AOSP's o
 archive is what comes out, with desc.txt first. An animation you did not change keeps its desc.txt exactly
 as the device wrote it, including the vendor line some devices use instead of the documented first line.
 
-The archive is usually inside a filesystem image rather than on hand: extract it (or drop it straight
-into the page if you already have it), and the tool reads it from there.
+The archive is usually inside a filesystem image rather than on hand, and that path is one click: open
+the image in the unpack tool, browse to /media/bootanimation, and press **Open in boot animation** on the
+zip. The file is kept as an artifact, opened as a source of its own and handed to this tool, with nothing
+downloaded or dropped again. A zip you already have can simply be dropped on the page.
 
 ## Look at a file without patching it
 

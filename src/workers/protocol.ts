@@ -338,6 +338,10 @@ export interface PatchWorkerApi {
     resolution?: { width: number; height: number },
   ): Promise<WorkspaceArtifact>;
   browseFilesystem(sourceId: string, path: string, inside?: string): Promise<FilesystemListing>;
+  /** Keeps a file read out of a filesystem image as an artifact, so a tool can open it. */
+  extractFilesystemFileAs(sourceId: string, path: string, inside?: string): Promise<WorkspaceArtifact>;
+  /** Opens an artifact as a source of its own, which is how a tool takes a zip out of an image. */
+  openArtifactSource(artifactId: string): Promise<WorkspaceSourceRecord>;
   /** Reads one file out of a filesystem image. */
   readFilesystemFile(sourceId: string, path: string, inside?: string): Promise<Uint8Array>;
   digestArtifact(id: string): Promise<string>;

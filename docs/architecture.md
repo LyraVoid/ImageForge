@@ -309,6 +309,12 @@ text plus the replaced frames to the worker, which rebuilds the archive and read
 check that every entry the user did not touch kept its bytes. Nothing writes to a device: the output is
 an archive to download.
 
+Artifacts are sources too. A file read out of a filesystem image is kept as an artifact, and an
+artifact can be opened as a source of its own (openArtifactSource): that is what lets a tool take a zip
+that lives inside a system image without a detour through the filesystem. It deliberately does not parse
+the bytes as an image, because a boot animation is not one. One thing to know about the workspace: closing
+a source takes every artifact derived from it, so an artifact has to be opened before its source is closed.
+
 ## Hard rules
 
 1. **Providers never parse boot images.** A provider receives the normalized object

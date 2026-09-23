@@ -43,6 +43,8 @@ export function UnpackPage() {
   const [metadataOnly, setMetadataOnly] = useState(false);
   const imageArtifacts = artifacts.filter((artifact) => /\.img$/i.test(artifact.name));
   const sendToPatcher = useForgeStore((state) => state.sendToPatcher);
+  const openArtifactAsSource = useForgeStore((state) => state.openArtifactAsSource);
+  const openFilesystemFile = useForgeStore((state) => state.openFilesystemFile);
   const [busy, setBusy] = useState<string | null>(null);
 
   const isPackage = source !== null && source.kind === "package";
@@ -235,6 +237,7 @@ export function UnpackPage() {
                           <ChevronRight />
                         </Button>
                       ) : (
+                        <>
                         <Button
                           variant="secondary"
                           size="sm"
@@ -244,6 +247,24 @@ export function UnpackPage() {
                           {busy !== null ? <LoaderCircle className="animate-spin" /> : null}
                           {t("unpack.readFile")}
                         </Button>
+                        {/* a zip inside an image is very often a boot animation: open it straight away */}
+                        {/\.zip$/i.test(entry.name) ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={busy !== null}
+                            onClick={async () => {
+                              const file = path === "/" ? "/" + entry.name : path + "/" + entry.name;
+                              setBusy(file);
+                              const opened = await openFilesystemFile(file);
+                              setBusy(null);
+                              if (opened) navigate("/tools/bootanimation");
+                            }}
+                          >
+                            {t("animation.open")}
+                          </Button>
+                        ) : null}
+                        </>
                       )}
                     </li>
                   ))}
@@ -403,7 +424,7 @@ export function UnpackPage() {
                           variant="ghost"
                           size="sm"
                           onClick={async () => {
-                            await sendToPatcher(artifact.id);
+                            await openArtifactAsSource(artifact.id);
                             navigate("/tools/bootanimation");
                           }}
                         >

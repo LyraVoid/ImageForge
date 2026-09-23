@@ -210,6 +210,13 @@ interface ForgeState {
   extractLogicalPartition: (partitionName: string) => Promise<WorkspaceArtifact | null>;
   browseFilesystem: (path: string) => Promise<FilesystemListing | null>;
   extractFilesystemFile: (path: string) => Promise<Uint8Array | null>;
+  /** Keeps a file out of a filesystem image as an artifact and opens it as a source of its own. */
+  openFilesystemFile: (path: string) => Promise<WorkspaceSourceRecord | null>;
+  /**
+   * Opens an artifact as a source of its own, without treating it as an image. That is how a boot
+   * animation, which lives inside a filesystem image, becomes something the animation tool opens.
+   */
+  openArtifactAsSource: (artifactId: string) => Promise<WorkspaceSourceRecord | null>;
   selectProvider: (providerId: string, options?: PatchOptions) => Promise<PatchPlan | null>;
   runPatch: () => Promise<boolean>;
   cancelPatch: () => Promise<void>;
@@ -388,6 +395,44 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       return listing;
     } catch (error) {
       set({ error: toImageForgeError(error).toJSON(), filesystemListing: null });
+      return null;
+    }
+  },
+
+  openArtifactAsSource: async (artifactId) => {
+    try {
+      const record = await getClient().openArtifactSource(artifactId);
+      set({
+        source: record,
+        insideEntry: null,
+        // a source that was opened rather than analyzed: tools that read it do their own parsing
+        stage: "empty",
+        analysis: null,
+        partitionView: null,
+        filesystemListing: null,
+        error: null,
+      });
+      return record;
+    } catch (error) {
+      set({ error: toImageForgeError(error).toJSON() });
+      return null;
+    }
+  },
+
+  openFilesystemFile: async (path) => {
+    const state = get();
+    if (!state.source) return null;
+    try {
+      const artifact = await getClient().extractFilesystemFileAs(
+        state.source.id,
+        path,
+        state.insideEntry ?? undefined,
+      );
+      set({ artifacts: [...get().artifacts, artifact], error: null });
+      // and straight into a tool, so nothing has to be downloaded and dropped again
+      return get().openArtifactAsSource(artifact.id);
+    } catch (error) {
+      set({ error: toImageForgeError(error).toJSON() });
       return null;
     }
   },
