@@ -201,6 +201,11 @@ export const zhHant: Messages = {
   "diff.sectionsHint": "boot 映像按檔案順序的分段，以及每一段裡落了多少差異。",
   "diff.notBoot": "目前映像不是 boot 映像，沒有段名可給；上面的位元組區間就是全部。",
 
+  "extract.selectAll": "全選",
+  "extract.selectNone": "取消全選",
+  "extract.extractSelected": "提取選取的 {count} 個",
+  "extract.selected": "已選 {count} 個",
+
   "dropzone.title": "把 Android 映像拖到這裡",
   "dropzone.hint": "或點擊選擇檔案",
   "dropzone.busy": "正在分析映像",

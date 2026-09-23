@@ -361,6 +361,8 @@ export interface PatchWorkerApi {
     resolution?: { width: number; height: number },
   ): Promise<WorkspaceArtifact>;
   browseFilesystem(sourceId: string, path: string, inside?: string): Promise<FilesystemListing>;
+  /** Extracts several entries at once, in the order given, and keeps each as an artifact. */
+  extractEntries(sourceId: string, entryIds: string[]): Promise<WorkspaceArtifact[]>;
   /** Keeps a file read out of a filesystem image as an artifact, so a tool can open it. */
   extractFilesystemFileAs(sourceId: string, path: string, inside?: string): Promise<WorkspaceArtifact>;
   /** Opens an artifact as a source of its own, which is how a tool takes a zip out of an image. */

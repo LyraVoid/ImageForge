@@ -86,6 +86,7 @@ export interface PatchWorkerClient {
     resolution?: { width: number; height: number },
   ): Promise<WorkspaceArtifact>;
   browseFilesystem(sourceId: string, path: string, inside?: string): Promise<FilesystemListing>;
+  extractEntries(sourceId: string, entryIds: string[]): Promise<WorkspaceArtifact[]>;
   extractFilesystemFileAs(sourceId: string, path: string, inside?: string): Promise<WorkspaceArtifact>;
   openArtifactSource(artifactId: string): Promise<WorkspaceSourceRecord>;
   readFilesystemFile(sourceId: string, path: string, inside?: string): Promise<Uint8Array>;
@@ -157,6 +158,7 @@ function createWorkerBackedClient(worker: Worker): PatchWorkerClient {
         resolution,
       ),
     browseFilesystem: (sourceId, path, inside) => remote.browseFilesystem(sourceId, path, inside),
+    extractEntries: (sourceId, entryIds) => remote.extractEntries(sourceId, entryIds),
     extractFilesystemFileAs: (sourceId, path, inside) =>
       remote.extractFilesystemFileAs(sourceId, path, inside),
     openArtifactSource: (artifactId) => remote.openArtifactSource(artifactId),
@@ -227,6 +229,7 @@ function createInlineClient(): PatchWorkerClient {
     packSplashImage: async (sourceId, inside, replacements, resolution) =>
       (await load()).packSplashImage(sourceId, inside, replacements, resolution),
     browseFilesystem: async (sourceId, path, inside) => (await load()).browseFilesystem(sourceId, path, inside),
+    extractEntries: async (sourceId, entryIds) => (await load()).extractEntries(sourceId, entryIds),
     extractFilesystemFileAs: async (sourceId, path, inside) =>
       (await load()).extractFilesystemFileAs(sourceId, path, inside),
     openArtifactSource: async (artifactId) => (await load()).openArtifactSource(artifactId),

@@ -201,6 +201,11 @@ export const ja: Messages = {
   "diff.sectionsHint": "boot イメージのセクションをファイル順に並べ、それぞれに落ちた差分を示します。",
   "diff.notBoot": "開いているイメージは boot イメージではないので、セクション名はありません。上のバイト範囲がすべてです。",
 
+  "extract.selectAll": "すべて選択",
+  "extract.selectNone": "選択を解除",
+  "extract.extractSelected": "選択した {count} 件を抽出",
+  "extract.selected": "{count} 件を選択中",
+
   "dropzone.title": "Android イメージをここにドロップ",
   "dropzone.hint": "またはクリックしてファイルを選択",
   "dropzone.busy": "イメージを分析しています",

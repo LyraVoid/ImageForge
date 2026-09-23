@@ -201,6 +201,11 @@ export const zhHans: Messages = {
   "diff.sectionsHint": "boot 镜像按文件顺序的分段，以及每一段里落了多少差异。",
   "diff.notBoot": "当前镜像不是 boot 镜像，没有段名可给；上面的字节区间就是全部。",
 
+  "extract.selectAll": "全选",
+  "extract.selectNone": "取消全选",
+  "extract.extractSelected": "提取选中的 {count} 个",
+  "extract.selected": "已选 {count} 个",
+
   "dropzone.title": "把 Android 镜像拖到这里",
   "dropzone.hint": "或点击选择文件",
   "dropzone.busy": "正在分析镜像",

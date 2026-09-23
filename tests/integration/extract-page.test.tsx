@@ -45,7 +45,7 @@ describe("the extract tool", () => {
     expect(await screen.findByText("init_boot.img")).toBeInTheDocument();
     expect(screen.getByText("Android boot image")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /Extract/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Extract" }));
 
     expect(await screen.findByText("Use in the patcher")).toBeInTheDocument();
     expect(store().artifacts).toHaveLength(1);
@@ -65,7 +65,7 @@ describe("the extract tool", () => {
     renderExtract();
 
     expect(await screen.findByText("boot.img")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /Extract/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Extract" }));
 
     expect(await screen.findByText("Use in the patcher")).toBeInTheDocument();
     expect(store().artifacts[0].sizeBytes).toBe(image.length);
@@ -80,7 +80,7 @@ describe("the extract tool", () => {
     renderExtract();
     expect(await screen.findByText("boot.img")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /Extract/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Extract" }));
 
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toMatch(/digest/);

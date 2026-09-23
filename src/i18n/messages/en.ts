@@ -204,6 +204,11 @@ export const en = {
   "diff.sectionsHint": "The sections of a boot image, in file order, with what fell in each.",
   "diff.notBoot": "The open image is not a boot image, so there is nothing to name; the byte ranges above are the whole story.",
 
+  "extract.selectAll": "Select all",
+  "extract.selectNone": "Select none",
+  "extract.extractSelected": "Extract {count} selected",
+  "extract.selected": "{count} selected",
+
   "dropzone.title": "Drop an Android image here",
   "dropzone.hint": "or click to browse files",
   "dropzone.busy": "Analyzing image",

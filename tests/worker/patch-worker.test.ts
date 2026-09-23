@@ -326,6 +326,30 @@ describe("PatchWorkerSession", () => {
     await session.closeSource(source.id);
   });
 
+  it("extracts several entries at once", async () => {
+    const session = new PatchWorkerSession();
+    const one = new Uint8Array(4096).fill(1);
+    const two = new Uint8Array(8192).fill(2);
+    const zip = await buildZip([
+      { name: "one.img", data: one },
+      { name: "two.img", data: two },
+      { name: "three.img", data: new Uint8Array(16).fill(3) },
+    ]);
+    const source = await session.openSource(toArrayBuffer(zip), "images.zip");
+
+    const artifacts = await session.extractEntries(source.id, ["one.img", "two.img"]);
+    expect(artifacts.map((artifact) => artifact.name)).toEqual(["one.img", "two.img"]);
+    expect(artifacts.map((artifact) => artifact.sizeBytes)).toEqual([4096, 8192]);
+    expect((await session.workspace()).artifacts).toHaveLength(2);
+    expect(await sha256Hex(new Uint8Array(await session.readArtifact(artifacts[1].id, 0, 8192)))).toBe(
+      await sha256Hex(two),
+    );
+
+    // an empty selection is a mistake worth naming, not a silent no-op
+    await expect(session.extractEntries(source.id, [])).rejects.toThrowError(WorkerError);
+    await session.closeSource(source.id);
+  });
+
   it("refuses to extract something the package does not have", async () => {
     const session = new PatchWorkerSession();
     const source = await session.openSource(

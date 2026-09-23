@@ -142,6 +142,8 @@ interface ForgeState {
   analyzeFile: (file: File) => Promise<AnalyzeResponse | null>;
   loadPackage: () => Promise<OpenedPackage | null>;
   extractEntry: (entryId: string) => Promise<WorkspaceArtifact | null>;
+  /** Extracts several entries at once, which is what a whole set of partitions wants. */
+  extractEntries: (entryIds: string[]) => Promise<WorkspaceArtifact[]>;
   /** Hands an artifact to the patcher; named without a leading "use" so it is not mistaken for a hook. */
   sendToPatcher: (artifactId: string) => Promise<AnalyzeResponse | null>;
   readArtifactBytes: (artifactId: string) => Promise<Uint8Array | null>;
@@ -322,6 +324,19 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     } catch (error) {
       set({ error: toImageForgeError(error).toJSON() });
       return null;
+    }
+  },
+
+  extractEntries: async (entryIds) => {
+    const state = get();
+    if (!state.source) return [];
+    try {
+      const artifacts = await getClient().extractEntries(state.source.id, entryIds);
+      set({ artifacts: [...get().artifacts, ...artifacts], error: null });
+      return artifacts;
+    } catch (error) {
+      set({ error: toImageForgeError(error).toJSON() });
+      return [];
     }
   },
 

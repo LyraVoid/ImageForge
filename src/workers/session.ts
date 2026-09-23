@@ -336,6 +336,22 @@ export class PatchWorkerSession implements PatchWorkerApi {
     return openPackage(this.requireSource(sourceId).source);
   }
 
+  /**
+   * Extracts a set of entries one after another. Each one goes through the same path as a single
+   * extraction, so a partition above the streaming threshold is still produced as a blob rather than
+   * held in memory.
+   */
+  async extractEntries(sourceId: string, entryIds: string[]): Promise<WorkspaceArtifact[]> {
+    if (entryIds.length === 0) {
+      throw new WorkerError("Nothing was selected.", "Pick at least one entry.");
+    }
+    const out: WorkspaceArtifact[] = [];
+    for (const entryId of entryIds) {
+      out.push(await this.extractPackageEntry(sourceId, entryId));
+    }
+    return out;
+  }
+
   async extractPackageEntry(
     sourceId: string,
     entryId: string,

@@ -31,6 +31,9 @@ export function ExtractPage() {
   const artifacts = useForgeStore((state) => state.artifacts);
   const loadPackage = useForgeStore((state) => state.loadPackage);
   const extractEntry = useForgeStore((state) => state.extractEntry);
+  const extractEntries = useForgeStore((state) => state.extractEntries);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [extractingMany, setExtractingMany] = useState(false);
   const sendToPatcher = useForgeStore((state) => state.sendToPatcher);
   const openInside = useForgeStore((state) => state.openInside);
   const artifactBlob = useForgeStore((state) => state.artifactBlob);
@@ -87,9 +90,53 @@ export function ExtractPage() {
                   {t("extract.reading")}
                 </p>
               ) : (
+                <>
+                <div className="flex flex-wrap items-center gap-2 pb-2 text-[11px] text-muted-foreground">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={listing.entries.length === 0}
+                    onClick={() =>
+                      setSelected(
+                        selected.length === listing.entries.length ? [] : listing.entries.map((entry) => entry.id),
+                      )
+                    }
+                  >
+                    {selected.length === listing.entries.length && selected.length > 0
+                      ? t("extract.selectNone")
+                      : t("extract.selectAll")}
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    disabled={selected.length === 0 || extractingMany}
+                    onClick={async () => {
+                      setExtractingMany(true);
+                      await extractEntries(selected);
+                      setExtractingMany(false);
+                      setSelected([]);
+                    }}
+                  >
+                    {extractingMany ? <LoaderCircle className="animate-spin" /> : null}
+                    {t("extract.extractSelected", { count: String(selected.length) })}
+                  </Button>
+                  <span>{t("extract.selected", { count: String(selected.length) })}</span>
+                </div>
                 <ul className="divide-y divide-border">
                   {listing.entries.map((entry) => (
                     <li key={entry.id} className="flex flex-wrap items-center gap-2 py-2 first:pt-0 last:pb-0">
+                      <input
+                        type="checkbox"
+                        aria-label={entry.name}
+                        checked={selected.includes(entry.id)}
+                        onChange={() =>
+                          setSelected((current) =>
+                            current.includes(entry.id)
+                              ? current.filter((id) => id !== entry.id)
+                              : [...current, entry.id],
+                          )
+                        }
+                      />
                       <span className="min-w-0 flex-1 truncate font-mono text-[11px] text-foreground">
                         {entry.name}
                         {entry.container === null ? null : (
@@ -134,6 +181,7 @@ export function ExtractPage() {
                     </li>
                   ))}
                 </ul>
+                </>
               )}
             </CardContent>
           </Card>
