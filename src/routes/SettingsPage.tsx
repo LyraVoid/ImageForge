@@ -27,7 +27,7 @@ function ProviderRow({ descriptor }: { descriptor: PatchProviderDescriptor }) {
   const record = useRecordText();
 
   return (
-    <div className="space-y-1.5 py-3 first:pt-0 last:pb-0">
+    <div className="space-y-1.5 py-4">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-medium text-foreground">{descriptor.name}</span>
         <Badge variant={descriptor.status === "available" ? "success" : "neutral"}>
