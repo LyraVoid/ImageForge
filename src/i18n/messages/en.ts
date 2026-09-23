@@ -52,7 +52,6 @@ export const en = {
   "picker.limit":
     "Images are processed with the Web Worker + WASM pipeline and are limited to {size}. ImageForge never flashes a device.",
 
-  "shell.tools": "Tools",
   "tools.title": "Android image tools",
   "tools.subtitle": "Everything runs in your browser: images and packages never leave this device.",
   "tools.more": "More tools",

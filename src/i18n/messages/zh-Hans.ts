@@ -49,7 +49,6 @@ export const zhHans: Messages = {
   "picker.limit":
     "镜像通过 Web Worker + WASM 流水线处理，大小上限为 {size}。ImageForge 从不刷入设备。",
 
-  "shell.tools": "工具",
   "tools.title": "Android 镜像工具",
   "tools.subtitle": "全部在浏览器里完成：镜像与安装包都不离开这台设备。",
   "tools.more": "更多工具",

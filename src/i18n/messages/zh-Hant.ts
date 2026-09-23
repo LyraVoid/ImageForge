@@ -49,7 +49,6 @@ export const zhHant: Messages = {
   "picker.limit":
     "映像透過 Web Worker + WASM 流程處理，大小上限為 {size}。ImageForge 從不刷入裝置。",
 
-  "shell.tools": "工具",
   "tools.title": "Android 映像工具",
   "tools.subtitle": "全部在瀏覽器裡完成：映像與安裝包都不離開這台裝置。",
   "tools.more": "更多工具",

@@ -49,7 +49,6 @@ export const ja: Messages = {
   "picker.limit":
     "イメージは Web Worker + WASM のパイプラインで処理され、上限は {size} です。ImageForge はデバイスへの書き込みを一切行いません。",
 
-  "shell.tools": "ツール",
   "tools.title": "Android イメージツール",
   "tools.subtitle": "すべてブラウザー内で完結します。イメージもパッケージもこの端末から出ません。",
   "tools.more": "その他のツール",

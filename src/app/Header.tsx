@@ -16,7 +16,7 @@ import { LanguageMenu } from "@/components/ui/language-menu";
 import { StepIndicator } from "@/components/ui/step-indicator";
 import { BrandMark } from "@/components/app/brand-mark";
 import { useT } from "@/i18n/use-translation";
-import { APP_VERSION } from "@/lib/app-meta";
+import { APP_VERSION, SOURCE_URL } from "@/lib/app-meta";
 import { useForgeStore } from "@/stores/forge-store";
 import { useThemeStore } from "@/stores/theme-store";
 import type { ThemeMode } from "@/stores/theme-store";
@@ -51,14 +51,6 @@ export function Header() {
             v{APP_VERSION}
           </Badge>
         </Link>
-
-        <Link
-          to="/"
-          className="hidden text-xs text-muted-foreground transition-colors hover:text-foreground sm:block"
-        >
-          {t("shell.tools")}
-        </Link>
-
 
         {inPatchFlow ? (
           <div className="hidden flex-1 justify-center md:flex">
@@ -108,12 +100,14 @@ export function Header() {
                   {t("shell.settings")}
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <a href="https://github.com/" target="_blank" rel="noreferrer noopener">
-                  <GitBranch className="size-3.5" />
-                  {t("shell.source")}
-                </a>
-              </DropdownMenuItem>
+              {SOURCE_URL === "" ? null : (
+                <DropdownMenuItem asChild>
+                  <a href={SOURCE_URL} target="_blank" rel="noreferrer noopener">
+                    <GitBranch className="size-3.5" />
+                    {t("shell.source")}
+                  </a>
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
