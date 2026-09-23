@@ -575,6 +575,22 @@ configuration asks for `preserveImageSize`, a provider passes `padTo: image.tota
 `repackBootImage`, which zero pads the output and reports the padding as a warning. The
 layout of the image itself is unchanged, and the AVB signature is dropped either way.
 
+## What a run checks before it hands you an image
+
+Verification is part of the pipeline, not a claim made afterwards. Before a produced image is offered
+for download:
+
+* the output is re-parsed — magic, header version, section bounds, page alignment;
+* the ramdisk's SHA-256 is compared with the one the plan recorded, when it records one;
+* the cmdline and the bootconfig markers the plan requires are present;
+* the produced bytes are hashed and compared with the digest the provider reports for them;
+* the artifact that was loaded is re-checked against the registry, and bundled payloads are fetched
+  **content addressed** (`?v=` plus the first 16 hex characters of their digest), so a stale cache
+  entry whose content no longer matches the record cannot be served under the current URL.
+
+A failed check stops the run rather than producing a file with a warning next to it. The one thing
+the pipeline does not decide for you is the flashing: see the checklist on the result page.
+
 ## WASM
 
 | Module | Purpose |

@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -81,5 +81,41 @@ describe("contributor-facing files", () => {
     expect(template).toContain("pnpm verify");
     expect(template).toContain("digest verified");
     expect(template).toMatch(/Not verified/);
+  });
+});
+
+/**
+ * A readme with a broken link or a screenshot that no longer exists is worse than a short one: it is
+ * the first thing a visitor reads, and it is the file most likely to be edited in a hurry.
+ */
+describe("readme links", () => {
+  it("points at files that exist", () => {
+    const readme = readFileSync(join(process.cwd(), "README.md"), "utf8");
+    const relative = [...readme.matchAll(/\]\(([^)]+)\)/g)]
+      .map((match) => match[1])
+      .filter((target) => !target.startsWith("http") && !target.startsWith("#"));
+    expect(relative.length).toBeGreaterThan(5);
+    for (const target of relative) {
+      expect(existsSync(join(process.cwd(), target.split("#")[0])), target).toBe(true);
+    }
+  });
+
+  it("shows the interface rather than describing it", () => {
+    const readme = readFileSync(join(process.cwd(), "README.md"), "utf8");
+    // Markdown images, and the src/srcset of a <picture> that swaps in the dark theme.
+    const images = [
+      ...[...readme.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map((match) => match[1]),
+      ...[...readme.matchAll(/srcset="([^"]+)"/g)].map((match) => match[1]),
+      ...[...readme.matchAll(/<img[^>]+src="([^"]+)"/g)].map((match) => match[1]),
+    ];
+    expect(images.length).toBeGreaterThanOrEqual(2);
+    for (const image of images) {
+      const file = join(process.cwd(), image);
+      expect(existsSync(file), image).toBe(true);
+      // A PNG signature, so a placeholder cannot pass as a screenshot.
+      const bytes = readFileSync(file);
+      expect([...bytes.subarray(0, 4)], image).toEqual([0x89, 0x50, 0x4e, 0x47]);
+      expect(bytes.length).toBeGreaterThan(20_000);
+    }
   });
 });

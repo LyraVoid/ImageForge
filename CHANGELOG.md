@@ -46,7 +46,11 @@ A round of adding managers, and of making the register behind them hold up.
   `SECURITY.md` (what is in scope, and what to report upstream instead) and `CODE_OF_CONDUCT.md`
   exist now, with issue forms that ask for the diagnostics export and a pull request template that
   has a section for what you could *not* verify.
-- The readme opens with what flashing a patched image can cost you, and the version is 0.2.0.
+- The readme was rewritten around what the tool does and what it can be trusted with, with two
+  screenshots of the running interface, and it now opens with what flashing a patched image can cost
+  you. Its links and screenshots are checked by a test, so a page that names a file which no longer
+  exists fails the suite. The verification model it used to carry moved into `docs/architecture.md`.
+- The version is 0.2.0.
 - **The version is now shown where it should be and comes from one place.** The header badge had
   been hardcoded at "v0.1" since the first release while the settings page showed nothing; both, and
   the version in an exported diagnostics report, now read `package.json` through a build time
