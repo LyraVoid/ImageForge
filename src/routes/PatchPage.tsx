@@ -12,6 +12,9 @@ import {
   APATCH_FLAVOR_SETTING,
   APATCH_FLAVORS,
   KERNELSU_KMI_SETTING,
+  KERNELSU_DEFAULT_FLAVOR,
+  KERNELSU_FLAVORS,
+  KERNELSU_FLAVOR_SETTING,
   KNOWN_KMIS,
   MAGISK_DEFAULT_FLAVOR,
   MAGISK_FLAVORS,
@@ -337,6 +340,24 @@ export function PatchPage() {
           description={t("patch.kernelsu.description")}
         >
           <div className="space-y-2">
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-foreground">{t("patch.kernelsu.manager")}</p>
+              <p className="text-[11px] leading-4 text-muted-foreground">
+                {t("patch.kernelsu.manager.description")}
+              </p>
+              <Select
+                aria-label={t("patch.kernelsu.manager")}
+                className="max-w-xs"
+                value={readOption(KERNELSU_FLAVOR_SETTING, KERNELSU_DEFAULT_FLAVOR)}
+                onChange={(event) => applyOption({ [KERNELSU_FLAVOR_SETTING]: event.target.value })}
+              >
+                {KERNELSU_FLAVORS.map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {record(entry.label) + " · " + record(entry.source)}
+                  </option>
+                ))}
+              </Select>
+            </div>
             <Select
               aria-label={t("patch.kernelsu.title")}
               className="max-w-xs"

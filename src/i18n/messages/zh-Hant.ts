@@ -314,6 +314,8 @@ export const zhHant: Messages = {
   "patch.kernelsu.title": "裝置 KMI 與模組",
   "patch.kernelsu.description":
     "KernelSU 模組必須與裝置的 KMI（核心模組介面）相符。它只能從帶核心的映像裡讀出，所以 init_boot 映像需要在這裡手動選擇。",
+  "patch.kernelsu.manager": "管理器",
+  "patch.kernelsu.manager.description": "要為哪個管理器打補丁。每個管理器的模組都針對自己的簽章憑證編譯，所以模組與管理結果的應用程式必須配套。",
   "patch.kernelsu.selectKmi": "選擇裝置 KMI",
   "patch.kernelsu.override": "覆寫隨附模組",
   "patch.kernelsu.overrideWith": "用 {name} 覆寫",

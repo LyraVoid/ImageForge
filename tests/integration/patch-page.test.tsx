@@ -90,3 +90,31 @@ describe("patch page re-planning", () => {
     expect(store().planResponse?.plan.configuration.magiskArtifacts).toContain("weavemask-magisk");
   }, 60000);
 });
+describe("patch page: the KernelSU family", () => {
+  beforeEach(async () => {
+    await store().reset();
+    const bytes = await buildBootImage({});
+    await store().analyzeFile(toFile(bytes, "boot.img"));
+  });
+
+  it("offers every manager of the family and plans for the chosen one", async () => {
+    await store().selectProvider("kernelsu");
+    renderPatchPage();
+
+    const manager = await screen.findByLabelText("Manager");
+    expect([...manager.querySelectorAll("option")].map((option) => option.textContent)).toEqual([
+      "KernelSU · official KernelSU release v3.3.0",
+      "SukiSU · SukiSU-Ultra release v4.2.0 (the same wrapper as upstream, its own modules)",
+      "ReSukiSU · ReSukiSU release v4.2.0-rc3 (wrapper and modules recovered from its APK)",
+      "YukiSU · YukiSU release v1.7.0 (its modules are release assets, its wrapper comes from its APK)",
+      "KowSU · KowSU Manager build 32737 (wrapper and modules recovered from its APK)",
+    ]);
+
+    fireEvent.change(manager, { target: { value: "koyeb" } });
+    await waitFor(() => expect(store().planResponse?.plan.configuration.kernelsuManager).toBe("kernelsu"));
+
+    fireEvent.change(manager, { target: { value: "yukisu" } });
+    await waitFor(() => expect(store().planResponse?.plan.configuration.kernelsuManager).toBe("yukisu"));
+    expect(store().planResponse?.plan.configuration.requiredManager).toBe("com.anatdx.yukisu");
+  }, 60000);
+});

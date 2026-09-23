@@ -1,19 +1,21 @@
 import type { ArtifactRegistry } from "../../artifacts/registry";
-import { KERNELSU_KSUINIT_ID, kernelsuLkmId } from "../../artifacts/catalog";
 import type { PatchArtifact } from "../../artifacts/types";
 import { KEEP_SIGNATURE_SETTING, outputOptions } from "./output-options";
 import { canonicalizeCpio } from "../../image";
 import {
   KERNELSU_CONFIG_ENTRY,
   KERNELSU_CONFIG_SETTING,
+  KERNELSU_FLAVOR_SETTING,
   KERNELSU_INIT_BACKUP_ENTRY,
   KERNELSU_INIT_ENTRY,
   KERNELSU_KMI_SETTING,
   KERNELSU_MODULE_ENTRY,
   KERNELSU_MODULE_NAME,
-  KERNELSU_REQUIRED_MANAGER,
+  kernelsuFlavor,
   plannedKmi,
 } from "./kernelsu-config";
+import type { KernelsuFlavor } from "./kernelsu-config";
+import { injectYukisuModuleConfig } from "./kernelsu-module-config";
 import { findMagiskMarker, loadRamdiskSection, ramdiskBytesForVerification, repackWithRamdisk } from "./ramdisk-support";
 import type { RamdiskSection } from "./ramdisk-support";
 import { AbortedError, PatchError } from "../../errors";
@@ -96,22 +98,23 @@ export class KernelsuPatchProvider implements PatchProvider {
       supportedTargets: ["boot", "init_boot"],
       notes: [
         "The ramdisk is modified: on GKI Android 13+ that is init_boot.img, otherwise a boot.img that carries a ramdisk.",
-        "The loadable module has to match the device KMI (for example android15-6.6) and is supplied by the user; it is verified before use.",
+        "The loadable module has to match the device KMI (for example android15-6.6); each manager's own module is bundled, and a module the user supplies overrides it after being verified.",
         "A ramdisk that Magisk already patched is refused.",
         "Vendor boot images with a ramdisk table are not supported yet.",
-        "The KernelSU manager app (me.weishu.kernelsu) has to be installed for the produced image to be usable.",
+        "The manager app of the selected flavour has to be installed for the produced image to be usable.",
       ],
     };
   }
 
   /**
-   * The module this build ships for a KMI. KernelSU publishes one per KMI, so for every KMI in
-   * the known list there is a module to use; a user supplied module overrides it.
+   * The module this build ships for a KMI, from the manager the plan selected. Every manager of the
+   * family publishes one per KMI, so for every KMI in the known list there is a module to use; a
+   * user supplied module overrides it.
    */
-  private bundledModule(kmi: string): PatchArtifact | undefined {
+  private bundledModule(flavor: KernelsuFlavor, kmi: string): PatchArtifact | undefined {
     if (kmi === "" || kmi === "unset") return undefined;
     try {
-      return this.artifacts.resolve({ providerId: this.id, artifactId: kernelsuLkmId(kmi) }).artifact;
+      return this.artifacts.resolve({ providerId: this.id, artifactId: flavor.lkmArtifactId(kmi) }).artifact;
     } catch {
       return undefined;
     }
@@ -167,12 +170,13 @@ export class KernelsuPatchProvider implements PatchProvider {
     planContext?: PatchPlanContext,
   ): Promise<PatchPlan> {
     const ramdisk = this.loadRamdisk(image);
-    const ksuinit = this.artifacts.resolve({ providerId: this.id, artifactId: KERNELSU_KSUINIT_ID });
+    const flavor = kernelsuFlavor(options.configuration?.[KERNELSU_FLAVOR_SETTING]);
+    const ksuinit = this.artifacts.resolve({ providerId: this.id, artifactId: flavor.ksuinitArtifactId });
     const kmi = await this.resolveKmi(image, options);
 
     const carriedModules = planContext?.attachmentNames ?? [];
     const plannedModules = carriedModules.length > 0 ? carriedModules : readFlags(options.configuration?.["modules"]);
-    const bundled = this.bundledModule(kmi.kmi);
+    const bundled = this.bundledModule(flavor, kmi.kmi);
     const configFlags = readFlags(options.configuration?.[KERNELSU_CONFIG_SETTING]);
     const output = outputOptions(options.configuration, undefined);
 
@@ -194,6 +198,7 @@ export class KernelsuPatchProvider implements PatchProvider {
         kmiSource: kmi.source,
         initEntry: KERNELSU_INIT_ENTRY,
         initBackupEntry: KERNELSU_INIT_BACKUP_ENTRY,
+        [KERNELSU_FLAVOR_SETTING]: flavor.id,
         moduleEntry: KERNELSU_MODULE_ENTRY,
         moduleSource:
           plannedModules.length > 0
@@ -204,7 +209,7 @@ export class KernelsuPatchProvider implements PatchProvider {
         moduleArtifact: bundled?.id ?? "none",
         moduleDigest: bundled?.sha256 ?? "none",
         ksuConfig: configFlags.length === 0 ? "none" : configFlags.join(" "),
-        requiredManager: KERNELSU_REQUIRED_MANAGER,
+        requiredManager: flavor.managerPackage,
         ramdiskCompression: COMPRESSION_LABEL[ramdisk.descriptor.format],
         ramdiskSectionSize: String(ramdisk.bytes.length),
         preserveImageSize: output.preserveImageSize ? "true" : "false",
@@ -295,23 +300,24 @@ export class KernelsuPatchProvider implements PatchProvider {
     const supplied = attachments[0];
     let moduleBytes: Uint8Array;
     let moduleOrigin: string;
+    const flavor = kernelsuFlavor(plan.configuration[KERNELSU_FLAVOR_SETTING]);
     if (supplied) {
       moduleBytes = supplied.bytes;
       moduleOrigin = "supplied (" + supplied.name + ")";
     } else {
       const artifactId = plan.configuration.moduleArtifact ?? "none";
       if (artifactId === "none") {
-        const bundled = this.bundledModule(kmiValue);
+        const bundled = this.bundledModule(flavor, kmiValue);
         if (!bundled) {
           throw new PatchError(
-            "This build has no KernelSU module for " + kmiValue + ".",
+            "This build has no " + flavor.label + " module for " + kmiValue + ".",
             "Select a KMI this build ships a module for, or attach the module yourself.",
           );
         }
       }
       const artifact = this.artifacts.resolve({
         providerId: this.id,
-        artifactId: plan.configuration.moduleArtifact ?? kernelsuLkmId(kmiValue),
+        artifactId: plan.configuration.moduleArtifact ?? flavor.lkmArtifactId(kmiValue),
       }).artifact;
       moduleBytes = await this.artifacts.loadVerifiedPayload(artifact);
       moduleOrigin = "bundled (" + artifact.id + ")";
@@ -365,13 +371,30 @@ export class KernelsuPatchProvider implements PatchProvider {
     }
 
     upsertEntry(archive, KERNELSU_INIT_ENTRY, ksuinitBytes, 0o100755);
-    upsertEntry(archive, KERNELSU_MODULE_ENTRY, moduleBytes, 0o100755);
+    // YukiSU carries its early boot settings inside the module, so they are written into the bytes
+    // that go to the ramdisk, exactly as its own patcher does. Everything else writes it untouched.
+    const moduleToWrite = flavor.injectModuleConfig
+      ? injectYukisuModuleConfig(moduleBytes, {
+          allowShell: readFlags(plan.configuration.ksuConfig).includes("allow_shell=1"),
+          bundled: supplied === undefined,
+        })
+      : moduleBytes;
+    upsertEntry(archive, KERNELSU_MODULE_ENTRY, moduleToWrite, 0o100755);
 
     const configFlags = readFlags(plan.configuration.ksuConfig);
-    if (configFlags.length === 0) removeEntry(archive, KERNELSU_CONFIG_ENTRY);
-    else upsertEntry(archive, KERNELSU_CONFIG_ENTRY, new TextEncoder().encode(configFlags.join(" ")), 0o100644);
-    // ksud removes this legacy marker; keeping it would confuse a later restore.
-    removeEntry(archive, "allow_shell");
+    // Some managers record that the module came with them by adding a line to their own config, and
+    // that only applies when the module written is the bundled one rather than one the user supplied.
+    const configLines = [
+      ...configFlags,
+      ...(supplied === undefined ? flavor.bundledModuleConfig : []),
+    ];
+    if (configLines.length === 0) removeEntry(archive, KERNELSU_CONFIG_ENTRY);
+    else {
+      upsertEntry(archive, KERNELSU_CONFIG_ENTRY, new TextEncoder().encode(configLines.join(" ")), 0o100644);
+    }
+    // Every manager of the family removes the same legacy marker, under one of two names; keeping it
+    // would confuse a later restore.
+    removeEntry(archive, flavor.legacyEntry);
 
     emit("repack", 80, "Repacking the boot image");
     // ksud writes its ramdisk through the same magiskboot derived writer as Magisk does (sorted
@@ -420,7 +443,7 @@ export class KernelsuPatchProvider implements PatchProvider {
         initEntry: KERNELSU_INIT_ENTRY,
         initBackup,
         ksuConfig: plan.configuration.ksuConfig ?? "none",
-        requiredManager: KERNELSU_REQUIRED_MANAGER,
+        requiredManager: flavor.managerPackage,
         archiveEntriesBefore: String(entriesBefore),
         archiveEntriesAfter: String(archive.entries.length),
         ramdiskCompression: COMPRESSION_LABEL[ramdisk.descriptor.format],

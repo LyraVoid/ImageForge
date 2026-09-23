@@ -315,6 +315,9 @@ export const ja: Messages = {
   "patch.kernelsu.title": "端末の KMI とモジュール",
   "patch.kernelsu.description":
     "KernelSU のモジュールは端末の KMI（カーネルモジュールインターフェース）と一致している必要があります。カーネルを持つイメージからしか読み取れないため、init_boot イメージではここで選択します。",
+  "patch.kernelsu.manager": "マネージャー",
+  "patch.kernelsu.manager.description":
+    "どのマネージャー向けにパッチするか。各マネージャーのモジュールは自分の署名証明書に対してビルドされるため、モジュールと結果を管理するアプリは揃っている必要があります。",
   "patch.kernelsu.selectKmi": "端末の KMI を選択",
   "patch.kernelsu.override": "同梱モジュールを上書き",
   "patch.kernelsu.overrideWith": "{name} で上書き",

@@ -314,6 +314,8 @@ export const zhHans: Messages = {
   "patch.kernelsu.title": "设备 KMI 与模块",
   "patch.kernelsu.description":
     "KernelSU 模块必须与设备的 KMI（内核模块接口）匹配。它只能从带内核的镜像里读出，所以 init_boot 镜像需要在这里手动选择。",
+  "patch.kernelsu.manager": "管理器",
+  "patch.kernelsu.manager.description": "为哪个管理器打补丁。每个管理器的模块都针对自己的签名证书编译，所以模块与用来管理结果的应用必须配套。",
   "patch.kernelsu.selectKmi": "选择设备 KMI",
   "patch.kernelsu.override": "覆盖随包模块",
   "patch.kernelsu.overrideWith": "用 {name} 覆盖",

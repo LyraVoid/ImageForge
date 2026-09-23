@@ -15,6 +15,7 @@ import {
   WEAVEMASK_MAGISKINIT_ID,
 } from "@/core";
 import { sha256Hex } from "@/core/hash";
+import { readModuleInfo } from "@/core/image";
 import { fsPayloadLoader, repoPath } from "../fixtures/artifacts";
 import { readFileSync } from "node:fs";
 
@@ -162,5 +163,66 @@ describe("bundled artifacts", () => {
     });
     const artifact = tampered.resolve({ providerId: "apatch", artifactId: APATCH_KPIMG_ID }).artifact;
     await expect(tampered.loadVerifiedPayload(artifact)).rejects.toThrowError(ArtifactError);
+  });
+});
+
+/**
+ * A digest proves a file did not change, not that it is the right kind of file: the KernelSU module
+ * for android13-5.15 was committed as the HTML page a failed download produced, and every digest
+ * check passed because it hashed whatever was there. What a payload is, has to be read from it.
+ */
+describe("bundled payloads are what they claim to be", () => {
+  const text = (bytes: Uint8Array): string => new TextDecoder("latin1").decode(bytes);
+  const isElf = (bytes: Uint8Array): boolean => text(bytes.subarray(0, 4)) === "\u007fELF";
+
+  it("ships a real loadable module for every manager and KMI", async () => {
+    for (const release of registry.releases("kernelsu")) {
+      for (const artifact of release.artifacts) {
+        if (artifact.type !== "loadable-module") continue;
+        const bytes = await registry.loadVerifiedPayload(artifact);
+        expect(isElf(bytes), artifact.id).toBe(true);
+        const info = readModuleInfo(bytes);
+        expect(info.name, artifact.id).toBe("kernelsu");
+        // The KMI in the artifact id has to be the kernel the module was built for.
+        const kmi = artifact.id.split("-lkm-")[1] ?? "";
+        const expected = kmi.includes("-") ? (kmi.split("-")[1] ?? "") : "";
+        expect(info.vermagic?.split(" ")[0].startsWith(expected + "."), artifact.id + " " + String(info.vermagic)).toBe(
+          true,
+        );
+      }
+    }
+  });
+
+  it("ships an init wrapper that is a program rather than a module", async () => {
+    for (const release of registry.releases("kernelsu")) {
+      const wrappers = release.artifacts.filter((artifact) => artifact.type === "init-wrapper");
+      for (const artifact of wrappers) {
+        const bytes = await registry.loadVerifiedPayload(artifact);
+        expect(isElf(bytes), artifact.id).toBe(true);
+        // A wrapper is an executable rather than a loadable module, which is what reading module
+        // info says: it refuses an ELF that is not relocatable.
+        expect(() => readModuleInfo(bytes), artifact.id).toThrowError(/not a loadable module/);
+      }
+    }
+  });
+
+  it("ships KernelPatch core images that start with the KernelPatch magic", async () => {
+    for (const artifact of registry.listArtifacts("apatch").filter((entry) => entry.type === "kernelpatch-image")) {
+      const bytes = await registry.loadVerifiedPayload(artifact);
+      expect(text(bytes.subarray(0, 6)), artifact.id).toBe("KP1158");
+    }
+  });
+
+  it("ships Magisk-family payloads that are programs, and a stub that is an APK", async () => {
+    for (const release of registry.releases("magisk")) {
+      for (const artifact of release.artifacts) {
+        const bytes = await registry.loadVerifiedPayload(artifact);
+        if (artifact.id.endsWith("-stub")) {
+          expect(text(bytes.subarray(0, 2)), artifact.id).toBe("PK");
+          continue;
+        }
+        expect(isElf(bytes), artifact.id).toBe(true);
+      }
+    }
   });
 });

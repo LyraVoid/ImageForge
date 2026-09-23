@@ -132,6 +132,12 @@ Deliberately honest limits:
   (`THIRD_PARTY_LICENSES/kernelsu/`) rather than being linked into this AGPL-3.0-or-later project.
   The archive layout is ksud's, so the produced ramdisk is **byte for byte the one the KernelSU app
   writes** for the same image.
+* **The KernelSU provider covers the whole family.** KernelSU started a family of managers that keep
+  its injection algorithm and rebuild the wrapper and the modules against their own signing
+  certificate, so a module belongs to exactly one manager: KernelSU, SukiSU, ReSukiSU, YukiSU and
+  KowSU are registered as flavours of one provider, each with its own wrapper, its own eight modules
+  and the app the produced image needs. The run records which manager it was made for, and the page
+  asks for it next to the device KMI.
 * **Magisk is the third provider.** It replaces the ramdisk `init` with `magiskinit`, writes its
   payloads to `overlay.d/sbin`, keeps its configuration in `.backup/.magisk`, patches fstab entries
   the way `magiskboot` does, and keeps the stock init inside the ramdisk as `.backup/init.xz` so

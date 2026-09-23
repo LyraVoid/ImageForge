@@ -318,6 +318,9 @@ export const en = {
   "patch.kernelsu.title": "Device KMI and module",
   "patch.kernelsu.description":
     "The KernelSU module has to match the kernel module interface of the device. It can only be read from an image that carries a kernel, so an init_boot image needs it selected here.",
+  "patch.kernelsu.manager": "Manager",
+  "patch.kernelsu.manager.description":
+    "Which manager the patch is made for. Each one compiles its modules against its own signing certificate, so its module and the app that manages the result have to match.",
   "patch.kernelsu.selectKmi": "select the device KMI",
   "patch.kernelsu.override": "Override the bundled module",
   "patch.kernelsu.overrideWith": "Override with {name}",

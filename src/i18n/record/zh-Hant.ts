@@ -107,14 +107,10 @@ export const zhHant: Record<string, string> = {
     "在修補 worker 內執行編譯為 WebAssembly 的上游 KernelPatch kptools。",
   "Injects the module into the ramdisk of init_boot.img (GKI 13+) or of a boot.img that carries one, exactly as ksud does: init becomes init.real, a new init (ksuinit) is added, and kernelsu.ko is added next to it.":
     "完全依 ksud 的做法把模組注入 init_boot.img（GKI 13+）或帶 ramdisk 的 boot.img 的 ramdisk：init 變成 init.real，新增一個 init（ksuinit），並在旁邊加上 kernelsu.ko。",
-  "The build ships one loadable module per KMI (GPL-2.0-only, redistributed unmodified as a separate program with its own licence; see THIRD_PARTY_LICENSES/kernelsu/). A module supplied by the user overrides the bundled one, and either way its .modinfo and the kernel version it was built for are checked before anything is written.":
-    "這個建置為每個 KMI 隨附一個可載入模組（GPL-2.0-only，作為獨立程式原樣再散布，並附有自己的授權記錄；見 THIRD_PARTY_LICENSES/kernelsu/）。使用者提供的模組會覆寫隨附模組，無論哪一種，寫入之前都會檢查它的 .modinfo 以及它所針對的核心版本。",
   "The KMI is read from the kernel banner when the image carries a kernel, and can be selected otherwise; init_boot.img carries no kernel, so there it has to be selected.":
     "映像帶核心時會從核心 banner 讀出 KMI，否則可以手動選擇；init_boot.img 不帶核心，所以必須在那裡選擇。",
   "Refuses a ramdisk that is already patched by Magisk, and reports when KernelSU is already installed.":
     "拒絕已被 Magisk 修補過的 ramdisk，並在 KernelSU 已安裝時如實回報。",
-  "The KernelSU manager app (me.weishu.kernelsu) has to be installed on the device.":
-    "裝置上必須安裝 KernelSU 管理器應用程式（me.weishu.kernelsu）。",
   "Rewrites the ramdisk the way Magisk's own patcher does: init becomes magiskinit (0750), overlay.d/ and overlay.d/sbin are created (0750), magisk.xz, stub.xz and init-ld.xz are added (0644), and .backup/.magisk holds the configuration (000).":
     "依 Magisk 自帶修補工具的方式改寫 ramdisk：init 變成 magiskinit（0750），建立 overlay.d/ 與 overlay.d/sbin（0750），加入 magisk.xz、stub.xz 與 init-ld.xz（0644），設定放在 .backup/.magisk（000）。",
   "The stock init is replaced rather than renamed.": "原廠 init 是被取代，而不是改名。",
@@ -139,13 +135,9 @@ export const zhHant: Record<string, string> = {
     "套用修補之前會先在目標核心上驗證 CONFIG_KALLSYMS=y。",
   "The ramdisk is modified: on GKI Android 13+ that is init_boot.img, otherwise a boot.img that carries a ramdisk.":
     "被修改的是 ramdisk：在 GKI Android 13+ 上是 init_boot.img，否則就是帶 ramdisk 的 boot.img。",
-  "The loadable module has to match the device KMI (for example android15-6.6) and is supplied by the user; it is verified before use.":
-    "可載入模組必須與裝置 KMI 相符（例如 android15-6.6），由使用者提供，並在使用前驗證。",
   "A ramdisk that Magisk already patched is refused.": "已被 Magisk 修補過的 ramdisk 會被拒絕。",
   "Vendor boot images with a ramdisk table are not supported yet.":
     "帶 ramdisk 表的 vendor boot 映像目前還不支援。",
-  "The KernelSU manager app (me.weishu.kernelsu) has to be installed for the produced image to be usable.":
-    "產物映像要能用，必須安裝 KernelSU 管理器應用程式（me.weishu.kernelsu）。",
   "The payloads of the selected manager are bundled (both Magisk and WeaveMask are GPL-3.0 throughout), so nothing has to be supplied.":
     "所選管理器的載荷已隨附（Magisk 與 WeaveMask 整體都是 GPL-3.0），因此無需自備。",
   "The stock init is replaced rather than renamed, and a compressed copy of it is kept inside the ramdisk for the manager's own uninstall path.":
@@ -164,6 +156,36 @@ export const zhHant: Record<string, string> = {
     "LyraVoid/KernelPatch-Aster 0ff4ae2b8cad8058c408d8a5bdb12569b1a84981（上游 0.13.8 加上 Aster 管理器信任的提交）",
   "LyraVoid/KernelPatch 1de1a37304406615a3c3b6f1d28d2cd926b93a0f (release 0.13.8 of the extended branch FolkPatch is built on)":
     "LyraVoid/KernelPatch 1de1a37304406615a3c3b6f1d28d2cd926b93a0f（FolkPatch 所用的擴充分支的 0.13.8 發佈）",
+
+  // KernelSU family managers
+  "Five managers of this family are registered as flavours — KernelSU (me.weishu.kernelsu), SukiSU (com.sukisu.ultra), ReSukiSU (com.resukisu.resukisu), YukiSU (com.anatdx.yukisu) and KowSU (com.kowx712.supermanager) — because each one's modules are compiled against its own manager certificate and cannot be mixed with another's.":
+    "這個家族登錄了五個管理器 flavour——KernelSU（me.weishu.kernelsu）、SukiSU（com.sukisu.ultra）、ReSukiSU（com.resukisu.resukisu）、YukiSU（com.anatdx.yukisu）與 KowSU（com.kowx712.supermanager）——因為每個管理器的模組都針對自己的管理器憑證編譯，不能混用。",
+  "Each flavour ships one loadable module per KMI (GPL-2.0-only, redistributed unmodified as a separate program with its own licence; see THIRD_PARTY_LICENSES/kernelsu/). A module supplied by the user overrides the bundled one, and either way its .modinfo and the kernel version it was built for are checked before anything is written.":
+    "每個 flavour 都隨附每個 KMI 一個可載入模組（GPL-2.0-only，作為獨立程式原樣散布並各自登錄授權條款；見 THIRD_PARTY_LICENSES/kernelsu/）。使用者提供的模組會覆蓋內建模組，兩者都會在寫入前驗證 .modinfo 與它編譯時的 kernel 版本。",
+  "The manager app of the selected flavour has to be installed on the device.":
+    "裝置上必須安裝所選 flavour 對應的管理器應用程式。",
+  "The loadable module has to match the device KMI (for example android15-6.6); each manager's own module is bundled, and a module the user supplies overrides it after being verified.":
+    "可載入模組必須與裝置 KMI 相符（例如 android15-6.6）；每個管理器自己的模組已隨附，使用者提供的模組經驗證後會覆蓋它。",
+  "KernelSU":
+    "KernelSU",
+  "SukiSU":
+    "SukiSU",
+  "ReSukiSU":
+    "ReSukiSU",
+  "YukiSU":
+    "YukiSU",
+  "KowSU":
+    "KowSU",
+  "official KernelSU release v3.3.0":
+    "官方 KernelSU release v3.3.0",
+  "SukiSU-Ultra release v4.2.0 (the same wrapper as upstream, its own modules)":
+    "SukiSU-Ultra release v4.2.0（包裝器與上游相同，模組是它自己的）",
+  "ReSukiSU release v4.2.0-rc3 (wrapper and modules recovered from its APK)":
+    "ReSukiSU release v4.2.0-rc3（包裝器與模組從其 APK 中取出）",
+  "YukiSU release v1.7.0 (its modules are release assets, its wrapper comes from its APK)":
+    "YukiSU release v1.7.0（模組是發佈資產，包裝器來自其 APK）",
+  "KowSU Manager build 32737 (wrapper and modules recovered from its APK)":
+    "KowSU Manager build 32737（包裝器與模組從其 APK 中取出）",
 
   // Magisk flavours
   "Magisk": "Magisk",

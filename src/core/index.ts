@@ -66,18 +66,25 @@ export type { KpmInfo } from "./patch/providers/kpm-info";
 export {
   KERNELSU_CONFIG_ENTRY,
   KERNELSU_CONFIG_SETTING,
+  KERNELSU_DEFAULT_FLAVOR,
+  KERNELSU_FLAVORS,
+  KERNELSU_FLAVOR_SETTING,
   KERNELSU_INIT_BACKUP_ENTRY,
   KERNELSU_INIT_ENTRY,
   KERNELSU_KMI_SETTING,
   KERNELSU_MODULE_ENTRY,
   KERNELSU_MODULE_NAME,
   KERNELSU_REQUIRED_MANAGER,
+  kernelsuFlavor,
   plannedKmi,
 } from "./patch/providers/kernelsu-config";
+export type { KernelsuFlavor } from "./patch/providers/kernelsu-config";
 export {
   KERNELSU_KSUINIT_ID,
   KERNELSU_KSUINIT_SHA256,
   KERNELSU_RELEASE,
+  kernelsuFamilyKsuinitId,
+  kernelsuFamilyLkmId,
   MAGISK_INIT_LD_PAYLOAD_ID,
   MAGISK_MAGISKINIT_ID,
   MAGISK_MAGISK_PAYLOAD_ID,

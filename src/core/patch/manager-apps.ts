@@ -46,6 +46,26 @@ export const MANAGER_APPS: ManagerApp[] = [
     name: "WeaveMask",
     releaseUrl: "https://github.com/Seyud/WeaveMask/releases",
   },
+  {
+    packageName: "com.sukisu.ultra",
+    name: "SukiSU",
+    releaseUrl: "https://github.com/SukiSU-Ultra/SukiSU-Ultra/releases",
+  },
+  {
+    packageName: "com.resukisu.resukisu",
+    name: "ReSukiSU",
+    releaseUrl: "https://github.com/ReSukiSU/ReSukiSU/releases",
+  },
+  {
+    packageName: "com.anatdx.yukisu",
+    name: "YukiSU",
+    releaseUrl: "https://github.com/Rouyashiki/YukiSU/releases",
+  },
+  {
+    packageName: "com.kowx712.supermanager",
+    name: "KowSU",
+    releaseUrl: "https://github.com/zaominn/KowSU/releases",
+  },
 ];
 
 /** The manager app that owns a package name, or undefined for a hand-supplied core image. */

@@ -1,4 +1,4 @@
-import type { ArtifactCatalog } from "./types";
+import type { ArtifactCatalog, ArtifactRelease } from "./types";
 
 export const MOCK_ARTIFACT_ID = "imageforge-mock-artifact";
 
@@ -54,21 +54,182 @@ export function kernelsuLkmSourceName(kmi: string): string {
   return "lkm-aarch64-" + kmi + "_kernelsu.ko";
 }
 
+/** One loadable module of the KernelSU family: the bytes its manager writes as `kernelsu.ko`. */
+interface KernelsuModule {
+  kmi: string;
+  sha256: string;
+  sizeBytes: number;
+}
+
 /**
- * The loadable modules bundled with this build. They are built from KernelSU's kernel directory,
- * which is GPL-2.0-only, and are redistributed unmodified as separate programs with their own
- * licence; see THIRD_PARTY_LICENSES/kernelsu/.
+ * One manager of the KernelSU family. They share the injection algorithm — `init` becomes
+ * `init.real`, a wrapper takes its place and a module is added next to it — and differ in the
+ * wrapper, the modules and the app that trusts them, so each is registered as its own release and
+ * selected as a flavour rather than being a provider of its own.
  */
-const KERNELSU_LKM: Array<{ kmi: string; sha256: string; sizeBytes: number }> = [
-  { kmi: "android12-5.10", sha256: "5ca70d239f955139db23cd3028e578975cd038a7f2dc5f54ab4498a13f7ce03a", sizeBytes: 349936 },
-  { kmi: "android13-5.10", sha256: "2bf61d77d1aac8c2cf01be5d6943bcb2b3f6a31ba127f4e2ce914c713ad24e80", sizeBytes: 345952 },
-  { kmi: "android13-5.15", sha256: "251411414ea3b05b045c0aa93c75fe77713d11f732b97c8f375987307a90f003", sizeBytes: 160949 },
-  { kmi: "android14-5.15", sha256: "9839ade0184687d20e05b1c7fd1c56043358eb468a0bff1fb11971bb78efbccb", sizeBytes: 470008 },
-  { kmi: "android14-6.1", sha256: "db47d831e5a61bc4ca1563915ac1c61cd40ceda7dc6c3d19a9572dfdce72d14c", sizeBytes: 386600 },
-  { kmi: "android15-6.6", sha256: "c31d994aaf285e7bf4cf1ec38c2bbf2d7f303d1a4a7d616405bcd9f850d684e5", sizeBytes: 315176 },
-  { kmi: "android16-6.12", sha256: "877286f81d500c4ec546c96e9718c186b7379573c97ba5d5a35dd9a91465d076", sizeBytes: 386624 },
-  { kmi: "android17-6.18", sha256: "adc743246822b3ea96c218425d4208aed2436805a73d2f3e8ed78cfa8602cadf", sizeBytes: 357304 },
+interface KernelsuFamilyMember {
+  /** Flavour id, artifact id prefix and the directory the payloads live in. */
+  flavor: string;
+  release: string;
+  releasedAt: string;
+  /** The manager package the wrapper and the modules trust. */
+  managerPackage: string;
+  /** The wrapper. `source` is omitted when the manager publishes the same bytes as upstream's. */
+  ksuinit: { sha256: string; sizeBytes: number; source?: string };
+  modules: KernelsuModule[];
+  notes: string;
+}
+
+/**
+ * The loadable modules and wrappers bundled with this build. They are built from each project's
+ * kernel directory, which is GPL-2.0-only, and are redistributed unmodified as separate programs
+ * with their own licence; see THIRD_PARTY_LICENSES/kernelsu/.
+ */
+const KERNELSU_FAMILY: KernelsuFamilyMember[] = [
+  {
+    flavor: "kernelsu",
+    release: KERNELSU_RELEASE,
+    releasedAt: "2026-08-28T00:00:00.000Z",
+    managerPackage: "me.weishu.kernelsu",
+    ksuinit: { sha256: KERNELSU_KSUINIT_SHA256, sizeBytes: 607360 },
+    modules: [
+      { kmi: "android12-5.10", sha256: "5ca70d239f955139db23cd3028e578975cd038a7f2dc5f54ab4498a13f7ce03a", sizeBytes: 349936 },
+      { kmi: "android13-5.10", sha256: "2bf61d77d1aac8c2cf01be5d6943bcb2b3f6a31ba127f4e2ce914c713ad24e80", sizeBytes: 345952 },
+      { kmi: "android13-5.15", sha256: "c3ddba3333b6b39ed16f37ef6c713624662916a75f2018ef1261f24650505dd4", sizeBytes: 374032 },
+      { kmi: "android14-5.15", sha256: "9839ade0184687d20e05b1c7fd1c56043358eb468a0bff1fb11971bb78efbccb", sizeBytes: 470008 },
+      { kmi: "android14-6.1", sha256: "db47d831e5a61bc4ca1563915ac1c61cd40ceda7dc6c3d19a9572dfdce72d14c", sizeBytes: 386600 },
+      { kmi: "android15-6.6", sha256: "c31d994aaf285e7bf4cf1ec38c2bbf2d7f303d1a4a7d616405bcd9f850d684e5", sizeBytes: 315176 },
+      { kmi: "android16-6.12", sha256: "877286f81d500c4ec546c96e9718c186b7379573c97ba5d5a35dd9a91465d076", sizeBytes: 386624 },
+      { kmi: "android17-6.18", sha256: "adc743246822b3ea96c218425d4208aed2436805a73d2f3e8ed78cfa8602cadf", sizeBytes: 357304 },
+    ],
+    notes:
+      "Official KernelSU release. It ships two separately licensed components, and both are bundled here unmodified: the userspace init wrapper (ksuinit, GPL-3.0-or-later) and one loadable module per KMI (built from KernelSU's kernel directory, GPL-2.0-only). Each keeps its own licence; see THIRD_PARTY_LICENSES/kernelsu/ for the record and the corresponding source. Modules are published per KMI because GKI keeps the module ABI stable within one, so a module built for one kernel version loads on another version of the same KMI.",
+  },
+  {
+    flavor: "sukisu",
+    release: "v4.2.0",
+    releasedAt: "2026-09-01T00:00:00.000Z",
+    managerPackage: "com.sukisu.ultra",
+    // SukiSU publishes its own wrapper, and it is byte for byte upstream's, so the upstream file is
+    // reused instead of being bundled twice.
+    ksuinit: { sha256: KERNELSU_KSUINIT_SHA256, sizeBytes: 607360, source: "bundled:/artifacts/kernelsu/kernelsu/ksuinit" },
+    modules: [
+      { kmi: "android12-5.10", sha256: "bc7138b278ce06359334de06cfc398cea66bd3a5392c0a21b9b3016784108e24", sizeBytes: 364664 },
+      { kmi: "android13-5.10", sha256: "03cbd36551ece175032795a35479bac6a80a7ed242b2b4d0dcdf2f27add3b6d4", sizeBytes: 356864 },
+      { kmi: "android13-5.15", sha256: "31720f6d41c6e9b11e0b1142f05870e046094bfbdd4d7a684d650fb2e3628548", sizeBytes: 385528 },
+      { kmi: "android14-5.15", sha256: "ab6f5c9c660a693187560131ecec7fc7ba2f5a161628c4fde102a866fd13e98a", sizeBytes: 501200 },
+      { kmi: "android14-6.1", sha256: "e755405a4960fd11c4a60d59c68c40dfde0d8975b6cca010f7db8a0f01c6cd9d", sizeBytes: 412952 },
+      { kmi: "android15-6.6", sha256: "fc57ff64d6e5a0c7dc05bc7f2d0f7b42bc830a4e3f7efd58fa306f05e86bb9c5", sizeBytes: 327520 },
+      { kmi: "android16-6.12", sha256: "0410c3b9112e9930f6434cdc4a6c354af1636e6fa0a948b063fd42706609046f", sizeBytes: 390480 },
+      { kmi: "android17-6.18", sha256: "9f28e43bc024169806893760eb0ff698e84d5503623ce90334f3732795c2f79d", sizeBytes: 365392 },
+    ],
+    notes:
+      "Official SukiSU-Ultra release. Its wrapper is byte for byte upstream KernelSU's, and its modules are its own builds, compiled against the SukiSU manager certificate, so they are registered here rather than with upstream. The patcher is upstream's plus the spoof_release and spoof_version keys it accepts in ksu_config. Wrapper GPL-3.0-or-later, modules GPL-2.0-only; see THIRD_PARTY_LICENSES/kernelsu/.",
+  },
+  {
+    flavor: "resukisu",
+    release: "v4.2.0-rc3",
+    releasedAt: "2026-09-22T00:00:00.000Z",
+    managerPackage: "com.resukisu.resukisu",
+    ksuinit: { sha256: "761afc0cac6ad839685493246cb352fa70a51ac2898daad70d1e88bf394b6dde", sizeBytes: 611424 },
+    modules: [
+      { kmi: "android12-5.10", sha256: "6649518c24544a3df80aaef3afd7ef3ded5858d538986c9b9f27bfd800ea716c", sizeBytes: 397792 },
+      { kmi: "android13-5.10", sha256: "9113a4e901802f2f573b7677e776bd2d7720090cdee21f22bb4744e51e865b85", sizeBytes: 391120 },
+      { kmi: "android13-5.15", sha256: "3f79b9b7636587467facb3cfb4594e36ea5973e1cda1508454d66580ea1c8a76", sizeBytes: 424568 },
+      { kmi: "android14-5.15", sha256: "1eca0e8449dcb01504b2208ff23f5844519693712b756a94c8b4a6d38bf10e13", sizeBytes: 548864 },
+      { kmi: "android14-6.1", sha256: "acd22787917ca1fe956578b6e1e7fcb0c478241812be6d1f9d566bb3c1a33549", sizeBytes: 453872 },
+      { kmi: "android15-6.6", sha256: "4241d4334d22b5824023c848086f803973b8af44f28032572bd1146cd938501d", sizeBytes: 361232 },
+      { kmi: "android16-6.12", sha256: "776e9b9def9fa163692d79c08b2b5d017652968902cd15995b2577c4ecdfed08", sizeBytes: 428984 },
+      { kmi: "android17-6.18", sha256: "5cc3798b8cb3d0de8dbaf4f2e4e61b9c8e5c34c4059fc12745fb1c5ed518202f", sizeBytes: 401448 },
+    ],
+    notes:
+      "Official ReSukiSU release. The project publishes only APKs, so the wrapper and the modules were recovered from the raw DEFLATE streams its libksud.so embeds them in (scripts/scan-embedded-elf.py), and each module's KMI was identified by its vermagic; see THIRD_PARTY_LICENSES/kernelsu/. Its patcher is upstream's plus bundled=1 in ksu_config when the bundled module is written, and the optional ksu_block_modules file, which this build does not offer. Wrapper GPL-3.0-or-later, modules GPL-2.0-only.",
+  },
+  {
+    flavor: "yukisu",
+    release: "v1.7.0",
+    releasedAt: "2026-09-18T00:00:00.000Z",
+    managerPackage: "com.anatdx.yukisu",
+    ksuinit: { sha256: "7df0b720ee7db30f1efe58d536c9675b1bd530d8f38904260ed580353995cc1e", sizeBytes: 309904 },
+    modules: [
+      { kmi: "android12-5.10", sha256: "9e52ef92606b7356102f43f9ef77376ab2f07d6fd0016be7708df1175227e806", sizeBytes: 1252296 },
+      { kmi: "android13-5.10", sha256: "81cb2e5bdee6232027f58063c911c821b12c4f8d19dceccf12cdde02e3447b05", sizeBytes: 1179696 },
+      { kmi: "android13-5.15", sha256: "21540a501f1b435d3fcfe56cbe3fe69d721047657a6f1953de65c3fe01f681f7", sizeBytes: 1254296 },
+      { kmi: "android14-5.15", sha256: "43b818f63a807fa59d292f9ad42c9ce5a088c36140efe6738849478e06710e67", sizeBytes: 1558376 },
+      { kmi: "android14-6.1", sha256: "53cb3028eaa81c39d5e6792a6a72ad60845d0a2efd573c455043af53dd298230", sizeBytes: 1239512 },
+      { kmi: "android15-6.6", sha256: "30a3ecf8091affc282f723a90a6043a893dca3ea9c0456cb668e29678410333e", sizeBytes: 1001808 },
+      { kmi: "android16-6.12", sha256: "f89f5a0363cbcd62f49838f7db2a5e56a0bb95ff41257684c41629e49f8ea776", sizeBytes: 1132112 },
+      { kmi: "android17-6.18", sha256: "9763badcfd623810a37cfbf53e0e0b50c48d1c98e5a0974b08b8311325c977b4", sizeBytes: 1074696 },
+    ],
+    notes:
+      "Official YukiSU release. Its patcher is upstream's plus bundled=1 and the ksu_allow_shell entry it removes instead of allow_shell, and it also writes its launch settings into the module itself (a 512 byte imgpatch config and a SuperKey block), which this build reproduces. Its wrapper is embedded in its libksud.so and was recovered from there; the modules are release assets. Wrapper GPL-3.0-or-later, modules GPL-2.0-only; see THIRD_PARTY_LICENSES/kernelsu/.",
+  },
+  {
+    flavor: "kowsu",
+    release: "manager-build-32737",
+    releasedAt: "2026-09-23T00:00:00.000Z",
+    managerPackage: "com.kowx712.supermanager",
+    ksuinit: { sha256: "7120b1702d01ab9e1bc6036a9de445c4ce9c44092c6fd30c76bec8de393273a8", sizeBytes: 607552 },
+    modules: [
+      { kmi: "android12-5.10", sha256: "2913307e65101a95166a434b10cf76cf77943b25ac1af48521d9e7f1aee31aa0", sizeBytes: 391176 },
+      { kmi: "android13-5.10", sha256: "9b135fc62560b2ca9430d1ddd5d20c9fb9865f1af47f145986d3d1518fb87cf4", sizeBytes: 381800 },
+      { kmi: "android13-5.15", sha256: "ba8e1d3492d55cb7e208e94a81cccf46ef195f2b9a6731d4f9d28948873aa790", sizeBytes: 405536 },
+      { kmi: "android14-5.15", sha256: "e86adb3198b186fda4558c0e8262be4f1dd49b205c3150ff38ac494c4b35fa21", sizeBytes: 531824 },
+      { kmi: "android14-6.1", sha256: "94ca998b5a71ed17a24f8097cef0c802e48c57316dedae7d7fd8f0fc574cbef4", sizeBytes: 441784 },
+      { kmi: "android15-6.6", sha256: "fdd9a5bd765fb1ebf6afec4246a83e982d4d3ecdb1e384349c1eb61a48370295", sizeBytes: 339304 },
+      { kmi: "android16-6.12", sha256: "14a5a860d70abef52a99a5f6e96a838cfb89bd55f3ccb58e680aab0e795047d1", sizeBytes: 418160 },
+      { kmi: "android17-6.18", sha256: "31d5fb79da54e3f2f1bbafa8c93c1ef92771f489c950e58ada5a8e7e07783271", sizeBytes: 388352 },
+    ],
+    notes:
+      "Official KowSU Manager release (zaominn/KowSU, built from KOWX712/KernelSU). The project publishes only APKs, so the wrapper and the modules were recovered from the raw DEFLATE streams its libksud.so embeds them in, with each module's KMI identified by its vermagic. Its patcher is upstream's plus bundled=1. The release also ships a second build of every module whose internal name is ksu (the xx variant); this build does not bundle those, because a user supplied module covers that case. Wrapper GPL-3.0-or-later, modules GPL-2.0-only; see THIRD_PARTY_LICENSES/kernelsu/.",
+  },
 ];
+
+/** The artifact id of one manager's init wrapper. */
+export function kernelsuFamilyKsuinitId(flavor: string): string {
+  return flavor + "-ksuinit";
+}
+
+/** The artifact id of one manager's loadable module for a KMI. */
+export function kernelsuFamilyLkmId(flavor: string, kmi: string): string {
+  return flavor + "-lkm-" + kmi;
+}
+
+/** Where a payload of one manager lives in the bundle. */
+export function kernelsuFamilySource(flavor: string, file: string): string {
+  return "bundled:/artifacts/kernelsu/" + flavor + "/" + file;
+}
+
+/** The wrappers and modules of one manager, as a release of the `kernelsu` provider. */
+function kernelsuFamilyRelease(member: KernelsuFamilyMember): ArtifactRelease {
+  const files = member.modules.map((module) => ({
+    id: kernelsuFamilyLkmId(member.flavor, module.kmi),
+    version: member.release + " (" + module.kmi + ")",
+    type: "loadable-module",
+    architecture: "arm64",
+    sha256: module.sha256,
+    source: kernelsuFamilySource(member.flavor, kernelsuLkmSourceName(module.kmi)),
+    sizeBytes: module.sizeBytes,
+  }));
+  return {
+    providerId: "kernelsu",
+    release: member.release,
+    releasedAt: member.releasedAt,
+    notes: member.notes,
+    artifacts: [
+      {
+        id: kernelsuFamilyKsuinitId(member.flavor),
+        version: member.release,
+        type: "init-wrapper",
+        architecture: "arm64",
+        sha256: member.ksuinit.sha256,
+        source: member.ksuinit.source ?? kernelsuFamilySource(member.flavor, "ksuinit"),
+        sizeBytes: member.ksuinit.sizeBytes,
+      },
+      ...files,
+    ],
+  };
+}
 
 /** Magisk release the ramdisk payloads are taken from. */
 export const MAGISK_RELEASE = "v30.7";
@@ -198,34 +359,9 @@ export const ARTIFACT_CATALOG: ArtifactCatalog = {
         },
       ],
     },
-    {
-      providerId: "kernelsu",
-      release: KERNELSU_RELEASE,
-      releasedAt: "2026-08-28T00:00:00.000Z",
-      notes:
-        "Official KernelSU release. It ships two separately licensed components, and both are bundled here unmodified: the userspace init wrapper (ksuinit, GPL-3.0-or-later) and one loadable module per KMI (built from KernelSU's kernel directory, GPL-2.0-only). Each keeps its own licence; see THIRD_PARTY_LICENSES/kernelsu/ for the record and the corresponding source. Modules are published per KMI because GKI keeps the module ABI stable within one, so a module built for one kernel version loads on another version of the same KMI.",
-      artifacts: [
-        {
-          id: KERNELSU_KSUINIT_ID,
-          version: KERNELSU_RELEASE,
-          type: "init-wrapper",
-          architecture: "arm64",
-          sha256: KERNELSU_KSUINIT_SHA256,
-          source: "bundled:/artifacts/kernelsu/ksuinit",
-          sizeBytes: 607360,
-        },
-        // One module per KMI, redistributed unmodified under its own licence.
-        ...KERNELSU_LKM.map((module) => ({
-          id: kernelsuLkmId(module.kmi),
-          version: KERNELSU_RELEASE + " (" + module.kmi + ")",
-          type: "loadable-module",
-          architecture: "arm64",
-          sha256: module.sha256,
-          source: "bundled:/artifacts/kernelsu/" + kernelsuLkmSourceName(module.kmi),
-          sizeBytes: module.sizeBytes,
-        })),
-      ],
-    },
+    // One release per manager of the family: one wrapper and one module per KMI, each redistributed
+    // unmodified under its own licence.
+    ...KERNELSU_FAMILY.map(kernelsuFamilyRelease),
     {
       providerId: "apatch",
       release: "11224",

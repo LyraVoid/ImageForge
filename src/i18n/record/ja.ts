@@ -107,14 +107,10 @@ export const ja: Record<string, string> = {
     "WebAssembly にコンパイルした上流の KernelPatch kptools を、パッチ worker の中で実行します。",
   "Injects the module into the ramdisk of init_boot.img (GKI 13+) or of a boot.img that carries one, exactly as ksud does: init becomes init.real, a new init (ksuinit) is added, and kernelsu.ko is added next to it.":
     "ksud とまったく同じように、init_boot.img（GKI 13 以降）またはラムディスクを持つ boot.img のラムディスクにモジュールを注入します。init は init.real になり、新しい init（ksuinit）が追加され、その隣に kernelsu.ko が追加されます。",
-  "The build ships one loadable module per KMI (GPL-2.0-only, redistributed unmodified as a separate program with its own licence; see THIRD_PARTY_LICENSES/kernelsu/). A module supplied by the user overrides the bundled one, and either way its .modinfo and the kernel version it was built for are checked before anything is written.":
-    "このビルドは KMI ごとにローダブルモジュールを 1 つ同梱しています（GPL-2.0-only。独立したプログラムとして改変せず再配布し、独自のライセンス記録を添えています。THIRD_PARTY_LICENSES/kernelsu/ を参照）。利用者が用意したモジュールは同梱のものを上書きし、どちらの場合も書き込む前に .modinfo と対象カーネルのバージョンを確認します。",
   "The KMI is read from the kernel banner when the image carries a kernel, and can be selected otherwise; init_boot.img carries no kernel, so there it has to be selected.":
     "イメージにカーネルがあれば KMI はカーネルのバナーから読み取り、なければ選択できます。init_boot.img にはカーネルがないため、そこでは選択が必要です。",
   "Refuses a ramdisk that is already patched by Magisk, and reports when KernelSU is already installed.":
     "Magisk でパッチ済みのラムディスクは拒否し、KernelSU がすでに導入されている場合はその旨を報告します。",
-  "The KernelSU manager app (me.weishu.kernelsu) has to be installed on the device.":
-    "端末に KernelSU マネージャーアプリ（me.weishu.kernelsu）が必要です。",
   "Rewrites the ramdisk the way Magisk's own patcher does: init becomes magiskinit (0750), overlay.d/ and overlay.d/sbin are created (0750), magisk.xz, stub.xz and init-ld.xz are added (0644), and .backup/.magisk holds the configuration (000).":
     "Magisk 自身のパッチツールと同じ方法でラムディスクを書き換えます。init は magiskinit（0750）になり、overlay.d/ と overlay.d/sbin を作成し（0750）、magisk.xz・stub.xz・init-ld.xz を追加し（0644）、設定は .backup/.magisk（000）に置きます。",
   "The stock init is replaced rather than renamed.": "純正の init は名前を変えるのではなく置き換えられます。",
@@ -140,13 +136,9 @@ export const ja: Record<string, string> = {
     "パッチを適用する前に、対象カーネルで CONFIG_KALLSYMS=y を確認します。",
   "The ramdisk is modified: on GKI Android 13+ that is init_boot.img, otherwise a boot.img that carries a ramdisk.":
     "変更されるのはラムディスクです。GKI の Android 13 以降では init_boot.img、それ以外ではラムディスクを持つ boot.img です。",
-  "The loadable module has to match the device KMI (for example android15-6.6) and is supplied by the user; it is verified before use.":
-    "ローダブルモジュールは端末の KMI（例: android15-6.6）と一致している必要があり、利用者が用意します。使用前に検証します。",
   "A ramdisk that Magisk already patched is refused.": "Magisk でパッチ済みのラムディスクは拒否します。",
   "Vendor boot images with a ramdisk table are not supported yet.":
     "ラムディスクテーブルを持つ vendor boot イメージにはまだ対応していません。",
-  "The KernelSU manager app (me.weishu.kernelsu) has to be installed for the produced image to be usable.":
-    "生成したイメージを使うには KernelSU マネージャーアプリ（me.weishu.kernelsu）が必要です。",
   "The payloads of the selected manager are bundled (both Magisk and WeaveMask are GPL-3.0 throughout), so nothing has to be supplied.":
     "選択したマネージャーのペイロードは同梱されています（Magisk も WeaveMask も全体が GPL-3.0）。用意するものはありません。",
   "The stock init is replaced rather than renamed, and a compressed copy of it is kept inside the ramdisk for the manager's own uninstall path.":
@@ -166,6 +158,36 @@ export const ja: Record<string, string> = {
     "LyraVoid/KernelPatch-Aster 0ff4ae2b8cad8058c408d8a5bdb12569b1a84981（上流 0.13.8 に Aster マネージャー信頼のコミットを加えたもの）",
   "LyraVoid/KernelPatch 1de1a37304406615a3c3b6f1d28d2cd926b93a0f (release 0.13.8 of the extended branch FolkPatch is built on)":
     "LyraVoid/KernelPatch 1de1a37304406615a3c3b6f1d28d2cd926b93a0f（FolkPatch が使う拡張ブランチの 0.13.8 リリース）",
+
+  // KernelSU family managers
+  "Five managers of this family are registered as flavours — KernelSU (me.weishu.kernelsu), SukiSU (com.sukisu.ultra), ReSukiSU (com.resukisu.resukisu), YukiSU (com.anatdx.yukisu) and KowSU (com.kowx712.supermanager) — because each one's modules are compiled against its own manager certificate and cannot be mixed with another's.":
+    "この系統のマネージャーを 5 つ flavour として登録しています。KernelSU（me.weishu.kernelsu）、SukiSU（com.sukisu.ultra）、ReSukiSU（com.resukisu.resukisu）、YukiSU（com.anatdx.yukisu）、KowSU（com.kowx712.supermanager）です。各マネージャーのモジュールは自分の証明書に対してビルドされるため、混在させられません。",
+  "Each flavour ships one loadable module per KMI (GPL-2.0-only, redistributed unmodified as a separate program with its own licence; see THIRD_PARTY_LICENSES/kernelsu/). A module supplied by the user overrides the bundled one, and either way its .modinfo and the kernel version it was built for are checked before anything is written.":
+    "各 flavour は KMI ごとに 1 つのローダブルモジュールを同梱します（GPL-2.0-only、独立したプログラムとして無改変で再配布し、それぞれライセンスを登録しています。THIRD_PARTY_LICENSES/kernelsu/ を参照）。利用者が用意したモジュールは同梱のものを上書きし、どちらの場合も書き込む前に .modinfo とビルド時のカーネルバージョンを検証します。",
+  "The manager app of the selected flavour has to be installed on the device.":
+    "端末には選択した flavour のマネージャーアプリが必要です。",
+  "The loadable module has to match the device KMI (for example android15-6.6); each manager's own module is bundled, and a module the user supplies overrides it after being verified.":
+    "ローダブルモジュールは端末の KMI（例: android15-6.6）と一致している必要があります。各マネージャー自身のモジュールを同梱しており、利用者が用意したモジュールは検証のうえで上書きします。",
+  "KernelSU":
+    "KernelSU",
+  "SukiSU":
+    "SukiSU",
+  "ReSukiSU":
+    "ReSukiSU",
+  "YukiSU":
+    "YukiSU",
+  "KowSU":
+    "KowSU",
+  "official KernelSU release v3.3.0":
+    "公式 KernelSU リリース v3.3.0",
+  "SukiSU-Ultra release v4.2.0 (the same wrapper as upstream, its own modules)":
+    "SukiSU-Ultra リリース v4.2.0（ラッパーは上流と同じ、モジュールは独自）",
+  "ReSukiSU release v4.2.0-rc3 (wrapper and modules recovered from its APK)":
+    "ReSukiSU リリース v4.2.0-rc3（ラッパーとモジュールは APK から復元）",
+  "YukiSU release v1.7.0 (its modules are release assets, its wrapper comes from its APK)":
+    "YukiSU リリース v1.7.0（モジュールはリリース成果物、ラッパーは APK から）",
+  "KowSU Manager build 32737 (wrapper and modules recovered from its APK)":
+    "KowSU Manager ビルド 32737（ラッパーとモジュールは APK から復元）",
 
   // Magisk flavours
   "Magisk": "Magisk",
