@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { PatchWorkerSession } from "@/workers/session";
 import { buildPayload } from "../fixtures/payload";
 import { buildBootImage } from "../fixtures/bootimg";
+import { buildSplash } from "../fixtures/splash";
 import { buildZip } from "../fixtures/zip";
 
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
@@ -36,6 +37,30 @@ describe("task progress", () => {
     await expect(
       session.extractPackageEntry(source.id, "payload.bin::init_boot", { stream: true }),
     ).resolves.toBeDefined();
+
+    await session.closeSource(source.id);
+  });
+
+  it("reports every splash frame, including the one that finishes the job", async () => {
+    const session = new PatchWorkerSession();
+    const splash = await buildSplash(
+      Array.from({ length: 20 }, (_, index) => ({
+        name: "frame-" + index,
+        width: 2,
+        height: 2,
+        color: [index, 0, 0] as [number, number, number],
+      })),
+    );
+    const source = await session.openSource(toArrayBuffer(splash), "splash.img");
+
+    const seen: Array<{ task: string; done: number; total: number }> = [];
+    await session.onTaskProgress((progress) => seen.push({ ...progress }));
+    await session.inspectSplash(source.id);
+
+    expect(seen.map((entry) => entry.done)).toEqual(Array.from({ length: 20 }, (_, index) => index + 1));
+    expect(seen.every((entry) => entry.task === "logo")).toBe(true);
+    expect(seen.every((entry) => entry.total === 20)).toBe(true);
+    expect(seen.at(-1)?.done).toBe(seen.at(-1)?.total);
 
     await session.closeSource(source.id);
   });

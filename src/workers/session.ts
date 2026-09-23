@@ -593,8 +593,6 @@ export class PatchWorkerSession implements PatchWorkerApi {
     const parsed = await parseSplash(source);
     const frames: SplashSummary["frames"] = [];
     for (const [index, frame] of parsed.frames.entries()) {
-      // reading a splash means inflating every frame, which is the slow part worth reporting
-      this.reportTask({ task: "logo", done: index, total: parsed.frames.length });
       // One frame at a time: a real splash holds twenty of them at ten megabytes each, and the
       // listing only needs their size.
       const bmp = await readSplashFrameBmp(source, frame);
@@ -611,6 +609,8 @@ export class PatchWorkerSession implements PatchWorkerApi {
         pixelsPerMeter: info.pixelsPerMeter,
         trailingBytes: Math.max(0, bmp.length - (54 + rowSize * info.height)),
       });
+      // Report after the frame is listed: the last report must reach the total so the bar disappears.
+      this.reportTask({ task: "logo", done: index + 1, total: parsed.frames.length });
     }
     return {
       format: format?.id ?? "unknown",
