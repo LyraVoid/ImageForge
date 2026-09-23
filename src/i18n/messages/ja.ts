@@ -417,6 +417,7 @@ export const ja: Messages = {
 
   "settings.title": "設定",
   "settings.subtitle": "実行環境・登録簿・外観。すべてローカルに保存されます。",
+  "settings.version": "バージョン {version} · AGPL-3.0-or-later",
   "settings.appearance.title": "外観",
   "settings.appearance.description": "デザイントークンがライトとダークのテーマを切り替えます。",
   "settings.language.title": "言語",

@@ -42,9 +42,17 @@ A round of adding managers, and of making the register behind them hold up.
 - `NOTICE` was wrong: it still listed Magisk and KernelSU as "referenced but not bundled" after both
   had become bundled, and it did not mention the forks. It now lists every bundled component, its
   licence and the fact that none of them is affiliated with this project.
-- `CONTRIBUTING.md` (how to work here, and the checklist for adding a manager or an artifact) and
-  `SECURITY.md` (what is in scope, and what to report upstream instead) exist now.
+- `CONTRIBUTING.md` (how to work here, and the checklist for adding a manager or an artifact),
+  `SECURITY.md` (what is in scope, and what to report upstream instead) and `CODE_OF_CONDUCT.md`
+  exist now, with issue forms that ask for the diagnostics export and a pull request template that
+  has a section for what you could *not* verify.
 - The readme opens with what flashing a patched image can cost you, and the version is 0.2.0.
+- **The version is now shown where it should be and comes from one place.** The header badge had
+  been hardcoded at "v0.1" since the first release while the settings page showed nothing; both, and
+  the version in an exported diagnostics report, now read `package.json` through a build time
+  constant, and a test compares what the interface renders with what the package says.
+- **The toolchain is pinned and the CI matches it**: `packageManager` names the pnpm version, `engines`
+  names Node 22.13+ (what pnpm 11 requires), and CI installs both from those fields.
 
 **Corrections**
 

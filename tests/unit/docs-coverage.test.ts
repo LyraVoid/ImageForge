@@ -53,3 +53,33 @@ describe("documentation coverage", () => {
     expect(readme).toContain("docs/testing.md");
   });
 });
+
+/**
+ * The files a person meets before they meet the code. They are short, they are easy to let rot, and
+ * an issue form that does not ask for the diagnostics export produces reports nobody can act on.
+ */
+describe("contributor-facing files", () => {
+  const read = (path: string): string => readFileSync(join(process.cwd(), path), "utf8");
+
+  it("keeps a code of conduct with a way to report", () => {
+    const conduct = read("CODE_OF_CONDUCT.md");
+    expect(conduct).toContain("Contributor Covenant");
+    expect(conduct).toMatch(/Report a vulnerability|@[\w-]+/);
+  });
+
+  it("asks an issue form for what makes a report answerable", () => {
+    const bug = read(".github/ISSUE_TEMPLATE/bug_report.yml");
+    // The diagnostics export is the difference between a report and a guess.
+    expect(bug).toContain("Export diagnostics");
+    expect(bug).toContain("SECURITY.md");
+    expect(read(".github/ISSUE_TEMPLATE/feature_request.yml")).toContain("reference");
+    expect(read(".github/ISSUE_TEMPLATE/config.yml")).toContain("blank_issues_enabled");
+  });
+
+  it("keeps the pull request template honest about verification", () => {
+    const template = read(".github/pull_request_template.md");
+    expect(template).toContain("pnpm verify");
+    expect(template).toContain("digest verified");
+    expect(template).toMatch(/Not verified/);
+  });
+});

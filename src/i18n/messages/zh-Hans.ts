@@ -415,6 +415,7 @@ export const zhHans: Messages = {
 
   "settings.title": "设置",
   "settings.subtitle": "运行时、注册表与外观。所有内容都保存在本地。",
+  "settings.version": "版本 {version} · AGPL-3.0-or-later",
   "settings.appearance.title": "外观",
   "settings.appearance.description": "设计令牌在浅色与深色主题之间切换。",
   "settings.language.title": "语言",

@@ -217,7 +217,8 @@ lists them all, says where each one looks, and how the material was captured.
     pnpm wasm:build:lz4      # rebuild public/wasm/lz4.wasm from the pinned liblz4 release
     pnpm wasm:build:bzip2    # rebuild public/wasm/bzip2.wasm from the pinned bzip2 release
 
-Requirements: Node 20+, pnpm 9+. Rebuilding the Rust module needs a Rust toolchain with
+Requirements: **Node 22.13+ and pnpm 11** (the exact pnpm is pinned in `package.json` as
+`packageManager`, so `corepack enable` or a recent pnpm picks it up). Rebuilding the Rust module needs a Rust toolchain with
 the `wasm32-unknown-unknown` target; rebuilding kptools downloads wasi-sdk, zlib and the
 pinned KernelPatch revision and needs no Rust. Both compiled modules are committed, so
 neither toolchain is required for app development.
@@ -312,7 +313,8 @@ and a real device `init_boot` image is used to enforce that
     tests/             unit, integration, worker, wasm and UI tests
     docs/              architecture, testing material and the user guide
     THIRD_PARTY_LICENSES/  upstream license texts, digests and integration policy
-    NOTICE, SECURITY.md, CONTRIBUTING.md, AGENTS.md  licensing, reporting and the working rules
+    NOTICE, SECURITY.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md, AGENTS.md  licensing, reporting,
+                                                                   contributing and the rules
 
 ## Image Engine coverage
 

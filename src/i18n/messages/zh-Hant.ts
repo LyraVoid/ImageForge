@@ -415,6 +415,7 @@ export const zhHant: Messages = {
 
   "settings.title": "設定",
   "settings.subtitle": "執行時、註冊表與外觀。所有內容都保存在本機。",
+  "settings.version": "版本 {version} · AGPL-3.0-or-later",
   "settings.appearance.title": "外觀",
   "settings.appearance.description": "設計權杖在淺色與深色主題之間切換。",
   "settings.language.title": "語言",

@@ -21,5 +21,7 @@
     "erasableSyntaxOnly": true,
     "paths": { "@/*": ["./src/*"] }
   },
-  "include": ["tests"]
+  // The tests import from src, so the ambient declarations that live there have to be part of this
+  // project as well: a file reached through an import is checked here, but included files are not.
+  "include": ["tests", "src/env.d.ts"]
 }

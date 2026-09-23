@@ -11,13 +11,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The pnpm version comes from the packageManager field in package.json, so CI and a
+      # contributor's machine run the same one.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # pnpm 11 needs Node 22.13 or newer; the built site itself runs in any modern browser.
+          node-version: 22
           cache: pnpm
 
       - name: Install

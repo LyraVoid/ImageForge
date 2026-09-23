@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { APP_VERSION } from "@/lib/app-meta";
 import { buildDiagnostics, diagnosticsFileName, diagnosticsJson } from "@/lib/diagnostics";
 import { fakeAnalysis, fakeOutput, fakePlan } from "../fixtures/forge";
 
@@ -35,7 +36,9 @@ describe("diagnostics report", () => {
 
     expect(report.tool).toEqual({
       name: "ImageForge",
-      version: "0.1",
+      // The version comes from package.json; asserting the constant keeps this from pinning a
+      // second copy of it that would have to be bumped by hand.
+      version: APP_VERSION,
       locale: "en",
       userAgent: "vitest",
       generatedAt: "2026-01-01T00:00:00.000Z",

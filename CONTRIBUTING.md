@@ -10,8 +10,10 @@ byte-level contract with software that runs on someone else's phone.
     pnpm verify              # docs check, typecheck, lint, tests, build — the gate
 
 `pnpm verify` is what has to pass before a change is merged; CI runs the same four stages
-(`.github/workflows/ci.yml`). Node 20+ and pnpm 9+ are enough: the compiled WebAssembly modules are
-committed, so no Rust or C toolchain is needed unless you are rebuilding one of them.
+(`.github/workflows/ci.yml`) on the same pnpm version this repository pins in `package.json`. Node
+22.13+ and pnpm 11 are what the toolchain needs (the built site itself runs in any modern browser);
+the compiled WebAssembly modules are committed, so no Rust or C toolchain is needed unless you are
+rebuilding one of them.
 
 ## The rules
 
@@ -54,6 +56,9 @@ If the payloads exist only inside an APK, `scripts/scan-embedded-elf.py` recover
 which KMI.
 
 ## Commits and pull requests
+
+By taking part you agree to the [Code of Conduct](CODE_OF_CONDUCT.md). The pull request template asks
+for what a reviewer needs, including the section about what you could **not** verify.
 
 * Commit messages are English, imperative and explain **why**; the diff already says what.
 * Keep unrelated changes apart, and say in the message what you ran.

@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "license": "AGPL-3.0-or-later",
+  "packageManager": "pnpm@11.25.0",
+  "engines": {
+    "node": ">=22.13"
+  },
   "sideEffects": [
     "**/*.css"
   ],

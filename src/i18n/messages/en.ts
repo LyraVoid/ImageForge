@@ -422,6 +422,7 @@ export const en = {
 
   "settings.title": "Settings",
   "settings.subtitle": "Runtime, registry and appearance. Everything is stored locally.",
+  "settings.version": "Version {version} · AGPL-3.0-or-later",
   "settings.appearance.title": "Appearance",
   "settings.appearance.description": "Design tokens switch between the light and dark themes.",
   "settings.language.title": "Language",

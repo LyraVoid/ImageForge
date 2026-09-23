@@ -1,0 +1,3 @@
+# Issue forms live in this directory. Blank issues stay enabled so a question does not have to be
+# forced into one of the forms, but the forms are what makes a report answerable.
+blank_issues_enabled: true

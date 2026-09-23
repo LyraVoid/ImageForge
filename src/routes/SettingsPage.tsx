@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { LanguageOptions } from "@/components/ui/language-menu";
 import { useRecordText, useT } from "@/i18n/use-translation";
 import type { MessageKey } from "@/i18n";
+import { APP_VERSION } from "@/lib/app-meta";
 import { formatBytes, truncateHash } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useForgeStore } from "@/stores/forge-store";
@@ -135,6 +136,9 @@ export function SettingsPage() {
       <header className="space-y-1">
         <h1 className="text-xl font-semibold tracking-tight">{t("settings.title")}</h1>
         <p className="max-w-2xl text-xs text-muted-foreground">{t("settings.subtitle")}</p>
+        <p className="text-[11px] text-muted-foreground">
+          {t("settings.version", { version: APP_VERSION })}
+        </p>
       </header>
 
       <div className="grid items-start gap-5 lg:grid-cols-[22rem_minmax(0,1fr)]">

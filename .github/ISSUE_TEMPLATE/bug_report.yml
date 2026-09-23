@@ -1,0 +1,81 @@
+name: Bug report
+description: Something did not work, or a produced image was wrong
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Two things make a bug report answerable here: the **diagnostics
+        export** from the result page (it carries the plan, the metadata and the artifact names,
+        with no image bytes and no secret in it), and what you did just before it went wrong.
+
+        If this is a security problem — a wrong image, a payload that does not match its recorded
+        digest, a leak — please use the private reporting described in `SECURITY.md` instead of
+        this form.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you got instead.
+      placeholder: |
+        I opened <image>, chose <method>, set <options>, pressed Patch, and ...
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where it went wrong
+      options:
+        - Opening or analysing a file
+        - The patch plan or a compatibility verdict
+        - Running a patch
+        - Verification of the produced image
+        - The produced image does not boot on the device
+        - A tool other than the patcher (extract, unpack, diff, logo, animation, inspect)
+        - The interface itself
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics export
+      description: |
+        From the result page, **Export diagnostics** downloads a JSON file. Paste it here, or attach
+        it. It never contains image bytes or the superkey; skim it before you post it.
+      render: json
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Settings shows it at the top of the page. If it came from a source checkout, give the commit.
+      placeholder: "0.2.0"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Browser and system
+      placeholder: "Firefox 141 on Windows 11, or Chromium 140 on Ubuntu 24.04"
+    validations:
+      required: true
+  - type: input
+    id: manager
+    attributes:
+      label: Manager app, if a patch is involved
+      description: The manager the image was made for, and its version — for example Magisk v30.7 installed from its release page.
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Before submitting
+      options:
+        - label: I read the user guide (docs/usage.md) and the checklist the result page shows.
+          required: true
+        - label: The diagnostics export or the text above contains no secret and no personal data.
+          required: true
+        - label: I understand that flashing a device is my own decision and my own risk.
+          required: true

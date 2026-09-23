@@ -1,0 +1,47 @@
+name: Feature request
+description: A format, a manager or a tool that should be supported
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Requests that fit this project best are the ones that can be *checked*: a format with a
+        reference implementation to read or to compile, and material to verify against (a device
+        dump, a release artifact, an oracle tool). `docs/architecture.md` explains why that matters
+        here more than it does elsewhere.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is missing
+      description: The image, format or manager you have, and what you cannot do with the tool today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like it to do
+    validations:
+      required: false
+  - type: input
+    id: reference
+    attributes:
+      label: Reference implementation or specification
+      description: Upstream source, a format document, an official tool, a release page. Cite it if you can.
+    validations:
+      required: false
+  - type: input
+    id: material
+    attributes:
+      label: Material that could verify it
+      description: A device dump, a vendor image, a release artifact, or an official tool to compare against.
+    validations:
+      required: false
+  - type: checkboxes
+    id: device
+    attributes:
+      label: Does it need a device?
+      options:
+        - label: I can provide material from a device (a partition dump, an official patcher's output).
+          required: false
+        - label: I understand that a feature which cannot be verified against real material may be declined or deferred.
+          required: true
