@@ -38,11 +38,15 @@ They are exactly the files Magisk's own patcher feeds to `magiskboot compress=xz
 (`scripts/boot_patch.sh:176`), and ImageForge compresses them at patch time with the same codec and
 settings, so the streams it writes are the streams the official patcher writes:
 
-* the crate is `lzma-rust2` 0.21.0, the one magiskboot links (`native/src/boot/Cargo.toml:38`), with a
-  CRC32 check (`native/src/boot/compress.rs:225-226`). magiskboot asks that crate for preset 9; this
-  project's encoder searches with preset 6 and then declares the dictionary the reference streams
-  carry (64 MiB), which is why the produced stream is byte identical for these payloads even though
-  the search that produced it was smaller;
+* the crate is `lzma-rust2`, the one magiskboot links (`native/src/boot/Cargo.toml:38`), with a CRC32
+  check (`native/src/boot/compress.rs:225-226`). The versions differ: magiskboot v30.7 pins 0.16.2
+  (`native/src/Cargo.toml:38`) and this project uses 0.21.0. magiskboot additionally asks the crate
+  for preset 9 while this project's encoder searches with preset 6 and then declares the dictionary
+  the reference streams carry (64 MiB). Neither difference shows up in the output: the test that
+  compares the produced ramdisk with the one Magisk's own app wrote passes byte for byte, so the
+  crate version and the smaller search are immaterial for these payloads — which is what makes the
+  same conclusion available for the WeaveMask flavour, whose compressor is the same source at the
+  same crate version as magiskboot;
 * the dictionary the stream *declares* is the one the official streams carry, 64 MiB — `xz --list
   --verbose --verbose` on the `overlay.d/sbin/*.xz` and `.backup/init.xz` of a device image reports
   `--lzma2=dict=64MiB`. The property byte only tells a decoder how much window to reserve, and the

@@ -2,10 +2,11 @@ import { loadWasmModule } from "../../wasm/loader";
 
 /**
  * xz, the container Magisk's patcher uses for its ramdisk payloads and one of the containers
- * Android kernels and ramdisks come in. The codec lives in the WebAssembly module: the same crate and
- * version as magiskboot (lzma-rust2 0.21.0) with a CRC32 check, but a smaller search preset — ours is
- * 6, magiskboot asks for 9. Both write the payloads Magisk ships byte for byte, because the declared
- * dictionary is rewritten to the one the reference streams carry; see REFERENCE_XZ_DICTIONARY.
+ * Android kernels and ramdisks come in. The codec lives in the WebAssembly module: the same crate as
+ * magiskboot (lzma-rust2, 0.21.0 here and 0.16.2 there) with a CRC32 check, but a smaller search
+ * preset — ours is 6, magiskboot asks for 9. Neither difference changes the output: the payloads
+ * Magisk ships come back byte for byte, because the declared dictionary is rewritten to the one the
+ * reference streams carry; see REFERENCE_XZ_DICTIONARY below.
  */
 
 /** The dictionary the reference encoder actually searches with (preset 6, from the crate's table). */

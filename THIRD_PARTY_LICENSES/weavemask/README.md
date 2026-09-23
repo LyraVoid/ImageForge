@@ -14,6 +14,7 @@ can therefore be redistributed with this AGPL-3.0-or-later project as separate, 
 | Licence | GPL-3.0, see LICENSE in this directory (byte identical to Magisk's, sha256 `589ed823e9a84c56feb95ac58e7cf384626b9cbf4fda2a907bc36e103de1bad2`) |
 | Retrieved on | 2026-09-24 |
 | Local modifications | none |
+| Signing certificate | the release asset and the `stub` bundled from it carry the same signer, `CN=Android Debug`, SHA-256 `9A:73:77:82:9D:BC:AC:B0:6D:45:F6:E0:EF:81:C5:C6:4A:25:5F:CE:C0:71:ED:09:3C:67:C9:CC:8B:E5:50:60` — the release is signed with a debug key, not a vendor release key |
 
 The repository to use is `Seyud/WeaveMask`: it is the fork that publishes releases. `Shiho-Patch/WeaveMask`
 is an older snapshot of the same work (its branch is 88 commits behind and it has no releases), so
@@ -59,7 +60,26 @@ flavours cannot be mixed: `magiskinit` looks for the stub and the manager under 
 * Verified: the patcher is byte identical to Magisk v30.7's, so the settings this project reproduces
   byte for byte against Magisk's own app output (`tests/integration/magisk.test.ts`, material supplied
   through `IMAGEFORGE_MAGISK_REFERENCE`) apply unchanged to a WeaveMask patch.
+* Verified: WeaveMask's compressor is Magisk v30.7's source (`native/src/boot/compress.rs`,
+  byte identical, `with_preset(9)` + CRC32 at line 225) **at the same crate version**: magiskboot
+  pins `lzma-rust2` 0.16.2 and so does WeaveMask (`native/src/Cargo.toml:38`), while this project
+  builds 0.21.0 and nonetheless reproduces Magisk's own streams byte for byte. So the two known
+  differences between this project's encoder and the one that produced these payloads (newer crate,
+  smaller search preset with a rewritten declared dictionary) have both been shown not to change the
+  output on Magisk's payloads.
 * **Not verified**: no image produced by the WeaveMask app itself was available, so the produced
   `.xz` streams have not been compared against WeaveMask's own output the way Magisk's have. Doing so
   needs one patched image from that app for a known source image; until then this record says so
-  rather than implying the stronger claim.
+  rather than implying the stronger claim. WeaveMask's payloads are different files from Magisk's, so
+  the agreement above is evidence from the same encoder on different inputs, not a proof about these.
+
+## Provenance notes
+
+* The tag is the pin. GitHub's release metadata names `master` as `targetCommitish` — what a release
+  gets when it is created from a branch name rather than a commit — so the source is established by
+  the annotated tag `v30.7.5`, whose commit is above, together with the APK's own
+  `versionName 30.7.5` / `versionCode 30750`.
+* The signing certificate above is worth knowing before recommending this flavour: the release asset
+  was signed with an Android debug key. That does not change the patch (the payloads are data written
+  into a ramdisk), but it does mean the app the produced image needs is a debug-signed build, so a
+  differently signed WeaveMask build is not a substitute for it.

@@ -414,8 +414,9 @@ built for against the KMI, and the result records its name, licence and vermagic
 
 The three payloads are bundled **uncompressed** — exactly the files Magisk's own patcher feeds to
 `magiskboot compress=xz` — and ImageForge compresses them at patch time with the same codec
-(`lzma-rust2` 0.21.0, CRC32, the crate magiskboot links; its own search preset is smaller than
-magiskboot's, and the declared dictionary is rewritten to the reference one) and the declared dictionary as the official streams
+(`lzma-rust2`, CRC32, the crate magiskboot links — 0.16.2 there, 0.21.0 here; this project's search
+preset is smaller than magiskboot's, and the declared dictionary is rewritten to the reference one)
+and the declared dictionary as the official streams
 (64 MiB, see `src/core/image/xz.ts`), so the produced streams are byte for byte the ones the app
 writes. The stock init is compressed the same way.
 
