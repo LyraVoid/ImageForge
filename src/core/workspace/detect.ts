@@ -1,4 +1,5 @@
 import { detectCompression, formatFromBootHeader } from "../image";
+import { LP_METADATA_GEOMETRY_MAGIC, LP_PARTITION_RESERVED_BYTES } from "../partition/lp";
 import { BOOT_MAGIC, VENDOR_BOOT_MAGIC } from "../image/bootimage/constants";
 import { decodeBootHeader, decodeVendorBootHeader } from "../image/bootimage/header";
 import type { ArtifactKind } from "./kinds";
@@ -29,6 +30,7 @@ export type ContentFormat =
   | "f2fs"
   | "dtb"
   | "elf"
+  | "super"
   | "unknown";
 
 export interface DetectedArtifact {
@@ -69,6 +71,7 @@ export const CONTENT_LABEL: Record<ContentFormat, string> = {
   f2fs: "F2FS filesystem",
   dtb: "Device tree blob",
   elf: "ELF object",
+  super: "Logical partition image (super)",
   unknown: "Unknown content",
 };
 
@@ -173,6 +176,28 @@ export function detectArtifact(bytes: Uint8Array): DetectedArtifact {
 
   if (matches(bytes, EXT4_MAGIC_OFFSET, EXT4_MAGIC)) {
     return { container: "raw", content: "ext4", kind: "filesystem", label: CONTENT_LABEL.ext4, packed: false };
+  }
+  // A super image keeps its geometry at LP_PARTITION_RESERVED_BYTES, which is where AOSP's reader
+  // looks and where lpmake writes it. Naming it properly is what offers the unpack tool for it:
+  // without this it was a plain blob and the interface did not suggest anything.
+  const readsGeometryAt = (offset: number): boolean => {
+    if (bytes.length < offset + 4) return false;
+    let magic = 0;
+    for (let index = 0; index < 4; index += 1) magic |= bytes[offset + index] << (index * 8);
+    return magic >>> 0 === LP_METADATA_GEOMETRY_MAGIC;
+  };
+  // A full image keeps the geometry at LP_PARTITION_RESERVED_BYTES; the compact super_empty form
+  // that lpmake writes without images keeps it at offset 0 and the metadata at 4096 instead.
+  if (readsGeometryAt(LP_PARTITION_RESERVED_BYTES) || readsGeometryAt(0)) {
+    {
+      return {
+        container: "raw",
+        content: "super",
+        kind: "partition-image",
+        label: CONTENT_LABEL.super,
+        packed: false,
+      };
+    }
   }
   if (matches(bytes, SUPERBLOCK_OFFSET, EROFS_MAGIC)) {
     return { container: "raw", content: "erofs", kind: "filesystem", label: CONTENT_LABEL.erofs, packed: false };

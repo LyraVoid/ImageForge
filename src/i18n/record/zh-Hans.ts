@@ -323,4 +323,5 @@ export const zhHans: Record<string, string> = {
   "Device tree blob": "设备树（DTB）",
   "ELF object": "ELF 对象",
   "Unknown content": "未知内容",
+"Logical partition image (super)": "逻辑分区镜像（super）",
 };

@@ -5,6 +5,8 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { bytesSource, listZip, parsePayload, payloadPartitionSource, storedEntrySource } from "@/core/package";
 import { logicalPartitionSource, packSuper, parseSuper } from "@/core/partition";
+import { detectArtifact } from "@/core/workspace/detect";
+import { TOOLS } from "@/app/tools";
 import { sha256Hex } from "@/core/hash";
 import { fileSource } from "../fixtures/file-source";
 
@@ -20,6 +22,36 @@ function pattern(size: number, seed: number): Uint8Array {
 }
 
 describe("the super writer", () => {
+  it("is recognised as a logical partition image, which offers the unpack tool for it", async () => {
+    const image = await packSuper(
+      [
+        { name: "system", sizeBytes: 1024 * 1024 },
+        { name: "vendor", sizeBytes: 2 * 1024 * 1024 },
+      ],
+      { deviceSize: 8 * 1024 * 1024, metadataOnly: true },
+    );
+    // a full image is recognised too, which is what a device dump of super looks like
+    const full = await packSuper(
+      [
+        { name: "system", source: bytesSource(new Uint8Array(4096)) },
+        { name: "vendor", source: bytesSource(new Uint8Array(8192)) },
+      ],
+      { deviceSize: 8 * 1024 * 1024 },
+    );
+    expect(detectArtifact(full.subarray(0, 8192)).content).toBe("super");
+
+    // the detection reads a prefix, exactly as it does for a file the user drops
+    const detected = detectArtifact(image.subarray(0, 8192));
+    expect(detected.content).toBe("super");
+    expect(detected.kind).toBe("partition-image");
+    expect(detected.label).toBe("Logical partition image (super)");
+
+    // and that kind is what a tool list matches on: unpack takes partition images
+    const offered = TOOLS.filter((tool) => tool.accepts.includes(detected.kind)).map((tool) => tool.id);
+    expect(offered).toContain("unpack");
+    expect(offered).not.toContain("extract");
+  });
+
   it("places partitions the way lpdump's layout describes and reads back", async () => {
     const directory = mkdtempSync(join(tmpdir(), "imageforge-super-"));
     const systemPath = join(directory, "system.img");

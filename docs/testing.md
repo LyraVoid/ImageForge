@@ -34,6 +34,25 @@ output is checked against the command line tools in the tests.
 | `IMAGEFORGE_IMG2SIMG` | AOSP's `img2simg`, which the sparse writer is compared against byte for byte | `unit/sparse-write` | `/usr/bin/img2simg` |
 | `IMAGEFORGE_KERNELSU_MODULE`, `IMAGEFORGE_KERNELSU_REFERENCE`, `IMAGEFORGE_MAGISK_REFERENCE`, `IMAGEFORGE_KPM_DIR`, `IMAGEFORGE_TEST_KPM`, `IMAGEFORGE_TEST_IMAGE` | the third party modules and stock images the patch providers are checked against | `fixtures/artifacts` and the provider tests | `.research/kpm`, `.research/images/…` |
 
+## What each reader is checked against
+
+The rule that came out of the reference-first work: no reader is verified only against something this
+project wrote. Each one has at least one test where the bytes come from somewhere else — a device, a
+vendor image, or the reference implementation itself.
+
+| Reader | The bytes it is checked against |
+|---|---|
+| boot and vendor_boot headers | device dumps of init_boot and vendor_boot |
+| zip, zip64, OTA payload | the 8.2 GB full OTA package |
+| xz, bzip2, gzip | the payload's REPLACE_XZ and REPLACE_BZ operations, and bunzip2 for the stream a Rust decoder got wrong |
+| sparse | simg2img's own output, and this writer read back by simg2img |
+| super and its logical partitions | lpmake's output, read back with lpdump and lpunpack |
+| erofs, including LZ4 | sha256sum taken on the device for files inside the image |
+| ext4 | the same, for the modules in vendor_dlkm |
+| splash | the real splash partition of the OTA |
+| MediaTek logo | a real logo.img from the public dataset named above |
+| the lz4 and bzip2 codecs | the reference C compiled to wasm, checked against the command line tools |
+
 ## How the material was captured
 
 The boot partitions came from a rooted device with read-only commands, run by hand:

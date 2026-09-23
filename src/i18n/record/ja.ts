@@ -325,4 +325,5 @@ export const ja: Record<string, string> = {
   "Device tree blob": "デバイスツリー（DTB）",
   "ELF object": "ELF オブジェクト",
   "Unknown content": "不明な内容",
+"Logical partition image (super)": "論理パーティションイメージ（super）",
 };
