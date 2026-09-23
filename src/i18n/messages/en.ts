@@ -136,6 +136,10 @@ export const en = {
   "logo.verified.framesIntact": "Checked: every frame you left alone kept its bytes.",
   "logo.verified.different": "Warning: the result differs from the image you opened.",
 
+  "logo.batch": "Batch replace…",
+  "logo.batchResult": "Applied {matched} of {count} pictures.",
+  "logo.batchUnmatched": "No frame matches: {names}",
+
   "dropzone.title": "Drop an Android image here",
   "dropzone.hint": "or click to browse files",
   "dropzone.busy": "Analyzing image",

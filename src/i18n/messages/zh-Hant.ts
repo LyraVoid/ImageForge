@@ -133,6 +133,10 @@ export const zhHant: Messages = {
   "logo.verified.framesIntact": "已驗證：未改動的幀位元組未變。",
   "logo.verified.different": "注意：結果與你開啟的映像不同。",
 
+  "logo.batch": "批次替換…",
+  "logo.batchResult": "已套用 {matched}／{count} 張圖片。",
+  "logo.batchUnmatched": "沒有相符的幀：{names}",
+
   "dropzone.title": "把 Android 映像拖到這裡",
   "dropzone.hint": "或點擊選擇檔案",
   "dropzone.busy": "正在分析映像",

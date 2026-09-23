@@ -141,6 +141,13 @@ interface ForgeState {
     index: number,
     source: { name: string; rgba: Uint8Array; width: number; height: number },
   ) => SplashReplacement | null;
+  /**
+   * Replaces several frames at once, matching each picture to the frame whose name it carries (the
+   * file name without its extension, case insensitive). Returns what matched and what did not.
+   */
+  replaceSplashFramesFromFiles: (
+    files: { name: string; rgba: Uint8Array; width: number; height: number }[],
+  ) => { matched: string[]; unmatched: string[] };
   clearSplashReplacement: (index: number) => void;
   setSplashMode: (mode: SplashResolutionMode, custom?: { width?: number; height?: number }) => void;
   /** Packs the image with every replacement in place, and keeps the result as an artifact. */
@@ -434,6 +441,25 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       set({ error: toImageForgeError(error).toJSON() });
       return null;
     }
+  },
+
+  replaceSplashFramesFromFiles: (files) => {
+    const summary = get().splash;
+    const matched: string[] = [];
+    const unmatched: string[] = [];
+    if (!summary) return { matched, unmatched: files.map((file) => file.name) };
+    for (const file of files) {
+      const base = file.name.replace(/\.[^.]+$/, "").trim().toLowerCase();
+      const frame = summary.frames.find((candidate) => candidate.name.trim().toLowerCase() === base);
+      if (!frame) {
+        unmatched.push(file.name);
+        continue;
+      }
+      const replacement = get().replaceSplashFrame(frame.index, file);
+      if (replacement) matched.push(frame.name.trim());
+      else unmatched.push(file.name);
+    }
+    return { matched, unmatched };
   },
 
   clearSplashReplacement: (index) => {

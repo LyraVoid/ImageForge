@@ -133,6 +133,10 @@ export const ja: Messages = {
   "logo.verified.framesIntact": "確認済み: 触っていないフレームはバイト単位でそのままです。",
   "logo.verified.different": "注意: 結果は開いたイメージと異なります。",
 
+  "logo.batch": "まとめて差し替え…",
+  "logo.batchResult": "{matched}／{count} 枚を適用しました。",
+  "logo.batchUnmatched": "一致するフレームがありません: {names}",
+
   "dropzone.title": "Android イメージをここにドロップ",
   "dropzone.hint": "またはクリックしてファイルを選択",
   "dropzone.busy": "イメージを分析しています",

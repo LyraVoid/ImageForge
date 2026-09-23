@@ -158,6 +158,38 @@ describe("the splash editor's data path", () => {
     expect(await detectLogoFormat(bytesSource(new Uint8Array(0x5000)))).toBeNull();
   });
 
+  it("replaces several frames at once, matching pictures to frame names", async () => {
+    const image = await buildSplash([
+      { name: "boot", width: 8, height: 4, color: [200, 0, 0] },
+      { name: "at", width: 4, height: 2, color: [0, 0, 200] },
+    ]);
+    await store().analyzeFile(toFile(image, "splash.img"));
+    await store().loadSplash();
+    store().setSplashMode("followOriginal");
+
+    const result = store().replaceSplashFramesFromFiles([
+      { name: "at.png", rgba: solid(4, 2, [0, 255, 0]), width: 4, height: 2 },
+      { name: "BOOT.BMP", rgba: solid(8, 4, [1, 2, 3]), width: 8, height: 4 },
+      { name: "nothing.png", rgba: solid(2, 2, [9, 9, 9]), width: 2, height: 2 },
+    ]);
+
+    // the file name without its extension is the frame name, whatever the case
+    expect(result.matched).toEqual(["at", "boot"]);
+    expect(result.unmatched).toEqual(["nothing.png"]);
+    expect(Object.keys(store().splashReplacements)).toHaveLength(2);
+
+    const artifact = await store().packSplash();
+    expect(artifact?.params?.replaced).toBe("2");
+    expect(artifact?.params?.verified).toBe("frames-intact");
+
+    const packed = await store().readArtifactBytes(artifact?.id as string);
+    const reparsed = await parseSplash(bytesSource(packed as Uint8Array));
+    const replaced = decodeBmp(await readSplashFrameBmp(bytesSource(packed as Uint8Array), reparsed.frames[1]));
+    expect(pixelAt(replaced.rgba, 4, 0, 0)).toEqual([0, 255, 0, 255]);
+    const untouched = decodeBmp(await readSplashFrameBmp(bytesSource(packed as Uint8Array), reparsed.frames[0]));
+    expect(pixelAt(untouched.rgba, 8, 0, 0)).toEqual([1, 2, 3, 255]);
+  });
+
   it("clears a replacement again", async () => {
     const image = await buildSplash([{ name: "boot", width: 4, height: 4, color: [1, 2, 3] }]);
     await store().analyzeFile(toFile(image, "splash.img"));

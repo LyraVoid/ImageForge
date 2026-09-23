@@ -133,6 +133,10 @@ export const zhHans: Messages = {
   "logo.verified.framesIntact": "已校验：未改动的帧字节未变。",
   "logo.verified.different": "注意：结果与你打开的镜像不同。",
 
+  "logo.batch": "批量替换…",
+  "logo.batchResult": "已应用 {matched}／{count} 张图片。",
+  "logo.batchUnmatched": "没有匹配的帧：{names}",
+
   "dropzone.title": "把 Android 镜像拖到这里",
   "dropzone.hint": "或点击选择文件",
   "dropzone.busy": "正在分析镜像",

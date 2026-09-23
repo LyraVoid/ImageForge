@@ -35,6 +35,7 @@ export function LogoPage() {
   const readSplashFramePreview = useForgeStore((state) => state.readSplashFramePreview);
   const replaceSplashFrame = useForgeStore((state) => state.replaceSplashFrame);
   const clearSplashReplacement = useForgeStore((state) => state.clearSplashReplacement);
+  const replaceSplashFramesFromFiles = useForgeStore((state) => state.replaceSplashFramesFromFiles);
   const setSplashMode = useForgeStore((state) => state.setSplashMode);
   const packSplash = useForgeStore((state) => state.packSplash);
   const exportSplashFrames = useForgeStore((state) => state.exportSplashFrames);
@@ -42,7 +43,48 @@ export function LogoPage() {
   const [target, setTarget] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [uploadError, setUploadError] = useState(false);
+  const [batch, setBatch] = useState<{ matched: number; count: number; unmatched: string[] } | null>(null);
   const input = useRef<HTMLInputElement | null>(null);
+  const batchInput = useRef<HTMLInputElement | null>(null);
+
+  /** Decodes a picture the user picked into straight RGBA, which is what the adaptation reads. */
+  const decodePicture = useCallback(async (file: File) => {
+    if (typeof createImageBitmap === "undefined") throw new Error("no createImageBitmap");
+    const bitmap = await createImageBitmap(file);
+    const canvas = document.createElement("canvas");
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("no 2d context");
+    context.drawImage(bitmap, 0, 0);
+    const pixels = context.getImageData(0, 0, bitmap.width, bitmap.height);
+    bitmap.close?.();
+    return {
+      name: file.name,
+      rgba: new Uint8Array(pixels.data),
+      width: bitmap.width,
+      height: bitmap.height,
+    };
+  }, []);
+
+  const handleBatch = useCallback(
+    async (files: File[]) => {
+      setBusy(true);
+      setUploadError(false);
+      try {
+        const decoded = [];
+        for (const file of files) decoded.push(await decodePicture(file));
+        const result = replaceSplashFramesFromFiles(decoded);
+        setBatch({ matched: result.matched.length, count: files.length, unmatched: result.unmatched });
+      } catch {
+        setUploadError(true);
+      } finally {
+        setBusy(false);
+        if (batchInput.current) batchInput.current.value = "";
+      }
+    },
+    [decodePicture, replaceSplashFramesFromFiles],
+  );
 
   useEffect(() => {
     if (source && stage !== "analyzing" && splash === null) void loadSplash();
@@ -71,22 +113,7 @@ export function LogoPage() {
       setBusy(true);
       setUploadError(false);
       try {
-        if (typeof createImageBitmap === "undefined") throw new Error("no createImageBitmap");
-        const bitmap = await createImageBitmap(file);
-        const canvas = document.createElement("canvas");
-        canvas.width = bitmap.width;
-        canvas.height = bitmap.height;
-        const context = canvas.getContext("2d");
-        if (!context) throw new Error("no 2d context");
-        context.drawImage(bitmap, 0, 0);
-        const pixels = context.getImageData(0, 0, bitmap.width, bitmap.height);
-        bitmap.close?.();
-        replaceSplashFrame(target, {
-          name: file.name,
-          rgba: new Uint8Array(pixels.data),
-          width: bitmap.width,
-          height: bitmap.height,
-        });
+        replaceSplashFrame(target, await decodePicture(file));
       } catch {
         setUploadError(true);
       } finally {
@@ -95,7 +122,7 @@ export function LogoPage() {
         if (input.current) input.current.value = "";
       }
     },
-    [target, replaceSplashFrame],
+    [target, replaceSplashFrame, decodePicture],
   );
 
   const packed = artifacts.filter((artifact) => artifact.tool === "logo" || artifact.tool === "export");
@@ -196,6 +223,30 @@ export function LogoPage() {
                   if (file) void handleFile(file);
                 }}
               />
+              <input
+                ref={batchInput}
+                className="hidden"
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(event) => {
+                  const files = Array.from(event.target.files ?? []);
+                  if (files.length > 0) void handleBatch(files);
+                }}
+              />
+              <div className="flex flex-wrap items-center gap-2 pb-2">
+                <Button variant="secondary" size="sm" disabled={busy} onClick={() => batchInput.current?.click()}>
+                  {t("logo.batch")}
+                </Button>
+                {batch ? (
+                  <span className="text-[11px] text-muted-foreground">
+                    {t("logo.batchResult", { matched: String(batch.matched), count: String(batch.count) })}
+                    {batch.unmatched.length > 0
+                      ? " " + t("logo.batchUnmatched", { names: batch.unmatched.join(", ") })
+                      : ""}
+                  </span>
+                ) : null}
+              </div>
               <ul className="divide-y divide-border">
                 {splash.frames.map((frame) => {
                   const preview = previews[frame.index];

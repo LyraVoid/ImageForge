@@ -150,6 +150,11 @@ choose how your picture should be adapted (as it is, fitted to the frame by crop
 stretching, or a size you name) and replace it; the preview shows the adapted result before anything
 is packed.
 
+**Batch replace** takes several pictures at once and matches each one to the frame whose name it
+carries (the file name without its extension, case insensitive): name the pictures `boot.png`,
+`fastboot.png` and so on, pick them together, and the page says how many were applied and which had
+no frame.
+
 **Export all frames** writes them into one zip (each frame as the BMP the device stores, plus a
 `manifest.json` naming every frame and its size), which is handy for keeping a record before editing.
 
