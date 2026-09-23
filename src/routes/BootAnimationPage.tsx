@@ -4,7 +4,6 @@ import { ErrorPanel } from "@/components/app/error-panel";
 import { ImagePicker } from "@/components/app/image-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useT } from "@/i18n/use-translation";
 import { downloadBlob } from "@/lib/download";
 import { formatBytes } from "@/lib/format";
@@ -149,11 +148,24 @@ export function BootAnimationPage() {
   const replacedCount = Object.keys(replacements).length;
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-5">
-      <div className="space-y-1">
-        <h1 className="text-base font-semibold tracking-tight">{t("tool.animation.title")}</h1>
-        <p className="text-xs text-muted-foreground">{t("tool.animation.description")}</p>
-      </div>
+    <div className="mx-auto w-full max-w-5xl space-y-5 py-2">
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <h1 className="text-xl font-semibold tracking-tight">{t("tool.animation.title")}</h1>
+          <p className="max-w-2xl text-xs text-muted-foreground">{t("tool.animation.description")}</p>
+        </div>
+        {ready ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="outline">
+              {animation.width}×{animation.height}
+            </Badge>
+            <Badge variant="neutral">{animation.fps} fps</Badge>
+            <Badge variant="primary">
+              {t("animation.replaced", { count: String(replacedCount) })}
+            </Badge>
+          </div>
+        ) : null}
+      </header>
 
       <ErrorPanel error={error} />
 
@@ -168,261 +180,308 @@ export function BootAnimationPage() {
           {t("extract.reading")}
         </p>
       ) : (
-        <>
-          <Card>
-            <CardHeader className="flex-row items-center gap-2">
-              <Sparkles className="size-3.5 text-muted-foreground" aria-hidden />
-              <div className="min-w-0 flex-1">
-                <CardTitle>
-                  {animation.width}×{animation.height} · {animation.fps} fps ·{" "}
-                  {t("animation.summary", {
-                    parts: String(animation.parts.length),
-                    frames: String(animation.parts.reduce((sum, entry) => sum + entry.frames.length, 0)),
-                  })}
-                </CardTitle>
-                <CardDescription>
-                  {animation.dialect === "vendor-g" ? t("animation.vendorDialect") : t("animation.standardDialect")}{" "}
-                  {t("animation.keepsOriginal")}
-                </CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                {t("animation.size")}
-                <input
-                  aria-label={t("animation.width")}
-                  className="w-20 rounded border border-border bg-surface px-2 py-1 font-mono text-[11px]"
-                  type="number"
-                  min={1}
-                  value={animation.width}
-                  onChange={(event) => editAnimationGlobal({ width: Number(event.target.value) })}
-                />
-                ×
-                <input
-                  aria-label={t("animation.height")}
-                  className="w-20 rounded border border-border bg-surface px-2 py-1 font-mono text-[11px]"
-                  type="number"
-                  min={1}
-                  value={animation.height}
-                  onChange={(event) => editAnimationGlobal({ height: Number(event.target.value) })}
-                />
-                {t("animation.fps")}
-                <input
-                  aria-label={t("animation.fps")}
-                  className="w-16 rounded border border-border bg-surface px-2 py-1 font-mono text-[11px]"
-                  type="number"
-                  min={1}
-                  value={animation.fps}
-                  onChange={(event) => editAnimationGlobal({ fps: Number(event.target.value) })}
-                />
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <canvas ref={canvas} className="max-h-48 w-auto rounded border border-border bg-black" />
-                <div className="space-y-2">
-                  <Button variant="secondary" size="sm" onClick={() => setPlaying(!playing)}>
+        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_21rem]">
+          <main className="space-y-5">
+            <section className="overflow-hidden rounded-lg border border-border bg-surface shadow-subtle">
+              <header className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3">
+                <Sparkles className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-sm font-semibold tracking-tight">
+                    {t("animation.summary", {
+                      parts: String(animation.parts.length),
+                      frames: String(animation.parts.reduce((sum, entry) => sum + entry.frames.length, 0)),
+                    })}
+                  </h2>
+                  <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
+                    {animation.dialect === "vendor-g"
+                      ? t("animation.vendorDialect")
+                      : t("animation.standardDialect")}{" "}
+                    {t("animation.keepsOriginal")}
+                  </p>
+                </div>
+                <Badge variant="neutral">{part ?? "-"}</Badge>
+              </header>
+              <div className="grid gap-4 p-4 md:grid-cols-[minmax(0,1fr)_11rem] md:items-center">
+                <div className="flex min-h-56 min-w-0 items-center justify-center overflow-hidden rounded-md border border-border bg-black">
+                  <canvas ref={canvas} className="max-h-72 max-w-full" />
+                </div>
+                <div className="space-y-3">
+                  <Button variant="primary" onClick={() => setPlaying(!playing)} className="w-full">
                     {playing ? <Pause /> : <Play />}
                     {playing ? t("animation.pause") : t("animation.play")}
                   </Button>
-                  <p className="font-mono text-[11px] text-muted-foreground">
-                    {frames.length === 0 ? "-" : ((frame % Math.max(1, frames.length)) + 1) + " / " + frames.length}
-                  </p>
+                  <dl className="grid grid-cols-2 gap-2 md:grid-cols-1">
+                    <div className="rounded-md bg-surface-muted px-3 py-2">
+                      <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                        {t("animation.frames")}
+                      </dt>
+                      <dd className="mt-0.5 font-mono text-sm">
+                        {frames.length === 0
+                          ? "-"
+                          : ((frame % Math.max(1, frames.length)) + 1) + " / " + frames.length}
+                      </dd>
+                    </div>
+                    <div className="rounded-md bg-surface-muted px-3 py-2">
+                      <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                        {t("animation.replaced", { count: "" }).trim()}
+                      </dt>
+                      <dd className="mt-0.5 font-mono text-sm">{replacedCount}</dd>
+                    </div>
+                  </dl>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </section>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("animation.parts")}</CardTitle>
-              <CardDescription>{t("animation.partsHint")}</CardDescription>
-            </CardHeader>
-            <CardContent>
+            <section className="overflow-hidden rounded-lg border border-border bg-surface shadow-subtle">
+              <header className="space-y-3 border-b border-border px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <Clock className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                  <div className="min-w-0 flex-1">
+                    <h2 className="truncate text-sm font-semibold tracking-tight">{part ?? "-"}</h2>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{t("animation.framesHint")}</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={offset === 0}
+                    onClick={() => setOffset(Math.max(0, offset - WINDOW))}
+                  >
+                    {t("animation.previous")}
+                  </Button>
+                  <span className="min-w-20 text-center font-mono text-[11px] text-muted-foreground">
+                    {frames.length === 0 ? 0 : offset + 1}–{Math.min(offset + WINDOW, frames.length)} /{" "}
+                    {frames.length}
+                  </span>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={offset + WINDOW >= frames.length}
+                    onClick={() => setOffset(offset + WINDOW)}
+                  >
+                    {t("animation.next")}
+                  </Button>
+                </div>
+              </header>
+              <div className="p-4">
+                <input
+                  ref={input}
+                  className="hidden"
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) void handleFile(file);
+                  }}
+                />
+                <ul className="grid grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-3">
+                  {windowFrames.map((entry) => {
+                    const replacement = replacements[entry.name];
+                    return (
+                      <li key={entry.name} className="min-w-0 space-y-1.5">
+                        <span className="flex aspect-square items-center justify-center overflow-hidden rounded-md border border-border bg-surface-muted">
+                          {replacement ? (
+                            <span className="px-2 text-center text-[10px] text-muted-foreground">
+                              {replacement.sourceName}
+                            </span>
+                          ) : urls[entry.name] ? (
+                            <img src={urls[entry.name]} alt={entry.name} className="h-full w-full object-contain" />
+                          ) : (
+                            <LoaderCircle className="size-3 animate-spin text-muted-foreground" aria-hidden />
+                          )}
+                        </span>
+                        <span className="block truncate font-mono text-[10px] text-muted-foreground">
+                          {entry.name.replace(/^.*\//, "")}
+                        </span>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="min-w-0 flex-1"
+                            disabled={busy}
+                            onClick={() => {
+                              setTarget(entry.name);
+                              input.current?.click();
+                            }}
+                          >
+                            {t("animation.replace")}
+                          </Button>
+                          {replacement ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              aria-label={t("animation.replace") + " " + entry.name}
+                              onClick={() => clearAnimationReplacement(entry.name)}
+                            >
+                              <RotateCcw />
+                            </Button>
+                          ) : null}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </section>
+          </main>
+
+          <aside className="space-y-4">
+            <section className="overflow-hidden rounded-lg border border-border bg-surface shadow-subtle">
+              <header className="border-b border-border px-4 py-3">
+                <h2 className="text-sm font-semibold tracking-tight">{t("animation.size")}</h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">{t("animation.keepsOriginal")}</p>
+              </header>
+              <div className="grid grid-cols-3 gap-2 p-3">
+                <label className="space-y-1 text-[11px] text-muted-foreground">
+                  {t("animation.width")}
+                  <input
+                    aria-label={t("animation.width")}
+                    className="h-9 w-full rounded-md border border-border bg-surface px-2 font-mono text-xs"
+                    type="number"
+                    min={1}
+                    value={animation.width}
+                    onChange={(event) => editAnimationGlobal({ width: Number(event.target.value) })}
+                  />
+                </label>
+                <label className="space-y-1 text-[11px] text-muted-foreground">
+                  {t("animation.height")}
+                  <input
+                    aria-label={t("animation.height")}
+                    className="h-9 w-full rounded-md border border-border bg-surface px-2 font-mono text-xs"
+                    type="number"
+                    min={1}
+                    value={animation.height}
+                    onChange={(event) => editAnimationGlobal({ height: Number(event.target.value) })}
+                  />
+                </label>
+                <label className="space-y-1 text-[11px] text-muted-foreground">
+                  {t("animation.fps")}
+                  <input
+                    aria-label={t("animation.fps")}
+                    className="h-9 w-full rounded-md border border-border bg-surface px-2 font-mono text-xs"
+                    type="number"
+                    min={1}
+                    value={animation.fps}
+                    onChange={(event) => editAnimationGlobal({ fps: Number(event.target.value) })}
+                  />
+                </label>
+              </div>
+            </section>
+
+            <section className="overflow-hidden rounded-lg border border-border bg-surface shadow-subtle">
+              <header className="border-b border-border px-4 py-3">
+                <h2 className="text-sm font-semibold tracking-tight">{t("animation.parts")}</h2>
+                <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{t("animation.partsHint")}</p>
+              </header>
               <ul className="divide-y divide-border">
                 {animation.parts.map((entry) => (
-                  <li key={entry.path} className="flex flex-wrap items-center gap-3 py-2 first:pt-0 last:pb-0">
-                    <Badge variant={entry.path === part ? "success" : "neutral"}>{entry.type}</Badge>
-                    <span className="min-w-0 flex-1 truncate font-mono text-[11px]">{entry.path}</span>
-                    <span className="font-mono text-[11px] text-muted-foreground">
-                      {entry.frames.length} {t("animation.frames")}
-                    </span>
-                    <label className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                      {t("animation.count")}
-                      <input
-                        className="w-14 rounded border border-border bg-surface px-1 py-0.5 font-mono text-[11px]"
-                        type="number"
-                        min={0}
-                        value={entry.count}
-                        onChange={(event) => editAnimationPart(entry.path, { count: Number(event.target.value) })}
-                      />
-                    </label>
-                    <label className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                      {t("animation.pauseFrames")}
-                      <input
-                        className="w-14 rounded border border-border bg-surface px-1 py-0.5 font-mono text-[11px]"
-                        type="number"
-                        min={0}
-                        value={entry.pause}
-                        onChange={(event) => editAnimationPart(entry.path, { pause: Number(event.target.value) })}
-                      />
-                    </label>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        selectAnimationPart(entry.path);
-                        // the strip and the player start at the beginning of a part
-                        setOffset(0);
-                        setFrame(0);
-                      }}
-                    >
-                      {t("animation.show")}
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex-row items-center gap-2">
-              <Clock className="size-3.5 text-muted-foreground" aria-hidden />
-              <div className="min-w-0 flex-1">
-                <CardTitle>{part ?? "-"}</CardTitle>
-                <CardDescription>{t("animation.framesHint")}</CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <input
-                ref={input}
-                className="hidden"
-                type="file"
-                accept="image/*"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) void handleFile(file);
-                }}
-              />
-              <div className="flex flex-wrap gap-2">
-                {windowFrames.map((entry) => {
-                  const replacement = replacements[entry.name];
-                  return (
-                    <div key={entry.name} className="w-24 space-y-1">
-                      <span className="flex h-24 w-24 items-center justify-center overflow-hidden rounded border border-border bg-surface-muted">
-                        {replacement ? (
-                          <span className="px-1 text-center text-[10px] text-muted-foreground">{replacement.sourceName}</span>
-                        ) : urls[entry.name] ? (
-                          <img src={urls[entry.name]} alt={entry.name} className="max-h-24 max-w-24" />
-                        ) : (
-                          <LoaderCircle className="size-3 animate-spin text-muted-foreground" aria-hidden />
-                        )}
-                      </span>
-                      <span className="block truncate font-mono text-[10px] text-muted-foreground">
-                        {entry.name.replace(/^.*\//, "")}
-                      </span>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          disabled={busy}
-                          onClick={() => {
-                            setTarget(entry.name);
-                            input.current?.click();
-                          }}
-                        >
-                          {t("animation.replace")}
-                        </Button>
-                        {replacement ? (
-                          <Button variant="ghost" size="sm" onClick={() => clearAnimationReplacement(entry.name)}>
-                            <RotateCcw />
-                          </Button>
-                        ) : null}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={offset === 0}
-                  onClick={() => setOffset(Math.max(0, offset - WINDOW))}
-                >
-                  {t("animation.previous")}
-                </Button>
-                <span className="font-mono">
-                  {frames.length === 0 ? 0 : offset + 1}–{Math.min(offset + WINDOW, frames.length)} / {frames.length}
-                </span>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={offset + WINDOW >= frames.length}
-                  onClick={() => setOffset(offset + WINDOW)}
-                >
-                  {t("animation.next")}
-                </Button>
-                <span>{t("animation.replaced", { count: String(replacedCount) })}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex-row items-center gap-2">
-              <Download className="size-3.5 text-muted-foreground" aria-hidden />
-              <CardTitle>{t("animation.pack")}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button
-                variant="primary"
-                size="sm"
-                disabled={busy}
-                onClick={async () => {
-                  setBusy(true);
-                  await packAnimation();
-                  setBusy(false);
-                }}
-              >
-                {busy ? <LoaderCircle className="animate-spin" /> : null}
-                {t("animation.pack")}
-                <ArrowRight />
-              </Button>
-              {last ? (
-                <p className="text-[11px] leading-4 text-muted-foreground">
-                  {t("animation.packed", { count: last.params?.replaced ?? "0" })}{" "}
-                  {last.params?.verified === "entries-intact"
-                    ? t("animation.verified")
-                    : t("animation.differs")}
-                </p>
-              ) : null}
-              {packed.length > 0 ? (
-                <ul className="space-y-2">
-                  {packed.map((artifact) => (
-                    <li
-                      key={artifact.id}
-                      className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface-muted px-3 py-2"
-                    >
-                      <span className="min-w-0 flex-1 truncate font-mono text-[11px]">{artifact.name}</span>
+                  <li key={entry.path} className="space-y-2 px-3 py-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={entry.path === part ? "success" : "neutral"}>{entry.type}</Badge>
+                      <span className="min-w-0 flex-1 truncate font-mono text-[11px]">{entry.path}</span>
                       <span className="font-mono text-[11px] text-muted-foreground">
-                        {formatBytes(artifact.sizeBytes)}
+                        {entry.frames.length} {t("animation.frames")}
                       </span>
+                    </div>
+                    <div className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
+                      <label className="flex flex-col gap-1 text-[11px] text-muted-foreground">
+                        {t("animation.count")}
+                        <input
+                          className="h-8 w-full rounded-md border border-border bg-surface px-2 font-mono text-[11px]"
+                          type="number"
+                          min={0}
+                          value={entry.count}
+                          onChange={(event) => editAnimationPart(entry.path, { count: Number(event.target.value) })}
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1 text-[11px] text-muted-foreground">
+                        {t("animation.pauseFrames")}
+                        <input
+                          className="h-8 w-full rounded-md border border-border bg-surface px-2 font-mono text-[11px]"
+                          type="number"
+                          min={0}
+                          value={entry.pause}
+                          onChange={(event) => editAnimationPart(entry.path, { pause: Number(event.target.value) })}
+                        />
+                      </label>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={async () => {
-                          const blob = await artifactBlob(artifact.id);
-                          if (blob) downloadBlob(blob, artifact.name);
+                        onClick={() => {
+                          selectAnimationPart(entry.path);
+                          setOffset(0);
+                          setFrame(0);
                         }}
                       >
-                        <Download />
-                        {t("extract.download")}
+                        {t("animation.show")}
                       </Button>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </CardContent>
-          </Card>
-        </>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            <section className="overflow-hidden rounded-lg border border-border bg-surface shadow-subtle lg:sticky lg:top-20">
+              <header className="flex items-center gap-2 border-b border-border px-4 py-3">
+                <Download className="size-4 text-muted-foreground" aria-hidden />
+                <div>
+                  <h2 className="text-sm font-semibold tracking-tight">{t("animation.pack")}</h2>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {t("animation.replaced", { count: String(replacedCount) })}
+                  </p>
+                </div>
+              </header>
+              <div className="space-y-3 p-3">
+                <Button
+                  variant="primary"
+                  className="w-full"
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    await packAnimation();
+                    setBusy(false);
+                  }}
+                >
+                  {busy ? <LoaderCircle className="animate-spin" /> : null}
+                  {t("animation.pack")}
+                  <ArrowRight />
+                </Button>
+                {last ? (
+                  <p className="text-[11px] leading-4 text-muted-foreground">
+                    {t("animation.packed", { count: last.params?.replaced ?? "0" })}{" "}
+                    {last.params?.verified === "entries-intact"
+                      ? t("animation.verified")
+                      : t("animation.differs")}
+                  </p>
+                ) : null}
+                {packed.length > 0 ? (
+                  <ul className="divide-y divide-border border-t border-border pt-1">
+                    {packed.map((artifact) => (
+                      <li key={artifact.id} className="flex flex-wrap items-center gap-2 py-2">
+                        <span className="min-w-0 flex-1 truncate font-mono text-[11px]">{artifact.name}</span>
+                        <span className="font-mono text-[11px] text-muted-foreground">
+                          {formatBytes(artifact.sizeBytes)}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={async () => {
+                            const blob = await artifactBlob(artifact.id);
+                            if (blob) downloadBlob(blob, artifact.name);
+                          }}
+                        >
+                          <Download />
+                          {t("extract.download")}
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            </section>
+          </aside>
+        </div>
       )}
     </div>
   );
