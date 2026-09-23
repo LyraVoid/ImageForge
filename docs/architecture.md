@@ -284,6 +284,25 @@ header, and its own fixture wrote both of those things, so every test passed unt
 through it. Fixtures therefore mirror the reference layout exactly, and at least one test has to cross
 the boundary — our writer read by their reader, and theirs by ours.
 
+## Boot animations
+
+A boot animation is a zip archive of desc.txt and part directories, and the format is documented by AOSP
+itself (frameworks/base/cmds/bootanimation/FORMAT.md, kept in .research/upstream/aosp/): a first line of
+WIDTH HEIGHT FPS, then rows of TYPE COUNT PAUSE PATH, where COUNT is how many times to play a part (0
+loops until boot finishes) and PAUSE is a number of frames.
+
+The parser here is deliberately more forgiving than that document, because a real vendor file demanded
+it. The device this project reads ships a line the document does not describe at all, g WIDTH HEIGHT
+OFFSETX OFFSETY FPS, and its desc.txt has comments and trailing spaces. So every line is kept exactly as
+it was read and is only rewritten when one of its fields is actually changed: an untouched animation
+comes back byte for byte, and an edited one keeps its dialect — change the frame rate of that vendor
+file and the g line is what changes, not a first line the device's parser may not expect.
+
+Writing follows the document's own convention, zip -0, which is what this project's zip writer does
+anyway: entries are stored, never compressed, with desc.txt first. One honest difference: the vendor
+archive of that device deflates some of its entries, so a repack stores them instead. The contents are
+identical either way, the system reads both, and storing is what the document asks for.
+
 ## Hard rules
 
 1. **Providers never parse boot images.** A provider receives the normalized object

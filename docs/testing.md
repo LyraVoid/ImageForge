@@ -29,6 +29,7 @@ output is checked against the command line tools in the tests.
 | `IMAGEFORGE_OTA_INIT_BOOT_SHA256` | the digest the OTA's `init_boot` must have, as an independent cross-check of the extraction | `unit/package` | the test skips |
 | `IMAGEFORGE_ASTER_DUMP`, `IMAGEFORGE_STOCK_IMAGE`, `IMAGEFORGE_INIT_BOOT`, `IMAGEFORGE_VENDOR_BOOT` | device dumps of the boot partitions | `fixtures/artifacts`, `integration/ramdisk`, `unit/vendor-repack`, `unit/lz4` | `.research/aster-validation/{boot,init_boot,vendor_boot}.img` |
 | `IMAGEFORGE_EROFS_DIGESTS`, `IMAGEFORGE_PAYLOAD_DIGESTS`, `IMAGEFORGE_EXT4_DIGESTS` | `sha256sum` output captured **on the device** for files inside erofs and ext4 images, and for payload partitions | `unit/partition`, `unit/payload-source` | `.research/aster-validation/erofs-product-digests.txt`, `erofs-payload-digests.txt`, `ext4-vendor_dlkm-digests.txt` |
+| `IMAGEFORGE_BOOTANIMATION` | a real vendor boot animation archive (the one used here came out of the OTA's my_product partition) | `unit/bootanimation` | `.research/bootanimation/bootanimation.zip` |
 | `IMAGEFORGE_MTK_LOGO` | a real MediaTek `logo.img` | `unit/mtk-logo` | `.research/mtk-logo/sample-logo.img` |
 | `IMAGEFORGE_LPMAKE` | AOSP's `lpmake`, which the super image writer is compared against byte for byte (`lpdump` and `lpunpack` from the same package read its output back) | `unit/super-write` | `/usr/bin/lpmake` |
 | `IMAGEFORGE_IMG2SIMG` | AOSP's `img2simg`, which the sparse writer is compared against byte for byte | `unit/sparse-write` | `/usr/bin/img2simg` |
@@ -61,7 +62,12 @@ The boot partitions came from a rooted device with read-only commands, run by ha
     adb pull /sdcard/init_boot.img
 
 The digest files are the output of `sha256sum` for files read on that device, one line per file, so a
-reader here can be checked against the same bytes the device holds. The MediaTek sample came from the
+reader here can be checked against the same bytes the device holds. The boot animation was read straight
+out of the OTA's my_product partition with this project's own EROFS reader, from /media/bootanimation:
+bootanimation.zip (1,644,551 bytes, sha256 02b982a1dbe4f9ed...) and rbootanimation.zip, the shutdown
+animation (411,754 bytes, sha256 b92a7b78581568f2...).
+
+The MediaTek sample came from the
 HuggingFace dataset `offici5l/fcetool`, which mirrors whole OTA files; its `logo.img` has sha256
 `b922e04c2c0d00317535411ff27cc2690a6e66136cbd8d94f9c47a7466264022`. Details and citations for each
 format are in `.research/memory/` and `.research/mtk-logo/NOTES.md`.
