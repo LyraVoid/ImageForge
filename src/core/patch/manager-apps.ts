@@ -4,7 +4,8 @@
  * A patch only works with the manager that trusts it, so the result page has to say which app to
  * install and how to get it. The package names here are the ones the providers record in the plan and
  * the metadata; the release URLs are the upstream projects' own release pages, checked to answer
- * HTTP 200 when this module was written (Magisk, KernelSU, APatch and KernelPatch-Aster).
+ * HTTP 200 when this module was written (Magisk, KernelSU, APatch, KernelPatch-Aster and
+ * FolkPatch).
  */
 export interface ManagerApp {
   packageName: string;
@@ -34,6 +35,11 @@ export const MANAGER_APPS: ManagerApp[] = [
     packageName: "me.yuki.aster",
     name: "KernelPatch-Aster",
     releaseUrl: "https://github.com/LyraVoid/KernelPatch-Aster/releases",
+  },
+  {
+    packageName: "me.yuki.folk",
+    name: "FolkPatch",
+    releaseUrl: "https://github.com/LyraVoid/FolkPatch/releases",
   },
 ];
 

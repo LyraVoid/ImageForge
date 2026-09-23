@@ -42,7 +42,7 @@ describe("existing patch detection", () => {
       parseImage(await buildBootImage({ kernel, ramdisk: buildRamdisk([{ name: "init" }]) })),
     );
 
-    expect(report.existingPatch?.join(" ")).toMatch(/KernelPatch \(APatch or Aster\)/);
+    expect(report.existingPatch?.join(" ")).toMatch(/KernelPatch \(APatch or one of its forks\)/);
   });
 
   it("does not claim to read a compressed kernel", async () => {

@@ -1,9 +1,9 @@
 # apatch
 
-Status: **two KernelPatch core images bundled**.
+Status: **three KernelPatch core images bundled**.
 
 ImageForge ships the KernelPatch core image (`kpimg`) that APatch injects into kernel
-images. Two flavours are bundled because each build only trusts the manager app it was built
+images. Three flavours are bundled because each build only trusts the manager app it was built
 for, and a patch made with one flavour is only usable with that manager.
 
 ## 1. Upstream KernelPatch (default)
@@ -66,3 +66,46 @@ flashed dump are supplied through `IMAGEFORGE_STOCK_IMAGE` and `IMAGEFORGE_ASTER
 The same kernel was also reproduced with the fork's official `kptools-linux` release binary,
 and our WebAssembly build of kptools produced byte identical output to it, so the toolchain
 used in the browser matches the released native tool.
+
+## 3. FolkPatch
+
+| Field | Value |
+| --- | --- |
+| Manager repository | https://github.com/LyraVoid/FolkPatch (GPL-3.0) |
+| Core image repository | https://github.com/LyraVoid/KernelPatch |
+| Pinned revision | `1de1a37304406615a3c3b6f1d28d2cd926b93a0f` (tag `0.13.8`, released 2026-08-31) |
+| Base | upstream KernelPatch `72a904c4` (0.13.8) plus the extended branch's own commits |
+| Local modifications | the extended branch adds its own hooks — among them `folkpatch_pathhide`, `folkpatch_netisolate`, `folkpatch_suaudit` and `folkpatch_uts` — and reduces the trusted manager list to `me.yuki.folk` with the SHA-256 of that APK's v2 signing certificate. `tools/` still builds a complete kptools, and the image format is the same `KP1158` as upstream. |
+| Reported version | KernelPatch image `0.13.8` (`0xd08`), compile time `08:03:59 Aug 31 2026` |
+| Trusted manager | `me.yuki.folk` |
+| Release used for the artifact | `0.13.8` (`LyraVoid/KernelPatch`), asset `kpimg-android` |
+| Bundled artifact | `public/artifacts/apatch/kpimg-folk.bin`, 474640 bytes, sha256 `d22352eee8bc1452436b1c3ee9ba7ebfb4408a1ba93456f02333a23c56df1509` |
+| License | GPL-2.0-or-later (inherited from upstream KernelPatch; see THIRD_PARTY_LICENSES/kernelpatch/) |
+
+### Provenance
+
+The artifact is the official `kpimg-android` asset of that release, byte for byte:
+
+    https://github.com/LyraVoid/KernelPatch/releases/download/0.13.8/kpimg-android
+
+It is the same file the FolkPatch app carries in its own APK (`assets/kpimg`), so the bytes
+ImageForge injects are the bytes the manager expects. Its version and compile time are the
+ones the release was built at, and the same release also publishes the matching
+`kptools-android` and `kptools-linux`.
+
+### Verified reproduction
+
+The branch's core image is not injected by the branch's own tool in this project: ImageForge
+uses its WebAssembly `kptools`, built from *upstream* KernelPatch `72a904c4`. That the two
+agree was checked rather than assumed — patching the same stock kernel with both the
+released native `kptools-linux` and our WebAssembly build produces byte identical output:
+
+    stock kernel        36731392 bytes
+    native patched      37207696 bytes  sha256 30f2c354333223e7... (first 16)
+    our patched kernel  37207696 bytes  sha256 30f2c354333223e7... (first 16)
+    differing bytes     0
+
+`tests/integration/folkpatch-reproduction.test.ts` runs that comparison in both directions
+live, and skips itself unless the branch's `kptools-linux` is supplied through
+`IMAGEFORGE_FOLKPATCH_KPTOOLS` (by default the copy in
+`.research/folkpatch-release/0.13.8/`).

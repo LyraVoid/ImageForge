@@ -67,6 +67,12 @@ const MATERIALS = [
     fallback: "/usr/bin/img2simg",
   },
   {
+    variables: ["IMAGEFORGE_FOLKPATCH_KPTOOLS"],
+    supplies:
+      "the native kptools of the KernelPatch branch FolkPatch is built on, which our WebAssembly build is compared against byte for byte",
+    fallback: ".research/folkpatch-release/0.13.8/kptools-linux",
+  },
+  {
     variables: [
       "IMAGEFORGE_KERNELSU_MODULE",
       "IMAGEFORGE_KERNELSU_REFERENCE",

@@ -38,7 +38,7 @@ export interface ImageReport {
 const KERNELPATCH_MAGIC = "KP1158";
 
 /** The sentence the report shows for a kernel that already carries that magic. */
-const KERNELPATCH_FOUND = "KernelPatch (APatch or Aster): the kernel carries KP1158";
+const KERNELPATCH_FOUND = "KernelPatch (APatch or one of its forks): the kernel carries KP1158";
 
 /**
  * Looks for the marks known patch programs leave behind, so that stacking a second root solution on

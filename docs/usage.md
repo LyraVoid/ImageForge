@@ -43,7 +43,7 @@ are not. Only files that are actually implemented appear as `available`.
 
 | Method | Target | Needs | Manager app |
 | --- | --- | --- | --- |
-| **APatch** | `boot.img` only | `CONFIG_KALLSYMS=y` in the kernel; uncompressed, gzip, LZ4 or xz kernel | `me.bmax.apatch`, or `me.yuki.aster` for the Aster flavour, or whatever a hand-supplied core image was built for |
+| **APatch** | `boot.img` only | `CONFIG_KALLSYMS=y` in the kernel; uncompressed, gzip, LZ4 or xz kernel | `me.bmax.apatch`, or `me.yuki.aster` for the Aster flavour, or `me.yuki.folk` for the FolkPatch flavour, or whatever a hand-supplied core image was built for |
 | **KernelSU** | `init_boot.img`, or a `boot.img`/`vendor_boot.img` with a ramdisk | the KMI of the device (read from the kernel when the image has one, otherwise selected) | `me.weishu.kernelsu` |
 | **Magisk** | `init_boot.img`, or a `boot.img`/`vendor_boot.img` with a ramdisk | nothing beyond the image | `com.topjohnwu.magisk` |
 | **Mock** | `boot.img`, `init_boot.img` | nothing | none: it is a pipeline demonstration, not a root solution |
@@ -135,7 +135,7 @@ what you are about to stack on top of.
 ## What the image needs before it is usable
 
 A patched image only works with the manager app that trusts it, so the result page's checklist names
-that app — Magisk, KernelSU, APatch or the Aster fork — and links straight to its **official release
+that app — Magisk, KernelSU, APatch, the Aster fork or FolkPatch — and links straight to its **official release
 page**, so the app can be obtained without hunting for it. The links are data
 (`src/core/patch/manager-apps.ts`), and a test keeps them in step with the package names the
 providers record: a provider added without a release page fails the suite rather than shipping a dead

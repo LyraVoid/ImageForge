@@ -29,7 +29,7 @@ export const APATCH_PROVIDER_DESCRIPTOR: PatchProviderDescriptor = {
     "Requires CONFIG_KALLSYMS=y in the target kernel. This is verified before the patch runs.",
     "Uncompressed, gzip, LZ4 (frame or legacy, independent or dependent blocks) and xz kernels are supported and re-compressed in the original container; LZMA, BZip2 and Zstandard kernels are refused.",
     "The superkey is optional and unset by default, matching the manager default where authentication is signature based.",
-    "Two KernelPatch core images are registered: the official upstream build (only the me.bmax.apatch manager is trusted) and the Aster fork build (only the me.yuki.aster manager is trusted).",
+    "Three KernelPatch core images are registered, because each build only trusts the manager it was made for: the official upstream build (me.bmax.apatch), the Aster fork build (me.yuki.aster) and the extended branch FolkPatch ships (me.yuki.folk).",
     "A custom flavour takes the core image from the run instead of the registry: the file has to start with the KernelPatch magic, and its digest and version are reported in the result.",
     "KernelPatch modules (KPM) can be attached, and are embedded by kptools with the same command shape FolkTool uses.",
     "Runs the upstream KernelPatch kptools, compiled to WebAssembly, inside the patch worker.",

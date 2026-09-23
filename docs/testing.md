@@ -43,6 +43,7 @@ fails when it is stale, and the test suite runs the check, so a table that drift
 | `IMAGEFORGE_MTK_LOGO` | a real MediaTek logo.img | `unit/mtk-logo.test` | `.research/mtk-logo/sample-logo.img` |
 | `IMAGEFORGE_LPMAKE` | AOSP's lpmake, which the super image writer is compared against byte for byte (lpdump and lpunpack from the same package read its output back) | `unit/super-write.test` | `/usr/bin/lpmake` |
 | `IMAGEFORGE_IMG2SIMG` | AOSP's img2simg, which the sparse writer is compared against byte for byte | `unit/sparse-write.test` | `/usr/bin/img2simg` |
+| `IMAGEFORGE_FOLKPATCH_KPTOOLS` | the native kptools of the KernelPatch branch FolkPatch is built on, which our WebAssembly build is compared against byte for byte | `fixtures/artifacts` | `.research/folkpatch-release/0.13.8/kptools-linux` |
 | `IMAGEFORGE_KERNELSU_MODULE`, `IMAGEFORGE_KERNELSU_REFERENCE`, `IMAGEFORGE_MAGISK_REFERENCE`, `IMAGEFORGE_KPM_DIR`, `IMAGEFORGE_TEST_KPM`, `IMAGEFORGE_TEST_IMAGE` | the third party modules and stock images the patch providers are checked against | `fixtures/artifacts` | `.research/kpm, .research/images/...` |
 
 <!-- material-table:end -->

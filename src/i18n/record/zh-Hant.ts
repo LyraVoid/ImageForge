@@ -66,8 +66,8 @@ export const zhHant: Record<string, string> = {
   "The kernel payload is compressed or uses an unknown container.":
     "核心載荷是壓縮過的，或使用了未知的容器。",
   "Android ramdisks are normally CPIO newc archives.": "Android 的 ramdisk 通常是 CPIO newc 封存檔。",
-  "KernelPatch (APatch or Aster): the kernel carries KP1158":
-    "KernelPatch（APatch 或 Aster）：核心裡帶有 KP1158",
+  "KernelPatch (APatch or one of its forks): the kernel carries KP1158":
+    "KernelPatch（APatch 或其分支）：核心裡帶有 KP1158",
   "Magisk: overlay.d/ or .backup/.magisk is in the ramdisk":
     "Magisk：ramdisk 裡有 overlay.d/ 或 .backup/.magisk",
   "KernelSU: kernelsu.ko is in the ramdisk": "KernelSU：ramdisk 裡有 kernelsu.ko",
@@ -97,8 +97,8 @@ export const zhHant: Record<string, string> = {
     "superkey 是選用的，預設不設定，與管理器預設的「以簽章認證」一致。",
   "The superkey is optional and left unset by default, matching the manager default where authentication is signature based.":
     "superkey 是選用的，預設不設定，與管理器預設的「以簽章認證」一致。",
-  "Two KernelPatch core images are registered: the official upstream build (only the me.bmax.apatch manager is trusted) and the Aster fork build (only the me.yuki.aster manager is trusted).":
-    "登錄了兩個 KernelPatch 核心映像：官方上游建置（只信任 me.bmax.apatch 管理器）與 Aster 分支建置（只信任 me.yuki.aster 管理器）。",
+  "Three KernelPatch core images are registered, because each build only trusts the manager it was made for: the official upstream build (me.bmax.apatch), the Aster fork build (me.yuki.aster) and the extended branch FolkPatch ships (me.yuki.folk).":
+    "登錄了三個 KernelPatch 核心映像——因為每個建置只信任它為之打造的管理器：官方上游建置（me.bmax.apatch）、Aster 分支建置（me.yuki.aster），以及 FolkPatch 所用的擴充分支（me.yuki.folk）。",
   "A custom flavour takes the core image from the run instead of the registry: the file has to start with the KernelPatch magic, and its digest and version are reported in the result.":
     "自訂風味改為從本次執行取得核心映像，而不是從註冊表取得：檔案必須以 KernelPatch 魔數開頭，結果裡會報告摘要與版本。",
   "KernelPatch modules (KPM) can be attached, and are embedded by kptools with the same command shape FolkTool uses.":
@@ -157,10 +157,13 @@ export const zhHant: Record<string, string> = {
   // KernelPatch flavours
   "Upstream KernelPatch": "上游 KernelPatch",
   "Aster fork": "Aster 分支",
+  "FolkPatch": "FolkPatch",
   "official APatch release 11224 (KernelPatch 0.13.3)":
     "官方 APatch release 11224（KernelPatch 0.13.3）",
   "LyraVoid/KernelPatch-Aster 0ff4ae2b8cad8058c408d8a5bdb12569b1a84981 (upstream 0.13.8 plus the Aster manager trust commit)":
     "LyraVoid/KernelPatch-Aster 0ff4ae2b8cad8058c408d8a5bdb12569b1a84981（上游 0.13.8 加上 Aster 管理器信任的提交）",
+  "LyraVoid/KernelPatch 1de1a37304406615a3c3b6f1d28d2cd926b93a0f (release 0.13.8 of the extended branch FolkPatch is built on)":
+    "LyraVoid/KernelPatch 1de1a37304406615a3c3b6f1d28d2cd926b93a0f（FolkPatch 所用的擴充分支的 0.13.8 發佈）",
 
   // plan steps
   "Analyze boot image": "分析 boot 映像",

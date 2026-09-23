@@ -19,12 +19,17 @@ export const APATCH_KPIMG_ID = "apatch-kpimg";
 /** KernelPatch core image built from the Aster fork of KernelPatch. */
 export const APATCH_KPIMG_ASTER_ID = "apatch-kpimg-aster";
 
+/** KernelPatch core image built from the extended branch the FolkPatch manager ships. */
+export const APATCH_KPIMG_FOLK_ID = "apatch-kpimg-folk";
+
 /** Upstream kptools compiled to WebAssembly; see third_party/kptools-wasm/. */
 export const APATCH_KPTOOLS_ID = "apatch-kptools-wasm";
 
 export const APATCH_KPIMG_SHA256 = "8f472d389d00f11c2d34c7059e1df8d580b9cb7d8c9f99b70877801b52992e2a";
 
 export const APATCH_KPIMG_ASTER_SHA256 = "429718afcabe5bbcf51389ce41a2c983940b3392fb3fa20b99454f3465849a94";
+
+export const APATCH_KPIMG_FOLK_SHA256 = "d22352eee8bc1452436b1c3ee9ba7ebfb4408a1ba93456f02333a23c56df1509";
 
 export const APATCH_KPTOOLS_SHA256 = "bb53abeae8be16f4d2127af1b700d95ff8a75b38eea2829251c9f774c9b61c4c";
 
@@ -210,6 +215,24 @@ export const ARTIFACT_CATALOG: ArtifactCatalog = {
           sha256: APATCH_KPIMG_ASTER_SHA256,
           source: "bundled:/artifacts/apatch/kpimg-aster.bin",
           sizeBytes: 340880,
+        },
+      ],
+    },
+    {
+      providerId: "apatch",
+      release: "folk-1de1a37",
+      releasedAt: "2026-08-31T00:00:00.000Z",
+      notes:
+        "Official KernelPatch release 0.13.8 (asset kpimg-android) from LyraVoid/KernelPatch, the extended branch FolkPatch is built on: revision 1de1a37304406615a3c3b6f1d28d2cd926b93a0f, which adds the FolkPatch path hiding, network isolation, su audit and uts hooks and trusts the FolkPatch manager (me.yuki.folk) only. Reports KernelPatch image version 0.13.8. Patching a stock boot image with it through our WebAssembly kptools build produces exactly the same kernel as the branch's own kptools-linux release binary, which tests/integration/folkpatch-reproduction.test.ts checks against each other.",
+      artifacts: [
+        {
+          id: APATCH_KPIMG_FOLK_ID,
+          version: "0.13.8",
+          type: "kernelpatch-image",
+          architecture: "arm64",
+          sha256: APATCH_KPIMG_FOLK_SHA256,
+          source: "bundled:/artifacts/apatch/kpimg-folk.bin",
+          sizeBytes: 474640,
         },
       ],
     },

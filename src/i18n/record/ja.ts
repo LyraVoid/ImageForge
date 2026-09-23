@@ -66,8 +66,8 @@ export const ja: Record<string, string> = {
   "The kernel payload is compressed or uses an unknown container.":
     "カーネルのペイロードは圧縮されているか、未知のコンテナを使っています。",
   "Android ramdisks are normally CPIO newc archives.": "Android のラムディスクは通常 CPIO newc アーカイブです。",
-  "KernelPatch (APatch or Aster): the kernel carries KP1158":
-    "KernelPatch（APatch または Aster）: カーネルに KP1158 があります",
+  "KernelPatch (APatch or one of its forks): the kernel carries KP1158":
+    "KernelPatch（APatch またはそのフォーク）: カーネルに KP1158 があります",
   "Magisk: overlay.d/ or .backup/.magisk is in the ramdisk":
     "Magisk: ラムディスクに overlay.d/ または .backup/.magisk があります",
   "KernelSU: kernelsu.ko is in the ramdisk": "KernelSU: ラムディスクに kernelsu.ko があります",
@@ -97,8 +97,8 @@ export const ja: Record<string, string> = {
     "スーパーキーは任意で、既定では未設定です。署名で認証するマネージャーの既定と同じ挙動です。",
   "The superkey is optional and left unset by default, matching the manager default where authentication is signature based.":
     "スーパーキーは任意で、既定では未設定です。署名で認証するマネージャーの既定と同じ挙動です。",
-  "Two KernelPatch core images are registered: the official upstream build (only the me.bmax.apatch manager is trusted) and the Aster fork build (only the me.yuki.aster manager is trusted).":
-    "KernelPatch のコアイメージを 2 つ登録しています。公式の上流ビルド（信頼するのは me.bmax.apatch マネージャーだけ）と、Aster フォークのビルド（信頼するのは me.yuki.aster マネージャーだけ）です。",
+  "Three KernelPatch core images are registered, because each build only trusts the manager it was made for: the official upstream build (me.bmax.apatch), the Aster fork build (me.yuki.aster) and the extended branch FolkPatch ships (me.yuki.folk).":
+    "KernelPatch のコアイメージを 3 つ登録しています。各ビルドが信頼するのは、そのために作られたマネージャーだけだからです。公式の上流ビルド（me.bmax.apatch）、Aster フォークのビルド（me.yuki.aster）、そして FolkPatch が使う拡張ブランチ（me.yuki.folk）です。",
   "A custom flavour takes the core image from the run instead of the registry: the file has to start with the KernelPatch magic, and its digest and version are reported in the result.":
     "カスタムフレーバーでは登録簿ではなく今回の実行からコアイメージを受け取ります。ファイルは KernelPatch のマジックで始まる必要があり、ダイジェストとバージョンは結果に記録されます。",
   "KernelPatch modules (KPM) can be attached, and are embedded by kptools with the same command shape FolkTool uses.":
@@ -159,10 +159,13 @@ export const ja: Record<string, string> = {
   // KernelPatch flavours
   "Upstream KernelPatch": "上流の KernelPatch",
   "Aster fork": "Aster フォーク",
+  "FolkPatch": "FolkPatch",
   "official APatch release 11224 (KernelPatch 0.13.3)":
     "公式 APatch リリース 11224（KernelPatch 0.13.3）",
   "LyraVoid/KernelPatch-Aster 0ff4ae2b8cad8058c408d8a5bdb12569b1a84981 (upstream 0.13.8 plus the Aster manager trust commit)":
     "LyraVoid/KernelPatch-Aster 0ff4ae2b8cad8058c408d8a5bdb12569b1a84981（上流 0.13.8 に Aster マネージャー信頼のコミットを加えたもの）",
+  "LyraVoid/KernelPatch 1de1a37304406615a3c3b6f1d28d2cd926b93a0f (release 0.13.8 of the extended branch FolkPatch is built on)":
+    "LyraVoid/KernelPatch 1de1a37304406615a3c3b6f1d28d2cd926b93a0f（FolkPatch が使う拡張ブランチの 0.13.8 リリース）",
 
   // plan steps
   "Analyze boot image": "boot イメージを分析",

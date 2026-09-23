@@ -48,7 +48,7 @@ describe.skipIf(!hasAsterReproductionMaterial)("Aster flavour against a flashed 
 
     // the dump from the flashed device is recognised as an already patched image
     const report = await buildImageReport(parseImage(readAsterDump()));
-    expect(report.existingPatch?.join(" ")).toMatch(/KernelPatch \(APatch or Aster\)/);
+    expect(report.existingPatch?.join(" ")).toMatch(/KernelPatch \(APatch or one of its forks\)/);
   }, TIMEOUT);
 
   it("reports which material the reproduction uses", () => {

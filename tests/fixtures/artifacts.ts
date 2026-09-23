@@ -134,3 +134,14 @@ export function readStockImage(): Uint8Array {
 export function readAsterDump(): Uint8Array {
   return new Uint8Array(readFileSync(ASTER_DUMP_PATH));
 }
+
+/**
+ * The native `kptools` of the extended KernelPatch branch FolkPatch ships, used as the oracle for
+ * the reproduction check: our WebAssembly build comes from upstream KernelPatch, so the two have to
+ * be shown to produce the same patched kernel rather than assumed to.
+ */
+export const FOLKPATCH_KPTOOLS_PATH =
+  process.env.IMAGEFORGE_FOLKPATCH_KPTOOLS ??
+  repoPath(".research", "folkpatch-release", "0.13.8", "kptools-linux");
+
+export const hasFolkpatchMaterial = existsSync(STOCK_IMAGE_PATH) && existsSync(FOLKPATCH_KPTOOLS_PATH);

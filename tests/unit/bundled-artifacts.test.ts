@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   APATCH_KPIMG_ASTER_ID,
   APATCH_KPIMG_ASTER_SHA256,
+  APATCH_KPIMG_FOLK_ID,
+  APATCH_KPIMG_FOLK_SHA256,
   APATCH_KPIMG_ID,
   APATCH_KPIMG_SHA256,
   APATCH_KPTOOLS_ID,
@@ -17,8 +19,12 @@ import { readFileSync } from "node:fs";
 const registry = createArtifactRegistry(ARTIFACT_CATALOG, fsPayloadLoader);
 
 describe("bundled artifacts", () => {
-  it("registers the upstream release and the Aster fork release", () => {
-    expect(registry.releases("apatch").map((release) => release.release)).toEqual(["11224", "aster-0ff4ae2"]);
+  it("registers the upstream release and the two fork releases", () => {
+    expect(registry.releases("apatch").map((release) => release.release)).toEqual([
+      "11224",
+      "aster-0ff4ae2",
+      "folk-1de1a37",
+    ]);
     expect(registry.resolve({ providerId: "apatch", artifactId: APATCH_KPIMG_ID }).release.release).toBe("11224");
     expect(registry.resolve({ providerId: "apatch", artifactId: APATCH_KPIMG_ASTER_ID }).release.release).toBe(
       "aster-0ff4ae2",
@@ -46,6 +52,17 @@ describe("bundled artifacts", () => {
     expect(artifact.sha256).toBe(APATCH_KPIMG_ASTER_SHA256);
     expect(bytes.length).toBe(artifact.sizeBytes);
     expect(await sha256Hex(bytes)).toBe(APATCH_KPIMG_ASTER_SHA256);
+  });
+
+  it("matches the shipped FolkPatch KernelPatch core image digest", async () => {
+    const artifact = registry.resolve({ providerId: "apatch", artifactId: APATCH_KPIMG_FOLK_ID }).artifact;
+    const bytes = await registry.loadVerifiedPayload(artifact);
+
+    expect(artifact.source).toBe("bundled:/artifacts/apatch/kpimg-folk.bin");
+    expect(artifact.version).toBe("0.13.8");
+    expect(artifact.sha256).toBe(APATCH_KPIMG_FOLK_SHA256);
+    expect(bytes.length).toBe(artifact.sizeBytes);
+    expect(await sha256Hex(bytes)).toBe(APATCH_KPIMG_FOLK_SHA256);
   });
 
   it("ships a KernelSU loadable module for every KMI, digest verified", async () => {

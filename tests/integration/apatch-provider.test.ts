@@ -94,7 +94,7 @@ describe("APatch provider preflight", () => {
 
   it("maps each flavour to a bundled core image and the manager it trusts", () => {
     expect(APATCH_DEFAULT_FLAVOR).toBe("upstream");
-    expect(APATCH_FLAVORS.map((flavor) => flavor.id)).toEqual(["upstream", "aster"]);
+    expect(APATCH_FLAVORS.map((flavor) => flavor.id)).toEqual(["upstream", "aster", "folkpatch"]);
 
     for (const flavor of APATCH_FLAVORS) {
       const resolved = artifacts.resolve({ providerId: "apatch", artifactId: flavor.artifactId });
@@ -106,6 +106,7 @@ describe("APatch provider preflight", () => {
 
     expect(APATCH_FLAVORS[0].managerPackage).toBe("me.bmax.apatch");
     expect(APATCH_FLAVORS[1].managerPackage).toBe("me.yuki.aster");
+    expect(APATCH_FLAVORS[2].managerPackage).toBe("me.yuki.folk");
   });
 
   it("rejects an unknown KernelPatch flavour", async () => {

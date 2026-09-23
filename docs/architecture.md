@@ -536,7 +536,7 @@ production source maps show exactly the thirty icons the app imports plus thirte
 
 | Provider | Target | Mechanism |
 | --- | --- | --- |
-| `apatch` | `boot.img` only | KernelPatch core image injected into the kernel by the upstream kptools build in WebAssembly. Two core images are registered as artifacts (upstream and the Aster fork); each only trusts its own manager app, so the plan records `kernelPatchFlavor` and `requiredManager`. A run can also carry its own core image (`kernelPatchFlavor: custom`), which is checked for the KernelPatch magic before kptools sees it |
+| `apatch` | `boot.img` only | KernelPatch core image injected into the kernel by the upstream kptools build in WebAssembly. Three core images are registered as artifacts (upstream, the Aster fork and the branch FolkPatch ships); each only trusts its own manager app, so the plan records `kernelPatchFlavor` and `requiredManager`. A run can also carry its own core image (`kernelPatchFlavor: custom`), which is checked for the KernelPatch magic before kptools sees it |
 | `kernelsu` | `boot.img`, `init_boot.img`, `vendor_boot.img` | The ramdisk init becomes `init.real` and the ksuinit wrapper takes its place, with the KernelSU loadable module next to it. The module comes from the registry for the device KMI or from the run |
 | `magisk` | `boot.img`, `init_boot.img`, `vendor_boot.img` | magiskinit replaces the ramdisk init, Magisk's payloads are written under `overlay.d/sbin`, its configuration goes to `.backup/.magisk`, and the stock init is kept as `.backup/init.xz` |
 | `mock` | `boot.img`, `init_boot.img` | Rewrites the kernel cmdline and a bootconfig manifest |
