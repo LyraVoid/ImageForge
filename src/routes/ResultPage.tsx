@@ -65,37 +65,21 @@ export function ResultPage() {
   const warningEntries = Array.from(new Set([...output.warnings, ...output.verification.verification.warnings]));
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-5">
+    <div className="mx-auto w-full max-w-5xl space-y-5 py-2">
       <div className="space-y-1">
-        <h1 className="text-base font-semibold tracking-tight">{t("result.title")}</h1>
+        <h1 className="text-xl font-semibold tracking-tight">{t("result.title")}</h1>
         <p className="text-xs text-muted-foreground">{t("result.subtitle")}</p>
       </div>
 
       <ErrorPanel error={error} />
 
-      <Card>
-        <CardHeader className="flex-row items-start justify-between gap-3">
-          <div className="space-y-1">
-            <CardTitle className="font-mono">{output.fileName}</CardTitle>
-            <CardDescription>
-              {t("result.meta", {
-                size: formatBytes(output.sizeBytes),
-                target: output.plan.target,
-                provider: output.plan.providerName,
-              })}
-            </CardDescription>
-          </div>
-          <Badge variant={output.verification.verification.valid ? "success" : "danger"}>
-            <ShieldCheck className="size-3" aria-hidden />
-            {output.verification.verification.valid ? t("result.verified") : t("result.needsAttention")}
-          </Badge>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              {t("result.verification")}
-            </p>
-            <div className="space-y-2">
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="space-y-5">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("result.verification")}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
               {checks.map((entry) => (
                 <StatusBadge
                   key={entry.id}
@@ -104,88 +88,110 @@ export function ResultPage() {
                   detail={entry.detail}
                 />
               ))}
-            </div>
+
+              {output.metadata.imageSizeBefore !== undefined &&
+              output.metadata.imageSizeBefore !== output.metadata.imageSizeAfter ? (
+                <p className="border-t border-border pt-3 text-[11px] leading-4 text-muted-foreground">
+                  {t("result.compactNote", {
+                    input: formatBytes(Number(output.metadata.imageSizeBefore)),
+                    output: formatBytes(Number(output.metadata.imageSizeAfter)),
+                  })}
+                </p>
+              ) : null}
+
+              {output.metadata.preserveImageSize === "true" ? (
+                <p className="text-[11px] leading-4 text-muted-foreground">
+                  {t("result.paddedNote", { size: formatBytes(Number(output.metadata.imageSizeAfter)) })}
+                </p>
+              ) : null}
+            </CardContent>
+          </Card>
+
+          <ReadinessChecklist
+            plan={output.plan}
+            metadata={output.metadata}
+            verification={output.verification}
+            sizeBytes={output.sizeBytes}
+          />
+
+          <div className="rounded-lg border border-info/30 bg-info-muted px-4 py-3">
+            <p className="text-[11px] leading-4 text-muted-foreground">
+              {providerNote(t, output.plan.providerId, output.plan.providerName, output.metadata.kpimgVersion)}
+            </p>
           </div>
 
-          {output.metadata.imageSizeBefore !== undefined &&
-          output.metadata.imageSizeBefore !== output.metadata.imageSizeAfter ? (
-            <p className="text-[11px] leading-4 text-muted-foreground">
-              {t("result.compactNote", {
-                input: formatBytes(Number(output.metadata.imageSizeBefore)),
-                output: formatBytes(Number(output.metadata.imageSizeAfter)),
-              })}
-            </p>
+          {warningEntries.length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>{t("result.warnings")}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-1.5">
+                  {warningEntries.map((warning) => (
+                    <li key={warning} className="text-[11px] leading-4 text-muted-foreground">
+                      {record(warning)}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
           ) : null}
 
-          {output.metadata.preserveImageSize === "true" ? (
-            <p className="text-[11px] leading-4 text-muted-foreground">
-              {t("result.paddedNote", { size: formatBytes(Number(output.metadata.imageSizeAfter)) })}
-            </p>
-          ) : null}
+          <Card>
+            <CardHeader className="flex-row items-start justify-between gap-3">
+              <div className="space-y-1">
+                <CardTitle>{t("result.technical")}</CardTitle>
+                <CardDescription>{t("result.technical.description")}</CardDescription>
+              </div>
+              <DiagnosticsButton className="shrink-0" />
+            </CardHeader>
+            <CardContent>
+              <KeyValueList entries={metadataEntries} />
+            </CardContent>
+          </Card>
+        </div>
 
-          <CodeBlock label="sha-256" value={output.sha256} wrap />
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="primary" size="lg" onClick={handleDownload}>
-              <Download />
-              {t("result.download")}
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={async () => {
-                await reset();
-                navigate(PATCH_ROUTES.image);
-              }}
-            >
-              <RotateCcw />
-              {t("result.another")}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <ReadinessChecklist
-        plan={output.plan}
-        metadata={output.metadata}
-        verification={output.verification}
-        sizeBytes={output.sizeBytes}
-      />
-
-      <div className="rounded-lg border border-info/30 bg-info-muted px-4 py-3">
-        <p className="text-[11px] leading-4 text-muted-foreground">
-          {providerNote(t, output.plan.providerId, output.plan.providerName, output.metadata.kpimgVersion)}
-        </p>
+        <aside className="lg:sticky lg:top-20">
+          <Card>
+            <CardHeader className="space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <CardTitle className="truncate font-mono">{output.fileName}</CardTitle>
+                  <CardDescription className="mt-1">
+                    {t("result.meta", {
+                      size: formatBytes(output.sizeBytes),
+                      target: output.plan.target,
+                      provider: output.plan.providerName,
+                    })}
+                  </CardDescription>
+                </div>
+                <Badge variant={output.verification.verification.valid ? "success" : "danger"}>
+                  <ShieldCheck className="size-3" aria-hidden />
+                  {output.verification.verification.valid ? t("result.verified") : t("result.needsAttention")}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <CodeBlock label="sha-256" value={output.sha256} wrap />
+              <Button variant="primary" size="lg" className="w-full" onClick={handleDownload}>
+                <Download />
+                {t("result.download")}
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full"
+                onClick={async () => {
+                  await reset();
+                  navigate(PATCH_ROUTES.image);
+                }}
+              >
+                <RotateCcw />
+                {t("result.another")}
+              </Button>
+            </CardContent>
+          </Card>
+        </aside>
       </div>
-
-      {warningEntries.length > 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("result.warnings")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-1.5">
-              {warningEntries.map((warning) => (
-                <li key={warning} className="text-[11px] leading-4 text-muted-foreground">
-                  {record(warning)}
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      <Card>
-        <CardHeader className="flex-row items-start justify-between gap-3">
-          <div className="space-y-1">
-            <CardTitle>{t("result.technical")}</CardTitle>
-            <CardDescription>{t("result.technical.description")}</CardDescription>
-          </div>
-          <DiagnosticsButton className="shrink-0" />
-        </CardHeader>
-        <CardContent>
-          <KeyValueList entries={metadataEntries} />
-        </CardContent>
-      </Card>
 
       <p className="text-center text-[11px] text-muted-foreground">
         <Link to="/settings" className="text-primary underline-offset-4 hover:underline">

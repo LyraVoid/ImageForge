@@ -94,9 +94,9 @@ export function ProcessingPage() {
   const activeMilestone = MILESTONES.find((entry) => entry.id === activeStage);
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-5 py-4">
+    <div className="mx-auto w-full max-w-4xl space-y-5 py-4">
       <div className="space-y-2">
-        <h1 className="text-base font-semibold tracking-tight">{t("process.title")}</h1>
+        <h1 className="text-xl font-semibold tracking-tight">{t("process.title")}</h1>
         <p className="text-xs text-muted-foreground">
           {t("process.subtitle", {
             message: progress?.message ? record(progress.message) : t("process.working"),
@@ -106,58 +106,69 @@ export function ProcessingPage() {
 
       <ErrorPanel error={error} />
 
-      <Card>
-        <CardContent className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              {stage === "patching" ? (
-                <LoaderCircle className="size-4 animate-spin text-primary" aria-hidden />
-              ) : (
-                <CircleCheck className="size-4 text-success" aria-hidden />
-              )}
-              <span className="text-sm font-medium">
-                {activeMilestone ? t(activeMilestone.labelKey) : t("process.working")}
-              </span>
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <Card>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                {stage === "patching" ? (
+                  <span className="flex size-9 items-center justify-center rounded-md bg-primary-muted text-primary">
+                    <LoaderCircle className="size-4 animate-spin" aria-hidden />
+                  </span>
+                ) : (
+                  <span className="flex size-9 items-center justify-center rounded-md bg-success-muted text-success">
+                    <CircleCheck className="size-4" aria-hidden />
+                  </span>
+                )}
+                <div>
+                  <p className="text-sm font-medium">
+                    {activeMilestone ? t(activeMilestone.labelKey) : t("process.working")}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {activeMilestone ? t(activeMilestone.descriptionKey) : ""}
+                  </p>
+                </div>
+              </div>
+              <span className="font-mono text-xl text-foreground">{current}%</span>
             </div>
-            <span className="font-mono text-xs text-muted-foreground">{current}%</span>
-          </div>
-          <Progress value={current} aria-label={t("process.aria.progress")} />
-        </CardContent>
-      </Card>
+            <Progress value={current} aria-label={t("process.aria.progress")} />
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardContent className="space-y-0">
-          <ol className="space-y-2">
-            {MILESTONES.map((milestone) => {
-              const done = current >= milestone.progress;
-              const isCurrent = activeStage === milestone.id;
-              return (
-                <li key={milestone.id} className="flex items-start gap-3">
-                  <span
-                    className={cn(
-                      "mt-0.5 size-1.5 shrink-0 rounded-full",
-                      done ? "bg-primary" : "bg-border-strong",
-                      isCurrent && "ring-2 ring-primary/30",
-                    )}
-                    aria-hidden
-                  />
-                  <div className="flex min-w-0 flex-1 items-baseline justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className={cn("text-xs", done ? "text-foreground" : "text-muted-foreground")}>
-                        {t(milestone.labelKey)}
-                      </p>
-                      <p className="text-[11px] leading-4 text-muted-foreground">
-                        {t(milestone.descriptionKey)}
-                      </p>
+        <Card>
+          <CardContent>
+            <ol className="space-y-3">
+              {MILESTONES.map((milestone) => {
+                const done = current >= milestone.progress;
+                const isCurrent = activeStage === milestone.id;
+                return (
+                  <li key={milestone.id} className="flex items-start gap-3">
+                    <span
+                      className={cn(
+                        "mt-1 size-2 shrink-0 rounded-full",
+                        done ? "bg-primary" : "bg-border-strong",
+                        isCurrent && "ring-2 ring-primary/30",
+                      )}
+                      aria-hidden
+                    />
+                    <div className="flex min-w-0 flex-1 items-baseline justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className={cn("text-xs", done ? "text-foreground" : "text-muted-foreground")}>
+                          {t(milestone.labelKey)}
+                        </p>
+                        <p className="text-[11px] leading-4 text-muted-foreground">
+                          {t(milestone.descriptionKey)}
+                        </p>
+                      </div>
+                      <span className="font-mono text-[11px] text-muted-foreground">{milestone.progress}%</span>
                     </div>
-                    <span className="font-mono text-[11px] text-muted-foreground">{milestone.progress}%</span>
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
-        </CardContent>
-      </Card>
+                  </li>
+                );
+              })}
+            </ol>
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="flex justify-end">
         <Button
