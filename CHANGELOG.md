@@ -50,6 +50,10 @@ A round of adding managers, and of making the register behind them hold up.
   screenshots of the running interface, and it now opens with what flashing a patched image can cost
   you. Its links and screenshots are checked by a test, so a page that names a file which no longer
   exists fails the suite. The verification model it used to carry moved into `docs/architecture.md`.
+- The readme exists in three languages now — English, Simplified Chinese and Japanese — each with a
+  switcher at the top, the project mark above the name. The mark is a real SVG file and both the
+  installed icons and the header draw the same colours, which they had not: the generated icons were
+  a shade off the token colours the interface uses.
 - The version is 0.2.0.
 - **The version is now shown where it should be and comes from one place.** The header badge had
   been hardcoded at "v0.1" since the first release while the settings page showed nothing; both, and

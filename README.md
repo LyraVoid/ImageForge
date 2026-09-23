@@ -1,4 +1,14 @@
-# ImageForge
+<p align="center">
+  <img src="docs/images/icon.svg" width="88" height="88" alt="ImageForge">
+</p>
+
+<h1 align="center">ImageForge</h1>
+
+<p align="center">
+  <b>English</b> ·
+  <a href="README.zh-CN.md">简体中文</a> ·
+  <a href="README.ja.md">日本語</a>
+</p>
 
 **A tool for Android boot images that runs in your browser.** Patch one with Magisk, KernelSU,
 APatch or a fork of any of them; open an OTA package and take a partition out of it; browse what is

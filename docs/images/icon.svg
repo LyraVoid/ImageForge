@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="ImageForge">
+  <title>ImageForge</title>
+  <!-- Nine forged pixels, the same mark the header draws (src/components/app/brand-mark.tsx), in the
+       token colours from src/styles/tokens.css. -->
+  <rect width="64" height="64" rx="12" fill="#0e1b2d"/>
+  <rect x="14" y="14" width="10" height="10" rx="2.2" fill="#394659"/>
+  <rect x="27" y="14" width="10" height="10" rx="2.2" fill="#394659"/>
+  <rect x="40" y="14" width="10" height="10" rx="2.2" fill="#f5ba26"/>
+  <rect x="14" y="27" width="10" height="10" rx="2.2" fill="#394659"/>
+  <rect x="27" y="27" width="10" height="10" rx="2.2" fill="#f5ba26"/>
+  <rect x="40" y="27" width="10" height="10" rx="2.2" fill="#394659"/>
+  <rect x="14" y="40" width="10" height="10" rx="2.2" fill="#f5ba26"/>
+  <rect x="27" y="40" width="10" height="10" rx="2.2" fill="#394659"/>
+  <rect x="40" y="40" width="10" height="10" rx="2.2" fill="#394659"/>
+</svg>

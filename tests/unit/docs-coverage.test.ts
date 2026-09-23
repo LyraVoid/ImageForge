@@ -89,14 +89,31 @@ describe("contributor-facing files", () => {
  * the first thing a visitor reads, and it is the file most likely to be edited in a hurry.
  */
 describe("readme links", () => {
-  it("points at files that exist", () => {
-    const readme = readFileSync(join(process.cwd(), "README.md"), "utf8");
-    const relative = [...readme.matchAll(/\]\(([^)]+)\)/g)]
-      .map((match) => match[1])
-      .filter((target) => !target.startsWith("http") && !target.startsWith("#"));
-    expect(relative.length).toBeGreaterThan(5);
-    for (const target of relative) {
-      expect(existsSync(join(process.cwd(), target.split("#")[0])), target).toBe(true);
+  const READMES = ["README.md", "README.zh-CN.md", "README.ja.md"];
+
+  it("points at files that exist, in every language", () => {
+    for (const name of READMES) {
+      const readme = readFileSync(join(process.cwd(), name), "utf8");
+      const relative = [...readme.matchAll(/\]\(([^)]+)\)/g)]
+        .map((match) => match[1])
+        .filter((target) => !target.startsWith("http") && !target.startsWith("#"));
+      expect(relative.length, name).toBeGreaterThan(5);
+      for (const target of relative) {
+        expect(existsSync(join(process.cwd(), target.split("#")[0])), name + " -> " + target).toBe(true);
+      }
+    }
+  });
+
+  it("offers the same languages from every readme", () => {
+    for (const name of READMES) {
+      const readme = readFileSync(join(process.cwd(), name), "utf8");
+      const others = READMES.filter((entry) => entry !== name);
+      for (const other of others) {
+        // The switcher links to the other files; the current language is plain text, not a link.
+        const linked = readme.includes("(" + other + ")") || readme.includes('href="' + other + '"');
+        expect(linked, name + " -> " + other).toBe(true);
+      }
+      expect(readme, name + " icon").toContain("docs/images/icon.svg");
     }
   });
 
@@ -112,10 +129,47 @@ describe("readme links", () => {
     for (const image of images) {
       const file = join(process.cwd(), image);
       expect(existsSync(file), image).toBe(true);
-      // A PNG signature, so a placeholder cannot pass as a screenshot.
       const bytes = readFileSync(file);
+      if (image.endsWith(".svg")) {
+        expect(bytes.subarray(0, 200).toString("utf8"), image).toContain("<svg");
+        continue;
+      }
+      // A PNG signature, so a placeholder cannot pass as a screenshot.
       expect([...bytes.subarray(0, 4)], image).toEqual([0x89, 0x50, 0x4e, 0x47]);
       expect(bytes.length).toBeGreaterThan(20_000);
+    }
+  });
+});
+
+/**
+ * The icon in the readme is the mark the header draws, so it has to keep drawing the same thing: the
+ * component owns the layout, and the standalone file is a copy that would otherwise drift silently.
+ */
+describe("the readme icon", () => {
+  it("draws the same nine cells as the header mark", () => {
+    const component = readFileSync(join(process.cwd(), "src/components/app/brand-mark.tsx"), "utf8");
+    const cells = [...component.matchAll(/\{ column: (\d), row: (\d), accent: (true|false) \}/g)].map((match) => ({
+      column: Number(match[1]),
+      row: Number(match[2]),
+      accent: match[3] === "true",
+    }));
+    expect(cells.length).toBe(9);
+
+    const svg = readFileSync(join(process.cwd(), "docs/images/icon.svg"), "utf8");
+    const rects = [...svg.matchAll(/<rect x="(\d+)" y="(\d+)" width="10" height="10" rx="2.2" fill="#([0-9a-f]{6})"\/>/g)].map(
+      (match) => ({ x: Number(match[1]), y: Number(match[2]), fill: match[3] }),
+    );
+    expect(rects.length, "nine cells and the tile").toBe(9);
+
+    const tile = svg.match(/<rect width="64" height="64" rx="12" fill="#([0-9a-f]{6})"\/>/);
+    expect(tile, "the rounded tile").not.toBeNull();
+
+    const accent = rects.find((rect) => rect.fill !== rects[0].fill)?.fill;
+    expect(accent, "an accent colour is used").toBeDefined();
+    for (const cell of cells) {
+      const rect = rects.find((entry) => entry.x === 14 + cell.column * 13 && entry.y === 14 + cell.row * 13);
+      expect(rect, cell.column + ":" + cell.row).toBeDefined();
+      expect(rect?.fill === accent, cell.column + ":" + cell.row + " accent").toBe(cell.accent);
     }
   });
 });

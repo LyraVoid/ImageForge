@@ -10,9 +10,11 @@ import { deflateSync } from "node:zlib";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-const BACKGROUND = [15, 23, 42, 255];
-const EDGE = [51, 65, 85, 255];
-const ACCENT = [251, 191, 36, 255];
+// The same three colours as the mark the header draws, from src/styles/tokens.css (the oklch values
+// are converted to sRGB here; the standalone SVG in docs/images/icon.svg carries the same hexes).
+const BACKGROUND = [14, 27, 45, 255];
+const EDGE = [57, 70, 89, 255];
+const ACCENT = [245, 186, 38, 255];
 const CLEAR = [0, 0, 0, 0];
 
 function draw(size) {
