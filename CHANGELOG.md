@@ -1,5 +1,49 @@
 # Changelog
 
+## Unreleased
+
+A round of adding managers, and of making the register behind them hold up.
+
+**More managers**
+
+- **FolkPatch** joins APatch as a third KernelPatch core image. Its core image comes from an extended
+  branch of KernelPatch rather than from upstream, so the interesting part was showing that this
+  project's WebAssembly kptools injects it identically: patching the same stock kernel with the
+  branch's own native `kptools-linux` and with the browser build produces the same bytes, which a test
+  now runs in both directions.
+- **WeaveMask** and **MagisKube** join Magisk as flavours. Both are forks whose patcher *is* Magisk
+  v30.7's — `boot_patch.sh` and the ramdisk patcher it drives are byte for byte the same files — while
+  their payloads and their manager apps are their own (`io.github.seyud.weave` and
+  `org.magiskube.magisk`). The patch page picks the manager, and the result names the app the image
+  needs.
+- **SukiSU, ReSukiSU, YukiSU and KowSU** join KernelSU: the provider now covers the whole family, since
+  every manager compiles its modules against its own signing certificate and they cannot be mixed. Each
+  is a flavour with its own wrapper and its own eight modules, and the run records which manager it was
+  made for. YukiSU is the one that also stores its early boot settings inside the module, which is
+  reproduced from its own headers rather than approximated.
+
+**Registration and verification**
+
+- Every bundled WebAssembly module is now digest verified before it is instantiated, with its digest
+  and its licence record tied together by tests; `bzip2.wasm` gained an npm build script.
+- Bundled payloads are held to what they claim to be, not only to their digest — a module has to be a
+  relocatable ELF named `kernelsu` whose vermagic matches its KMI, a wrapper an executable rather than
+  a module, a core image has to start with `KP1158`, a stub has to be an APK. That check found one: the
+  KernelSU module for `android13-5.15` in this repository was the HTML page a failed download had left
+  behind, and its digest had been recorded as if it were the artifact. It is replaced, and the class of
+  mistake is now guarded.
+- Payloads that their projects publish only inside an APK are recovered with
+  `scripts/scan-embedded-elf.py`, validated against a manager whose archives are published, and each
+  module is filed under the KMI its own `vermagic` names — which the provider checks again at patch
+  time.
+
+**Corrections**
+
+- magiskboot links `lzma-rust2` 0.16.2, not the 0.21.0 this project uses; the output is identical for
+  the payloads Magisk ships, which is what the real-material test asserts, but the explanation was
+  wrong in four places.
+- The KernelPatch message for an already patched kernel no longer names two managers by hand.
+
 ## 0.1.0
 
 The first release. Everything runs in the browser: no server, no upload, and nothing is ever flashed to

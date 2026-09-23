@@ -110,69 +110,53 @@ an image to a server.
 
 ## Status (v0.1)
 
-Two providers are implemented and self-verifying:
+Four providers are implemented and self-verifying. Three of them cover a family of managers, because
+managers fork each other and a fork's payloads are built against its own signing certificate, so the
+patch method and the manager are two different choices.
 
-* **APatch** is the first real provider. It injects the KernelPatch core image into the
-  kernel inside `boot.img` using the **upstream kptools compiled to WebAssembly**, so the
-  actual KernelPatch implementation runs in the browser rather than a reimplementation of
-  it. Verified against a real GKI android13-5.10 boot image.
-* **The Mock Provider** rewrites the kernel cmdline and a bootconfig manifest so the
-  pipeline can be exercised without touching root. It never pretends to be a root solution.
+* **APatch** injects the KernelPatch core image into the kernel inside `boot.img` using the
+  **upstream kptools compiled to WebAssembly**, so the actual KernelPatch implementation runs in the
+  browser rather than a reimplementation of it. **Three core images are registered as flavours**,
+  because each build only trusts the manager it was made for: the upstream APatch build
+  (`me.bmax.apatch`), the Aster fork (`me.yuki.aster`) and the extended KernelPatch branch FolkPatch
+  ships (`me.yuki.folk`). Verified against a real GKI android13-5.10 boot image, and the Aster and
+  FolkPatch cores are checked against the bytes their own releases produce.
+* **KernelSU** writes the ramdisk the way `ksud` does: `init` becomes `init.real`, a KernelSU init
+  wrapper takes its place, and `kernelsu.ko` is added next to it. It targets `init_boot.img`
+  (GKI 13+) or a `boot.img` that carries a ramdisk, refuses a ramdisk Magisk already patched, and
+  requires the module to match the device KMI (read from the kernel banner when the image has one,
+  otherwise selected). One loadable module per KMI is bundled and used by default; a module supplied
+  by the user overrides it after being verified. The archive layout is ksud's, so the produced ramdisk
+  is **byte for byte the one the KernelSU app writes** for the same image.
+  **Five managers are registered as flavours**: KernelSU, SukiSU, ReSukiSU, YukiSU and KowSU, each
+  with its own wrapper, its own eight modules and the app the produced image needs.
+* **Magisk** replaces the ramdisk `init` with `magiskinit`, writes its payloads to `overlay.d/sbin`,
+  keeps its configuration in `.backup/.magisk`, patches fstab entries the way `magiskboot` does, and
+  keeps the stock init inside the ramdisk as `.backup/init.xz` so Magisk's app can restore the image
+  by itself. Its payloads are bundled uncompressed from the pinned release and compressed at patch
+  time with magiskboot's codec, settings and declared dictionary; together with magiskboot's archive
+  layout that makes the produced ramdisk **byte for byte the one the official app writes**, which the
+  real-material test asserts. **Two more forks are registered as flavours**: WeaveMask
+  (`io.github.seyud.weave`) and MagisKube (`org.magiskube.magisk`). Both patch the ramdisk with
+  Magisk v30.7's own patcher — the same files, modes and configuration keys, checked byte for byte —
+  while the payloads and the manager app are their own.
+* **The Mock Provider** rewrites the kernel cmdline and a bootconfig manifest so the pipeline can be
+  exercised without touching root. It never pretends to be a root solution.
+
+The kernel modules and core images of other projects are GPL-licensed, and the kernel side of
+KernelSU's family is GPL-2.0-only, which cannot be combined with this project's AGPL-3.0-or-later.
+They are therefore **not linked into ImageForge**: every one is redistributed unmodified as a
+separate program, digest verified before use, with its own licence record and pinned revision in
+`THIRD_PARTY_LICENSES/`.
 
 Deliberately honest limits:
 
-* **KernelSU (LKM) is the second provider.** It writes the ramdisk the way `ksud` does:
-  `init` becomes `init.real`, a KernelSU init wrapper takes its place, and `kernelsu.ko` is
-  added next to it. It targets `init_boot.img` (GKI 13+) or a `boot.img` that carries a
-  ramdisk, refuses a ramdisk Magisk already patched, and requires the module to match the device
-  KMI (read from the kernel banner when the image has one, otherwise selected). One loadable
-  module per KMI is bundled and used by default; a module supplied by the user overrides it. The
-  modules are built from KernelSU's kernel directory, which is GPL-2.0-only, so they are
-  redistributed unmodified as separate programs with their own licence record
-  (`THIRD_PARTY_LICENSES/kernelsu/`) rather than being linked into this AGPL-3.0-or-later project.
-  The archive layout is ksud's, so the produced ramdisk is **byte for byte the one the KernelSU app
-  writes** for the same image.
-* **The KernelSU provider covers the whole family.** KernelSU started a family of managers that keep
-  its injection algorithm and rebuild the wrapper and the modules against their own signing
-  certificate, so a module belongs to exactly one manager: KernelSU, SukiSU, ReSukiSU, YukiSU and
-  KowSU are registered as flavours of one provider, each with its own wrapper, its own eight modules
-  and the app the produced image needs. The run records which manager it was made for, and the page
-  asks for it next to the device KMI.
-* **Magisk is the third provider.** It replaces the ramdisk `init` with `magiskinit`, writes its
-  payloads to `overlay.d/sbin`, keeps its configuration in `.backup/.magisk`, patches fstab entries
-  the way `magiskboot` does, and keeps the stock init inside the ramdisk as `.backup/init.xz` so
-  Magisk's app can restore the image by itself. Its payloads are bundled uncompressed from the
-  pinned release (GPL-3.0 throughout) and compressed at patch time with magiskboot's codec, settings
-  and declared dictionary; together with magiskboot's archive layout that makes the produced ramdisk
-  **byte for byte the one the official app writes**, which the real-material test asserts.
-  **Two more forks are registered as flavours** of this provider: WeaveMask (`io.github.seyud.weave`)
-  and MagisKube (`org.magiskube.magisk`). Both patch the ramdisk with Magisk v30.7's own patcher — the
-  same files, modes and configuration keys, checked byte for byte — while the payloads and the manager
-  app are their own, so the flavour, not a second implementation, is what a run selects.
-
-The suite needs real material for its strongest checks — an OTA package, device dumps, a MediaTek logo
-image — and every test that needs it skips itself and names the environment variable that supplies it.
-[docs/testing.md](docs/testing.md) lists them all, says where each one looks, and how the material was
-captured. `pnpm typecheck && pnpm lint && pnpm test && pnpm build` is the gate.
 * **A KernelPatch core image can also be supplied by hand.** Picking the custom flavour lets you
   attach your own `kpimg`: it is checked for the KernelPatch magic before kptools runs, the plan
   pins the file name, and the result reports the digest and the version kptools read from it.
   Whatever manager that image was built to trust is the one the device needs.
 * **A KernelSU or Magisk module supplied by the user overrides the bundled one**, and both are
   checked the same way (its `.modinfo` and the kernel version it was built for).
-* **LZ4 is compressed by the reference implementation, not a reimplementation.** `lz4.wasm` is
-  upstream liblz4 1.10.0 (BSD-2-Clause) pinned and digest verified, driven at HC level 12, the setting
-  magiskboot uses; a stock device ramdisk comes back out byte for byte identical, which
-  `tests/unit/lz4.test.ts` asserts against the real image.
-* **APatch patches arm64 kernels in uncompressed, gzip, LZ4 or xz containers.** The kernel is
-  expanded, patched and written back into the same container (LZ4 frames with dependent
-  blocks included). LZMA, BZip2 and Zstandard kernels are refused with a structured
-  error instead of being patched wrongly. It also requires `CONFIG_KALLSYMS=y`, which is
-  verified before the patch runs.
-* **The superkey is optional and unset by default**, matching the manager default where
-  authentication is signature based. The patch page can set one, in which case only its
-  SHA-256 is embedded in the kernel (`root_superkey`) and the key itself is never written
-  into the plan, the metadata or the produced image.
 * **The AVB signature is dropped** on repack, so verified boot fails unless the produced
   image is re-signed or verification is disabled.
 * **Remote artifact downloads are not implemented.** Only bundled artifacts (digest
@@ -180,18 +164,38 @@ captured. `pnpm typecheck && pnpm lint && pnpm test && pnpm build` is the gate.
 * **Vendor boot images are supported by the ramdisk providers.** The platform ramdisk fragment is
   replaced and the image is repacked with its original layout: the dtb, the ramdisk table and the
   bootconfig stay where they were.
-
+* **APatch patches arm64 kernels in uncompressed, gzip, LZ4 or xz containers.** The kernel is
+  expanded, patched and written back into the same container (LZ4 frames with dependent blocks
+  included). LZMA, BZip2 and Zstandard kernels are refused with a structured error instead of being
+  patched wrongly. It also requires `CONFIG_KALLSYMS=y`, which is verified before the patch runs.
+* **The superkey is optional and unset by default**, matching the manager default where
+  authentication is signature based. The patch page can set one, in which case only its SHA-256 is
+  embedded in the kernel (`root_superkey`) and the key itself is never written into the plan, the
+  metadata or the produced image.
+* **LZ4 is compressed by the reference implementation, not a reimplementation.** `lz4.wasm` is
+  upstream liblz4 1.10.0 (BSD-2-Clause) pinned and digest verified, driven at HC level 12, the setting
+  magiskboot uses; a stock device ramdisk comes back out byte for byte identical, which
+  `tests/unit/lz4.test.ts` asserts against the real image.
+* **No image writer for `erofs` or `ext4`**, and **no KernelPatch LKM route**: those were considered
+  and left out, because each needs a device to be verified against.
 * **The result page ends with a checklist, not just a download button.** It repeats what the run
   recorded — the target partition, the manager app the image needs, what the dropped AVB signature
-  means, what changed, the plan id — so the consequences of writing the image to a device are
-  visible before you do it. **Export diagnostics** writes the same facts as JSON (no image bytes, no
-  secret) for a bug report.
+  means, what changed, the plan id — so the consequences of writing the image to a device are visible
+  before you do it. **Export diagnostics** writes the same facts as JSON (no image bytes, no secret)
+  for a bug report.
 * **The interface speaks English, Simplified Chinese, Traditional Chinese and Japanese.** The
   language picker is in the header and in Settings. Patch records are deliberately *not* translated:
   a plan pins provider, release, artifact and configuration, and its id is a hash over them, so the
-  same run has to produce the same plan whatever language the interface is in. Verdicts the
-  interface words itself (compatibility reasons and warnings, verification checks) travel as stable
-  codes and are translated where they are shown.
+  same run has to produce the same plan whatever language the interface is in. Verdicts the interface
+  words itself (compatibility reasons and warnings, verification checks) travel as stable codes and
+  are translated where they are shown.
+
+The suite needs real material for its strongest checks — a full OTA package, device dumps, a
+MediaTek logo image, a boot animation, the flash-derived references, and the native tools some readers
+are compared against. Every test that needs it **skips itself and names the environment variable**
+that supplies it, so the suite is honest about what did not run; [docs/testing.md](docs/testing.md)
+lists them all, says where each one looks, and how the material was captured.
+`pnpm typecheck && pnpm lint && pnpm test && pnpm build` is the gate (`pnpm verify` runs it in order).
 
 ## Quick start
 
@@ -205,6 +209,7 @@ captured. `pnpm typecheck && pnpm lint && pnpm test && pnpm build` is the gate.
     pnpm wasm:build          # rebuild public/wasm/imageforge.wasm from the Rust crate
     pnpm wasm:build:kptools  # rebuild public/wasm/kptools.wasm from the pinned KernelPatch revision
     pnpm wasm:build:lz4      # rebuild public/wasm/lz4.wasm from the pinned liblz4 release
+    pnpm wasm:build:bzip2    # rebuild public/wasm/bzip2.wasm from the pinned bzip2 release
 
 Requirements: Node 20+, pnpm 9+. Rebuilding the Rust module needs a Rust toolchain with
 the `wasm32-unknown-unknown` target; rebuilding kptools downloads wasi-sdk, zlib and the
