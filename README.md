@@ -307,8 +307,12 @@ and a real device `init_boot` image is used to enforce that
     src/stores/        Zustand stores (workflow + theme + language)
     src/i18n/          message catalogues (en, zh-Hans, zh-Hant, ja) and engine prose tables
     crates/            Rust crate compiled to WebAssembly
+    scripts/           reproducible builds (`wasm:build:*`), the icon generator, the material table
+    public/            the site's own files: bundled wasm modules, manager payloads, icons, worker
     tests/             unit, integration, worker, wasm and UI tests
-    THIRD_PARTY_LICENSES/  upstream license texts and integration policy
+    docs/              architecture, testing material and the user guide
+    THIRD_PARTY_LICENSES/  upstream license texts, digests and integration policy
+    NOTICE, SECURITY.md, CONTRIBUTING.md, AGENTS.md  licensing, reporting and the working rules
 
 ## Image Engine coverage
 
