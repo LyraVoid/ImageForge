@@ -2,6 +2,7 @@ import { WorkerError } from "../core/errors";
 import { sha256Hex } from "../core/hash";
 import { buildZip, parseImage } from "../core/image";
 import { animationFrames, packAnimation, readAnimationZip } from "../core/animation";
+import { bootSections, diffSources, sectionDiff } from "../core/diff";
 import type { AnimationEntry } from "../core/animation";
 import { DEFAULT_SPARSE_BLOCK_SIZE, packSparseStream, packSuperStream } from "../core/partition";
 import type { SuperPartitionInput } from "../core/partition";
@@ -83,6 +84,7 @@ import type {
   AnalyzeResponse,
   AnimationPackRequest,
   AnimationSummary,
+  DiffSummary,
   ImageSummary,
   PatchRequest,
   PatchResponse,
@@ -844,6 +846,31 @@ export class PatchWorkerSession implements PatchWorkerApi {
       },
       stream,
     );
+  }
+
+  /**
+   * Compares the open source with an artifact, byte by byte, and names the sections any difference
+   * falls in when the source is a boot image. This is what verifies a patch against the original.
+   */
+  async compareWithArtifact(
+    sourceId: string,
+    inside: string | undefined,
+    artifactId: string,
+  ): Promise<DiffSummary> {
+    const { source } = await this.viewSource(sourceId, inside);
+    const other = blobSource(await this.artifactBlob(artifactId));
+    const diff = await diffSources(source, other);
+    const sections = await bootSections(source);
+    return {
+      sizeA: diff.sizeA,
+      sizeB: diff.sizeB,
+      identical: diff.identical,
+      differingBytes: diff.differingBytes,
+      ranges: diff.ranges,
+      truncated: diff.truncated,
+      sections: sections === null ? null : sectionDiff(diff.ranges, sections, Math.max(diff.sizeA, diff.sizeB)),
+      kind: sections === null ? null : "boot",
+    };
   }
 
   async inspectAnimation(sourceId: string, inside?: string): Promise<AnimationSummary> {

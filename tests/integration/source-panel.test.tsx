@@ -39,8 +39,9 @@ describe("the source panel", () => {
     expect(screen.getByText("Raw bytes")).toBeInTheDocument();
     expect(screen.getByText("Android init_boot image · v4")).toBeInTheDocument();
     expect(screen.getByText("Patch an image")).toBeInTheDocument();
-    // the patcher and the read-only inspector both accept a boot image, and both are implemented
-    expect(screen.getAllByText("Available")).toHaveLength(2);
+    // name the tools rather than count them: a new tool that accepts a boot image is not a failure
+    expect(screen.getByText("Compare")).toBeInTheDocument();
+    expect(screen.getAllByText("Available").length).toBeGreaterThanOrEqual(2);
     expect(screen.queryByText("Not implemented in this build yet.")).toBeNull();
   });
 

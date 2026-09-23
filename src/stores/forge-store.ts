@@ -13,6 +13,7 @@ import type { OpenedPackage } from "@/core/package";
 import type { WorkspaceArtifact } from "@/core/workspace";
 import type {
   AnimationSummary,
+  DiffSummary,
   FilesystemListing,
   PartitionView,
   SplashSummary,
@@ -157,6 +158,12 @@ interface ForgeState {
   animationReplacements: Record<string, { data: Uint8Array; sourceName: string; width: number; height: number }>;
   /** The desc.txt to write. Null while nothing has been edited, which keeps the original byte for byte. */
   animationDescDraft: string | null;
+  /** The last comparison, and what it compared. */
+  diff: DiffSummary | null;
+  diffArtifactId: string | null;
+  /** Compares the open source with an artifact of the workspace. */
+  compareWithArtifact: (artifactId: string) => Promise<DiffSummary | null>;
+  clearDiff: () => void;
   /** Reads the open source as a boot animation: its parts and their frames. */
   loadAnimation: () => Promise<AnimationSummary | null>;
   selectAnimationPart: (path: string) => void;
@@ -240,6 +247,8 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
   splash: null,
   splashPreviews: {},
   splashReplacements: {},
+  diff: null,
+  diffArtifactId: null,
   animation: null,
   animationSourceId: null,
   animationPart: null,
@@ -695,6 +704,25 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       return null;
     }
   },
+
+  compareWithArtifact: async (artifactId) => {
+    const state = get();
+    if (!state.source) return null;
+    try {
+      const summary = await getClient().compareWithArtifact(
+        state.source.id,
+        state.insideEntry ?? undefined,
+        artifactId,
+      );
+      set({ diff: summary, diffArtifactId: artifactId, error: null });
+      return summary;
+    } catch (error) {
+      set({ diff: null, error: toImageForgeError(error).toJSON() });
+      return null;
+    }
+  },
+
+  clearDiff: () => set({ diff: null, diffArtifactId: null }),
 
   loadAnimation: async () => {
     const state = get();

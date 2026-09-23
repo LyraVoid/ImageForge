@@ -6,6 +6,7 @@ import type {
   AnalyzeResponse,
   AnimationPackRequest,
   AnimationSummary,
+  DiffSummary,
   PatchRequest,
   PatchResponse,
   PatchWorkerApi,
@@ -45,6 +46,7 @@ export interface PatchWorkerClient {
   artifactBlob(id: string): Promise<Blob>;
   packSparseArtifact(artifactId: string, options?: { blockSize?: number }): Promise<WorkspaceArtifact>;
   packSuperImage(request: SuperPackRequest): Promise<WorkspaceArtifact>;
+  compareWithArtifact(sourceId: string, inside: string | undefined, artifactId: string): Promise<DiffSummary>;
   inspectAnimation(sourceId: string, inside?: string): Promise<AnimationSummary>;
   readAnimationFrame(sourceId: string, inside: string | undefined, name: string): Promise<ArrayBuffer>;
   packAnimationArchive(
@@ -123,6 +125,8 @@ function createWorkerBackedClient(worker: Worker): PatchWorkerClient {
     artifactBlob: (id) => remote.artifactBlob(id),
     packSparseArtifact: (artifactId, options) => remote.packSparseArtifact(artifactId, options),
     packSuperImage: (request) => remote.packSuperImage(request),
+    compareWithArtifact: (sourceId, inside, artifactId) =>
+      remote.compareWithArtifact(sourceId, inside, artifactId),
     inspectAnimation: (sourceId, inside) => remote.inspectAnimation(sourceId, inside),
     readAnimationFrame: (sourceId, inside, name) => remote.readAnimationFrame(sourceId, inside, name),
     packAnimationArchive: (sourceId, inside, request) =>
@@ -201,6 +205,8 @@ function createInlineClient(): PatchWorkerClient {
     packSparseArtifact: async (artifactId, options) =>
       (await load()).packSparseArtifact(artifactId, options),
     packSuperImage: async (request) => (await load()).packSuperImage(request),
+    compareWithArtifact: async (sourceId, inside, artifactId) =>
+      (await load()).compareWithArtifact(sourceId, inside, artifactId),
     inspectAnimation: async (sourceId, inside) => (await load()).inspectAnimation(sourceId, inside),
     readAnimationFrame: async (sourceId, inside, name) =>
       (await load()).readAnimationFrame(sourceId, inside, name),

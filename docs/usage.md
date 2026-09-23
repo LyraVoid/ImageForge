@@ -221,6 +221,19 @@ the image in the unpack tool, browse to /media/bootanimation, and press **Open i
 zip. The file is kept as an artifact, opened as a source of its own and handed to this tool, with nothing
 downloaded or dropped again. A zip you already have can simply be dropped on the page.
 
+## See what actually changed
+
+**Compare** takes the image that is open and anything in the workspace and reports, byte for byte, where
+they differ: the total, the ranges, and a strip that shows where in the file they sit. When the open
+image is a boot image it also names the sections — header, kernel, ramdisk — and says how much of the
+difference fell in each, which is how a patch is checked: patch a stock image, compare the result with
+the original, and a difference that reaches outside the ramdisk is the first sign that something moved
+that was meant to stay put.
+
+Two things it says plainly: a truncated range list with an exact byte count (a file that differs
+everywhere has millions of ranges, so the list stops and the count does not), and a source that is not a
+boot image, where the byte ranges are the whole story.
+
 ## Look at a file without patching it
 
 **Inspect an image** is the read-only face of the same workspace: open anything there and the page

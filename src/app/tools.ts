@@ -89,6 +89,16 @@ export const TOOLS: ToolDefinition[] = [
     produces: ["package"],
   },
   {
+    id: "diff",
+    path: "/tools/diff",
+    titleKey: "tool.diff.title",
+    descriptionKey: "tool.diff.description",
+    status: "available",
+    flow: "single",
+    accepts: ["boot-container", "package", "partition-image", "filesystem", "ramdisk", "logo-container", "blob"],
+    produces: ["report"],
+  },
+  {
     id: "inspect",
     path: "/tools/inspect",
     titleKey: "tool.inspect.title",

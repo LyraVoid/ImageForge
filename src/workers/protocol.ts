@@ -161,6 +161,27 @@ export interface SplashPreview {
   rgba: ArrayBuffer;
 }
 
+/** Where two images differ, and which part of a boot image those bytes belong to. */
+export interface DiffSectionSummary {
+  name: string;
+  start: number;
+  end: number;
+  differingBytes: number;
+  ranges: { start: number; length: number }[];
+}
+
+export interface DiffSummary {
+  sizeA: number;
+  sizeB: number;
+  identical: boolean;
+  differingBytes: number;
+  ranges: { start: number; length: number }[];
+  truncated: boolean;
+  /** The sections of a boot image, or null when the source is not one. */
+  sections: DiffSectionSummary[] | null;
+  kind: string | null;
+}
+
 /** One frame of a boot animation, as the archive holds it. */
 export interface AnimationFrameSummary {
   name: string;
@@ -314,6 +335,8 @@ export interface PatchWorkerApi {
     index: number,
     resolution?: { width: number; height: number },
   ): Promise<SplashPreview>;
+  /** Compares the open source with an artifact, byte by byte. */
+  compareWithArtifact(sourceId: string, inside: string | undefined, artifactId: string): Promise<DiffSummary>;
   /** Reads a boot animation: its desc.txt, its parts and their frames. */
   inspectAnimation(sourceId: string, inside?: string): Promise<AnimationSummary>;
   /** One frame's bytes, which is what the preview draws. */

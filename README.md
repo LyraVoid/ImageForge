@@ -22,6 +22,7 @@ The start page is a set of tools; the patcher is the first one, and the only one
 | **Unpack partitions** — sparse images, `super.img` logical partitions, erofs and ext4 browsing (`/tools/unpack`) | available |
 | **Boot logo (first screen)** — read, view and replace splash and MediaTek logo images (`/tools/logo`) | available |
 | **Boot animation** — open `bootanimation.zip`, play it, replace frames, edit desc.txt, pack it again (`/tools/bootanimation`) | available |
+| **Compare** — what changed between two images, and which part of a boot image it was (`/tools/diff`) | available |
 | **Inspect an image** — read-only look at anything you open: what it is, its report and digests (`/tools/inspect`) | available |
 
 Adding one is a data change (`src/app/tools.ts`) plus its own route; the tools page, the header and
@@ -45,6 +46,11 @@ source image — are refused by name instead of guessed at.
 by operation into a `Blob` (which browsers keep on disk) rather than a single buffer, so a 3 GiB
 `my_stock` can be extracted and downloaded — it used to be impossible, since one `Uint8Array` of that
 size cannot exist in a browser. The page marks such an artifact as blob-backed.
+
+**And it says what changed.** The compare tool puts the image that is open next to anything the
+workspace holds and reports where they differ byte by byte — and, when the image is a boot image, it
+names the part each difference falls in: the header, the kernel, the ramdisk. Patching something and
+comparing the result with the original is the check this project runs on itself.
 
 **Packing is covered too.** Partitions can be written back out as an Android sparse image, and a set of
 them can be laid out as a super image the way AOSP's lpmake lays them out (tick them on the unpack

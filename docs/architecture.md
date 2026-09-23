@@ -315,6 +315,20 @@ that lives inside a system image without a detour through the filesystem. It del
 the bytes as an image, because a boot animation is not one. One thing to know about the workspace: closing
 a source takes every artifact derived from it, so an artifact has to be opened before its source is closed.
 
+## Comparing images
+
+The compare core (src/core/diff/) walks two sources in one megabyte chunks, merges runs of differing
+bytes that are within 64 bytes of each other into one range, and stops *listing* ranges after 200 of
+them while still counting every differing byte exactly — a file that differs everywhere would otherwise
+produce millions of ranges. The run that extends past the shorter source is one more range.
+
+When the source is a boot image the ranges are mapped onto its sections, which come from the header: the
+header declares sizes and not offsets, so each section starts where the previous one ends, rounded up to
+the page size. A real init_boot of this device, for one, is header 0..4096 and ramdisk 4096..2724822, so
+a change inside the ramdisk is reported as exactly that and nothing else. Everything a named section does
+not cover is reported as outside any section, which is where the padding and the tail of a partition dump
+live.
+
 ## Hard rules
 
 1. **Providers never parse boot images.** A provider receives the normalized object
