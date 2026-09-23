@@ -144,6 +144,16 @@ export const zhHans: Messages = {
   "logo.resolutionApply": "使用这个尺寸",
 
   "sparse.pack": "打包为稀疏镜像",
+  "super.title": "打包 super 镜像",
+  "super.hint": "把已提取的分区按 AOSP lpmake 的布局排成一个 super 镜像，方便交给刷机工具。",
+  "super.none": "先提取分区：工作区里任何 .img 工件都能放进去。",
+  "super.deviceSize": "设备大小",
+  "super.auto": "自动",
+  "super.alignment": "对齐",
+  "super.alignment.mib": "1 MiB",
+  "super.alignment.block": "块大小",
+  "super.pack": "打包 super",
+
   "dropzone.title": "把 Android 镜像拖到这里",
   "dropzone.hint": "或点击选择文件",
   "dropzone.busy": "正在分析镜像",

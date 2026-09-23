@@ -192,6 +192,12 @@ backup, and then the partitions one after another, aligned, with the metadata's 
 in place. Its output is byte for byte what lpmake writes for the same inputs and options, which the
 tests check against the real tool, and lpdump and lpunpack read it back.
 
+In the app: extract the partitions you want (the extract page), then on the unpack page tick them in
+**Pack a super image**, give a device size if you have one, and choose the alignment — 1 MiB is
+AOSP's default, and the block size fits a real partition exactly without padding it. The super image
+appears as an artifact like any other, and one click turns it into a sparse image, which is what
+lpmake -S produces.
+
 Two notes on sizes: a partition that is not a whole number of blocks is padded up to the alignment (a
 real partition is block aligned, so this only affects hand-made files), and the device size defaults to
 what the parts need. The reserved area and the alignment are options.

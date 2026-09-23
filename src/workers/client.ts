@@ -16,6 +16,7 @@ import type {
   SplashPreview,
   SplashReplacementRequest,
   SplashSummary,
+  SuperPackRequest,
   WorkspaceSnapshot,
   WorkspaceSourceRecord,
 } from "./protocol";
@@ -41,6 +42,7 @@ export interface PatchWorkerClient {
   extractPackageEntry(sourceId: string, entryId: string, options?: { stream?: boolean }): Promise<WorkspaceArtifact>;
   artifactBlob(id: string): Promise<Blob>;
   packSparseArtifact(artifactId: string, options?: { blockSize?: number }): Promise<WorkspaceArtifact>;
+  packSuperImage(request: SuperPackRequest): Promise<WorkspaceArtifact>;
   analyzeArtifact(artifactId: string): Promise<AnalyzeResponse>;
   inspectPartition(sourceId: string, inside?: string): Promise<PartitionView>;
   unpackSparseSource(sourceId: string): Promise<WorkspaceArtifact>;
@@ -109,6 +111,7 @@ function createWorkerBackedClient(worker: Worker): PatchWorkerClient {
     extractPackageEntry: (sourceId, entryId, options) => remote.extractPackageEntry(sourceId, entryId, options),
     artifactBlob: (id) => remote.artifactBlob(id),
     packSparseArtifact: (artifactId, options) => remote.packSparseArtifact(artifactId, options),
+    packSuperImage: (request) => remote.packSuperImage(request),
     analyzeArtifact: (artifactId) => remote.analyzeArtifact(artifactId),
     inspectPartition: (sourceId, inside) => remote.inspectPartition(sourceId, inside),
     unpackSparseSource: (sourceId) => remote.unpackSparseSource(sourceId),
@@ -175,6 +178,7 @@ function createInlineClient(): PatchWorkerClient {
     artifactBlob: async (id) => (await load()).artifactBlob(id),
     packSparseArtifact: async (artifactId, options) =>
       (await load()).packSparseArtifact(artifactId, options),
+    packSuperImage: async (request) => (await load()).packSuperImage(request),
     analyzeArtifact: async (artifactId) => (await load()).analyzeArtifact(artifactId),
     inspectPartition: async (sourceId, inside) => (await load()).inspectPartition(sourceId, inside),
     unpackSparseSource: async (sourceId) => (await load()).unpackSparseSource(sourceId),

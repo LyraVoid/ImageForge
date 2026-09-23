@@ -161,6 +161,16 @@ export interface SplashPreview {
   rgba: ArrayBuffer;
 }
 
+/** What the super image builder needs: which artifacts, and how to lay them out. */
+export interface SuperPackRequest {
+  partitions: { artifactId: string; name?: string; group?: string; writable?: boolean }[];
+  deviceSize?: number;
+  metadataSize?: number;
+  metadataSlots?: number;
+  alignment?: number;
+  groups?: { name: string; maximumSize: number }[];
+}
+
 export interface SplashReplacementRequest {
   index: number;
   /**
@@ -225,6 +235,11 @@ export interface PatchWorkerApi {
    * be in memory. The chunking matches AOSP's `img2simg` for the same input.
    */
   packSparseArtifact(artifactId: string, options?: { blockSize?: number }): Promise<WorkspaceArtifact>;
+  /**
+   * Lays workspace artifacts out as a super image, in the order given, the way AOSP's lpmake does.
+   * The partitions are copied through in chunks into a blob, so a large set stays out of memory.
+   */
+  packSuperImage(request: SuperPackRequest): Promise<WorkspaceArtifact>;
   /** Hands an artifact to the patcher, which reads its bytes where they already are. */
   analyzeArtifact(artifactId: string): Promise<AnalyzeResponse>;
   /** What kind of partition container the open source is, and what it holds. */

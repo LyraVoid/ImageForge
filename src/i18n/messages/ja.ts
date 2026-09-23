@@ -144,6 +144,16 @@ export const ja: Messages = {
   "logo.resolutionApply": "このサイズを使う",
 
   "sparse.pack": "スパースイメージに変換",
+  "super.title": "super イメージを作る",
+  "super.hint": "抽出したパーティションを AOSP の lpmake と同じ配置で 1 つの super イメージにまとめます。",
+  "super.none": "先にパーティションを抽出してください。ワークスペースの .img なら何でも入れられます。",
+  "super.deviceSize": "デバイスサイズ",
+  "super.auto": "自動",
+  "super.alignment": "整列",
+  "super.alignment.mib": "1 MiB",
+  "super.alignment.block": "ブロックサイズ",
+  "super.pack": "super を作る",
+
   "dropzone.title": "Android イメージをここにドロップ",
   "dropzone.hint": "またはクリックしてファイルを選択",
   "dropzone.busy": "イメージを分析しています",

@@ -251,6 +251,32 @@ lpmake image was put through it. Both are fixed, and the fixture now puts things
 them. The lesson is worth keeping: a self-made fixture can hide a layout bug for months, and a reference
 implementation is what exposes it.
 
+## Reference implementations first
+
+Every byte level format in this project was implemented against a reference rather than against
+recollection, and the order matters:
+
+1. Find the reference implementation, read it, and cite it (file:line) in the code that depends on it.
+   AOSP's liblp and libsparse, magiskboot, the Linux ext4 and erofs sources, the LZ4 and bzip2 trees.
+2. If the reference is small enough to run, compile it to WebAssembly and use it directly: the lz4 and
+   bzip2 codecs in public/wasm are the reference C, built by the scripts of the same name, so the
+   decompressor is the reference by construction.
+3. If a mature tool can produce or read the format, treat it as an oracle and compare byte for byte:
+   img2simg and simg2img for sparse images, lpmake, lpdump and lpunpack for super images, bunzip2 for
+   bzip2 streams. Where the oracle exists, the tests pin its output and this project's writer to the
+   same digest.
+4. When a byte differs, stop and find out which field it is instead of adjusting anything. Every one of
+   these was found that way: the 8088 byte gap that was the geometry block being 52 bytes instead of
+   4096; the geometry checksum covering the struct rather than the block; the block device entry's size
+   and name being written in the wrong order; a header checksum hashed over 256 bytes instead of the
+   128 the header declares.
+
+Two lessons are worth more than the formats themselves. A fixture this project makes can hide a layout
+bug for months: the super reader here looked for the geometry at offset 0 and hashed a fixed 256 byte
+header, and its own fixture wrote both of those things, so every test passed until an lpmake image went
+through it. Fixtures therefore mirror the reference layout exactly, and at least one test has to cross
+the boundary — our writer read by their reader, and theirs by ours.
+
 ## Hard rules
 
 1. **Providers never parse boot images.** A provider receives the normalized object

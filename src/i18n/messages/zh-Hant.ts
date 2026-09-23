@@ -144,6 +144,16 @@ export const zhHant: Messages = {
   "logo.resolutionApply": "使用這個尺寸",
 
   "sparse.pack": "打包為稀疏映像",
+  "super.title": "打包 super 映像",
+  "super.hint": "把已提取的分割區按 AOSP lpmake 的佈局排成一個 super 映像，方便交給刷機工具。",
+  "super.none": "先提取分割區：工作區裡任何 .img 工件都能放進去。",
+  "super.deviceSize": "裝置大小",
+  "super.auto": "自動",
+  "super.alignment": "對齊",
+  "super.alignment.mib": "1 MiB",
+  "super.alignment.block": "區塊大小",
+  "super.pack": "打包 super",
+
   "dropzone.title": "把 Android 映像拖到這裡",
   "dropzone.hint": "或點擊選擇檔案",
   "dropzone.busy": "正在分析映像",

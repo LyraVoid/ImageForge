@@ -147,6 +147,16 @@ export const en = {
   "logo.resolutionApply": "Use this size",
 
   "sparse.pack": "Pack as sparse image",
+  "super.title": "Pack a super image",
+  "super.hint": "Lay extracted partitions out as one super image, the way AOSP's lpmake does, so a flashing tool can take them.",
+  "super.none": "Extract a partition first: any .img artifact in the workspace can go in.",
+  "super.deviceSize": "Device size",
+  "super.auto": "auto",
+  "super.alignment": "Alignment",
+  "super.alignment.mib": "1 MiB",
+  "super.alignment.block": "block size",
+  "super.pack": "Pack super image",
+
   "dropzone.title": "Drop an Android image here",
   "dropzone.hint": "or click to browse files",
   "dropzone.busy": "Analyzing image",

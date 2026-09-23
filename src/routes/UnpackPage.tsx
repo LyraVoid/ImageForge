@@ -1,4 +1,4 @@
-import { ArrowRight, ChevronRight, Download, FolderOpen, HardDrive, LoaderCircle, PackageOpen, Undo2 } from "lucide-react";
+import { ArrowRight, ChevronRight, Download, FolderOpen, HardDrive, Layers, LoaderCircle, PackageOpen, Undo2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { ErrorPanel } from "@/components/app/error-panel";
@@ -35,6 +35,12 @@ export function UnpackPage() {
   const extractFilesystemFile = useForgeStore((state) => state.extractFilesystemFile);
   const artifactBlob = useForgeStore((state) => state.artifactBlob);
   const packSparse = useForgeStore((state) => state.packSparse);
+  const packSuper = useForgeStore((state) => state.packSuper);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [deviceSize, setDeviceSize] = useState("");
+  const [alignment, setAlignment] = useState(1024 * 1024);
+  const [packing, setPacking] = useState(false);
+  const imageArtifacts = artifacts.filter((artifact) => /\.img$/i.test(artifact.name));
   const sendToPatcher = useForgeStore((state) => state.sendToPatcher);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -253,6 +259,85 @@ export function UnpackPage() {
               </CardHeader>
             </Card>
           )}
+
+          <Card>
+            <CardHeader className="flex-row items-center gap-2">
+              <Layers className="size-3.5 text-muted-foreground" aria-hidden />
+              <div className="min-w-0 flex-1">
+                <CardTitle>{t("super.title")}</CardTitle>
+                <CardDescription>{t("super.hint")}</CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {imageArtifacts.length === 0 ? (
+                <p className="text-xs text-muted-foreground">{t("super.none")}</p>
+              ) : (
+                <>
+                  <ul className="space-y-1.5">
+                    {imageArtifacts.map((artifact) => (
+                      <li key={artifact.id} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          aria-label={artifact.name}
+                          checked={selected.includes(artifact.id)}
+                          onChange={() =>
+                            setSelected((current) =>
+                              current.includes(artifact.id)
+                                ? current.filter((id) => id !== artifact.id)
+                                : [...current, artifact.id],
+                            )
+                          }
+                        />
+                        <span className="min-w-0 flex-1 truncate font-mono text-[11px]">{artifact.name}</span>
+                        <span className="font-mono text-[11px] text-muted-foreground">
+                          {formatBytes(artifact.sizeBytes)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                    {t("super.deviceSize")}
+                    <input
+                      aria-label={t("super.deviceSize")}
+                      className="w-24 rounded border border-border bg-surface px-2 py-1 font-mono text-[11px]"
+                      type="number"
+                      min={1}
+                      placeholder={t("super.auto")}
+                      value={deviceSize}
+                      onChange={(event) => setDeviceSize(event.target.value)}
+                    />
+                    {t("super.alignment")}
+                    <select
+                      aria-label={t("super.alignment")}
+                      className="rounded border border-border bg-surface px-2 py-1 text-[11px]"
+                      value={alignment}
+                      onChange={(event) => setAlignment(Number(event.target.value))}
+                    >
+                      <option value={1024 * 1024}>{t("super.alignment.mib")}</option>
+                      <option value={4096}>{t("super.alignment.block")}</option>
+                    </select>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      disabled={selected.length === 0 || packing}
+                      onClick={async () => {
+                        setPacking(true);
+                        await packSuper({
+                          artifactIds: selected,
+                          deviceSize: Number(deviceSize) > 0 ? Number(deviceSize) : undefined,
+                          alignment,
+                        });
+                        setPacking(false);
+                      }}
+                    >
+                      {packing ? <LoaderCircle className="animate-spin" /> : null}
+                      {t("super.pack")}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader className="flex-row items-center gap-2">

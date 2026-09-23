@@ -136,6 +136,12 @@ interface ForgeState {
   artifactBlob: (artifactId: string) => Promise<Blob | null>;
   /** Rewrites an artifact as an Android sparse image and keeps it in the workspace. */
   packSparse: (artifactId: string) => Promise<WorkspaceArtifact | null>;
+  /** Lays several artifacts out as a super image, the way AOSP's lpmake does. */
+  packSuper: (request: {
+    artifactIds: string[];
+    deviceSize?: number;
+    alignment?: number;
+  }) => Promise<WorkspaceArtifact | null>;
   /** Points the tools at one entry inside the opened package, or at the file itself (null). */
   openInside: (entryId: string | null) => void;
   inspectPartition: () => Promise<PartitionView | null>;
@@ -595,6 +601,23 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
   packSparse: async (artifactId) => {
     try {
       const artifact = await getClient().packSparseArtifact(artifactId);
+      set({ artifacts: [...get().artifacts, artifact], error: null });
+      return artifact;
+    } catch (error) {
+      set({ error: toImageForgeError(error).toJSON() });
+      return null;
+    }
+  },
+
+  packSuper: async (request) => {
+    try {
+      const artifacts = get().artifacts.filter((artifact) => request.artifactIds.includes(artifact.id));
+      const artifact = await getClient().packSuperImage({
+        partitions: artifacts.map((entry) => ({ artifactId: entry.id })),
+        deviceSize: request.deviceSize,
+        alignment: request.alignment,
+        groups: [{ name: "main", maximumSize: request.deviceSize ?? 0 }],
+      });
       set({ artifacts: [...get().artifacts, artifact], error: null });
       return artifact;
     } catch (error) {

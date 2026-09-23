@@ -51,11 +51,38 @@ describe("the unpack tool", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Unpack to a raw image/ }));
 
-    expect(await screen.findByText(/super-raw\.img/)).toBeInTheDocument();
+    // the artifact is listed twice on purpose: once as the result, once as an input to the super card
+    expect((await screen.findAllByText(/super-raw\.img/)).length).toBeGreaterThan(0);
     expect(store().artifacts).toHaveLength(1);
     expect(store().artifacts[0].sizeBytes).toBe(4 * 4096);
     expect(store().artifacts[0].kind).toBe("blob");
   });
+
+  it("offers to pack the workspace's partitions into a super image", async () => {
+    const sparse = buildSparse([
+      { type: "raw", blockCount: 2, data: new Uint8Array(8192).fill(0x41) },
+      { type: "raw", blockCount: 2, data: new Uint8Array(8192).fill(0x42) },
+    ]);
+    await store().analyzeFile(toFile(sparse, "parts.sparse.img"));
+    renderUnpack();
+    await screen.findByText("Blocks");
+    fireEvent.click(screen.getByRole("button", { name: /Unpack to a raw image/ }));
+    expect((await screen.findAllByText(/parts-raw\.img/)).length).toBeGreaterThan(0);
+
+    // the card lists the .img artifacts, and packing needs at least one selected
+    const checkbox = screen.getByRole("checkbox", { name: "parts-raw.img" });
+    expect(screen.getByRole("button", { name: /Pack super image/ })).toBeDisabled();
+    fireEvent.click(checkbox);
+    expect(screen.getByRole("button", { name: /Pack super image/ })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole("button", { name: /Pack super image/ }));
+
+    expect((await screen.findAllByText("super.img")).length).toBeGreaterThan(0);
+    const superArtifact = store().artifacts.find((artifact) => artifact.name === "super.img");
+    expect(superArtifact?.params?.super).toBe("true");
+    // the raw image is 16 KiB, so the super image holds it plus the metadata area
+    expect(superArtifact?.sizeBytes).toBeGreaterThan(16 * 1024);
+  }, 120000);
 
   it("points a package at the extract tool", async () => {
     const zip = await buildZip([{ name: "payload.bin", data: new Uint8Array(64) }]);

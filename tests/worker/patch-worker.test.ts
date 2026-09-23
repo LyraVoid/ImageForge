@@ -3,7 +3,7 @@ import { WorkerError } from "@/core/errors";
 import { sha256Hex } from "@/core/hash";
 import { createPatchWorkerClient } from "@/workers/client";
 import { bytesSource } from "@/core/package";
-import { parseSparse, unpackSparse } from "@/core/partition";
+import { logicalPartitionSource, parseSparse, parseSuper, unpackSparse } from "@/core/partition";
 import { PatchWorkerSession } from "@/workers/session";
 import { buildBootImage } from "../fixtures/bootimg";
 import { buildPayload } from "../fixtures/payload";
@@ -235,6 +235,47 @@ describe("PatchWorkerSession", () => {
     expect(parsed.header.totalBlocks).toBe(Math.ceil(image.length / 4096));
     const unpacked = await unpackSparse(bytesSource(new Uint8Array(bytes)), parsed);
     expect(await sha256Hex(unpacked)).toBe(await sha256Hex(image));
+
+    await session.closeSource(source.id);
+  });
+
+  it("lays extracted partitions out as a super image, then as a sparse one", async () => {
+    const session = new PatchWorkerSession();
+    const system = new Uint8Array(4096 * 4).map((_, index) => (index * 3) % 251);
+    const vendor = new Uint8Array(4096 * 6).map((_, index) => (index * 7 + 5) % 251);
+    const zip = await buildZip([
+      { name: "system.img", data: system },
+      { name: "vendor.img", data: vendor },
+    ]);
+    const source = await session.openSource(toArrayBuffer(zip), "images.zip");
+    const systemArtifact = await session.extractPackageEntry(source.id, "system.img");
+    const vendorArtifact = await session.extractPackageEntry(source.id, "vendor.img");
+
+    const superArtifact = await session.packSuperImage({
+      partitions: [{ artifactId: systemArtifact.id }, { artifactId: vendorArtifact.id }],
+      alignment: 4096,
+      groups: [{ name: "main", maximumSize: 1024 * 1024 }],
+    });
+    expect(superArtifact.params?.super).toBe("true");
+    expect(superArtifact.params?.partitions).toBe("2");
+    expect(superArtifact.name).toBe("super.img");
+
+    // our own reader sees both partitions where they were placed
+    const bytes = new Uint8Array(await session.readArtifact(superArtifact.id, 0, superArtifact.sizeBytes));
+    const parsed = await parseSuper(bytesSource(bytes));
+    expect(parsed.partitions.map((entry) => entry.name)).toEqual(["system", "vendor"]);
+    for (const [name, content] of [["system", system], ["vendor", vendor]] as const) {
+      const logical = logicalPartitionSource(bytesSource(bytes), parsed, name);
+      const read = new Uint8Array(await logical.read(0, content.length));
+      expect(await sha256Hex(read), name).toBe(await sha256Hex(content));
+    }
+
+    // and the sparse writer takes the super image the rest of the way, which is what lpmake -S does
+    const sparseArtifact = await session.packSparseArtifact(superArtifact.id);
+    const sparseBytes = new Uint8Array(await session.readArtifact(sparseArtifact.id, 0, sparseArtifact.sizeBytes));
+    const sparseParsed = await parseSparse(bytesSource(sparseBytes));
+    expect(sparseParsed.header.totalBlocks).toBe(Math.ceil(bytes.length / 4096));
+    expect(await sha256Hex(await unpackSparse(bytesSource(sparseBytes), sparseParsed))).toBe(await sha256Hex(bytes));
 
     await session.closeSource(source.id);
   });

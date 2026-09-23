@@ -1,7 +1,8 @@
 import { WorkerError } from "../core/errors";
 import { sha256Hex } from "../core/hash";
 import { buildZip, parseImage } from "../core/image";
-import { DEFAULT_SPARSE_BLOCK_SIZE, packSparseStream } from "../core/partition";
+import { DEFAULT_SPARSE_BLOCK_SIZE, packSparseStream, packSuperStream } from "../core/partition";
+import type { SuperPartitionInput } from "../core/partition";
 import type { ParsedImage } from "../core/image";
 import { buildImageReport } from "../core/image/report";
 import { createPatchEngine } from "../core/patch/engine";
@@ -90,6 +91,7 @@ import type {
   SplashPreview,
   SplashReplacementRequest,
   SplashSummary,
+  SuperPackRequest,
   WorkspaceSnapshot,
   WorkspaceSourceRecord,
   FilesystemListing,
@@ -784,6 +786,55 @@ export class PatchWorkerSession implements PatchWorkerApi {
         tool: "sparse",
         name,
         params: { sparse: "true", blockSize: String(blockSize), paddedBytes: String(paddedBytes) },
+      },
+      stream,
+    );
+  }
+
+  async packSuperImage(request: SuperPackRequest): Promise<WorkspaceArtifact> {
+    if (request.partitions.length === 0) {
+      throw new WorkerError("A super image with no partitions holds nothing.", "Pick at least one partition.");
+    }
+    const inputs: SuperPartitionInput[] = [];
+    let firstSourceId = "";
+    for (const partition of request.partitions) {
+      const artifact = this.artifacts.get(partition.artifactId);
+      if (!artifact) {
+        throw new WorkerError(
+          "Nothing in the workspace has the id " + partition.artifactId + ".",
+          "Extract that partition first.",
+        );
+      }
+      firstSourceId = firstSourceId || artifact.record.sourceId;
+      const fallback = artifact.record.name
+        .replace(/\.[a-z0-9]+$/i, "")
+        .replace(/[^A-Za-z0-9_]/g, "_");
+      inputs.push({
+        // the container has no place to keep a display name, so the file's own name is the partition
+        name: partition.name ?? fallback,
+        source: blobSource(await this.artifactBlob(partition.artifactId)),
+        group: partition.group,
+        writable: partition.writable,
+      });
+    }
+    const stream = await packSuperStream(inputs, {
+      deviceSize: request.deviceSize,
+      metadataSize: request.metadataSize,
+      metadataSlots: request.metadataSlots,
+      alignment: request.alignment,
+      groups: request.groups,
+    });
+    return this.registerStreamedArtifact(
+      {
+        sourceId: firstSourceId,
+        parentId: request.partitions[0].artifactId,
+        tool: "super",
+        name: "super.img",
+        params: {
+          super: "true",
+          partitions: String(inputs.length),
+          alignment: String(request.alignment ?? 1024 * 1024),
+        },
       },
       stream,
     );
