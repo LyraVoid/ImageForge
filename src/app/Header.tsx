@@ -1,4 +1,4 @@
-import { Moon, Settings, Sun, Monitor, GitBranch } from "lucide-react";
+import { Moon, Settings, Sun, Monitor, GitBranch, Trash2 } from "lucide-react";
 import { Link, useLocation } from "react-router";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import { LanguageMenu } from "@/components/ui/language-menu";
 import { StepIndicator } from "@/components/ui/step-indicator";
 import { useT } from "@/i18n/use-translation";
 import { APP_VERSION } from "@/lib/app-meta";
+import { useForgeStore } from "@/stores/forge-store";
 import { useThemeStore } from "@/stores/theme-store";
 import type { ThemeMode } from "@/stores/theme-store";
 import { isPatchFlow } from "./tools";
@@ -34,6 +35,8 @@ export function Header() {
   const setMode = useThemeStore((state) => state.setMode);
   const steps = useWorkflowSteps();
   const stepIndex = stepIndexForPath(location.pathname);
+  const clearWorkspace = useForgeStore((state) => state.clearWorkspace);
+  const hasWorkspace = useForgeStore((state) => state.source !== null || state.artifacts.length > 0);
   // Only the patcher has steps; on the tools page the freed space belongs to the site name.
   const inPatchFlow = isPatchFlow(location.pathname);
 
@@ -56,6 +59,20 @@ export function Header() {
         >
           {t("shell.tools")}
         </Link>
+
+        {/* Everything is kept in this browser between visits, so there has to be a way to wipe it */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="ml-auto"
+          title={t("shell.clearWorkspace")}
+          onClick={() => {
+            if (!hasWorkspace || window.confirm(t("shell.clearWorkspaceConfirm"))) void clearWorkspace();
+          }}
+        >
+          <Trash2 className="size-3.5" />
+          <span className="hidden sm:inline">{t("shell.clearWorkspace")}</span>
+        </Button>
 
         {inPatchFlow ? (
           <div className="hidden flex-1 justify-center md:flex">

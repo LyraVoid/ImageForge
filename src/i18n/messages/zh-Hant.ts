@@ -212,6 +212,9 @@ export const zhHant: Messages = {
   "task.super": "正在建構 super 映像",
   "task.logo": "正在讀取影格",
 
+  "shell.clearWorkspace": "清空工作區",
+  "shell.clearWorkspaceConfirm": "清除瀏覽器保存的一切：目前開啟的檔案、所有工件，以及為下次造訪保存的內容。",
+
   "dropzone.title": "把 Android 映像拖到這裡",
   "dropzone.hint": "或點擊選擇檔案",
   "dropzone.busy": "正在分析映像",

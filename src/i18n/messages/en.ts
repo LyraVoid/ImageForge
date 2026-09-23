@@ -215,6 +215,9 @@ export const en = {
   "task.super": "Building super image",
   "task.logo": "Reading frames",
 
+  "shell.clearWorkspace": "Clear workspace",
+  "shell.clearWorkspaceConfirm": "Forget everything this browser kept: the open file, the artifacts and anything saved for the next visit.",
+
   "dropzone.title": "Drop an Android image here",
   "dropzone.hint": "or click to browse files",
   "dropzone.busy": "Analyzing image",

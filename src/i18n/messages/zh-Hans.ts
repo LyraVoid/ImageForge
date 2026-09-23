@@ -212,6 +212,9 @@ export const zhHans: Messages = {
   "task.super": "正在构建 super 镜像",
   "task.logo": "正在读取帧",
 
+  "shell.clearWorkspace": "清空工作区",
+  "shell.clearWorkspaceConfirm": "清除浏览器保存的一切：当前打开的文件、所有工件，以及为下次访问保存的内容。",
+
   "dropzone.title": "把 Android 镜像拖到这里",
   "dropzone.hint": "或点击选择文件",
   "dropzone.busy": "正在分析镜像",

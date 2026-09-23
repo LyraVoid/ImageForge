@@ -212,6 +212,9 @@ export const ja: Messages = {
   "task.super": "super イメージを作成中",
   "task.logo": "フレームを読み込み中",
 
+  "shell.clearWorkspace": "ワークスペースを消去",
+  "shell.clearWorkspaceConfirm": "このブラウザが保持しているもの（開いているファイル、成果物、次回のために保存した内容）をすべて消します。",
+
   "dropzone.title": "Android イメージをここにドロップ",
   "dropzone.hint": "またはクリックしてファイルを選択",
   "dropzone.busy": "イメージを分析しています",

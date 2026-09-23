@@ -44,9 +44,6 @@ export interface SplashReplacement {
 /** The longest side of a preview the editor builds in the page. */
 const SPLASH_PREVIEW_MAX = 240;
 
-/** The restore runs once per session, the first time the shell mounts. */
-let restored = false;
-
 /** The task progress subscription is made once per session, the first time a file is opened. */
 let progressSubscribed = false;
 import { mergePlanOptions } from "./plan-options";
@@ -182,6 +179,8 @@ interface ForgeState {
   diffArtifactId: string | null;
   /** Brings back what a previous visit left in the workspace. Runs once per session. */
   restoreWorkspace: () => Promise<void>;
+  /** Forgets the workspace and everything this browser kept of it. */
+  clearWorkspace: () => Promise<void>;
   /** Compares the open source with an artifact of the workspace. */
   compareWithArtifact: (artifactId: string) => Promise<DiffSummary | null>;
   clearDiff: () => void;
@@ -758,21 +757,29 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
   },
 
   restoreWorkspace: async () => {
-    if (restored) return;
-    restored = true;
     try {
       const snapshot = await getClient().restoreWorkspace();
-      const first = snapshot.sources[0];
+      // Whatever the user has already done wins: a restore that lands after they opened a file
+      // must add to the workspace rather than replace it, and must never hand them a source it cannot read.
+      const current = get();
+      const known = new Set(current.artifacts.map((artifact) => artifact.id));
+      const restoredArtifacts = snapshot.artifacts.filter((artifact) => !known.has(artifact.id));
+      const again = current.source ?? snapshot.sources.find((entry) => entry.attached === true);
       set({
-        artifacts: snapshot.artifacts,
-        ...(first ? { source: first } : {}),
-        ...(first ? { stage: "empty" as const } : {}),
+        artifacts: [...current.artifacts, ...restoredArtifacts],
+        ...(again ? { source: again } : {}),
+        ...(again && current.source === null ? { stage: "empty" as const } : {}),
         error: null,
       });
     } catch (error) {
       // a workspace that cannot be read is not a reason for the tools to stop working
       console.warn("imageforge: could not restore the workspace", error);
     }
+  },
+
+  clearWorkspace: async () => {
+    // reset() clears the session and what it persisted; this is the way to ask for it
+    await get().reset();
   },
 
   compareWithArtifact: async (artifactId) => {

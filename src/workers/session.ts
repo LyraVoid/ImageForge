@@ -208,6 +208,7 @@ export class PatchWorkerSession implements PatchWorkerApi {
       sizeBytes: source.size,
       kind: detected.kind,
       detected,
+      attached: true,
     };
     this.nextSourceId += 1;
     const keepable = file instanceof Blob ? file : new Blob([file]);
@@ -1291,6 +1292,8 @@ export class PatchWorkerSession implements PatchWorkerApi {
         sizeBytes: entry.sizeBytes,
         kind: entry.kind,
         detected: entry.detected,
+        // the file is only readable again when its bytes were small enough to keep
+        attached: Boolean(entry.bytes),
       };
       this.sources.set(entry.id, { record, source: entry.bytes ? blobSource(entry.bytes) : null });
       this.workspaceState = addSource(this.workspaceState, record);
@@ -1398,7 +1401,9 @@ export class PatchWorkerSession implements PatchWorkerApi {
     this.controller?.abort();
     this.controller = null;
     this.state = null;
-    void clearWorkspace();
+    // awaited: a reset that came back before the stored workspace was gone would let a later
+    // visit read the old rows back, which is the opposite of clearing
+    await clearWorkspace();
     // One reset for the whole session: the workspace is what the patcher reads its image from.
     this.workspaceState = emptyWorkspace();
     this.sources.clear();

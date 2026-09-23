@@ -109,6 +109,11 @@ export interface WorkspaceSourceRecord {
   sizeBytes: number;
   kind: ArtifactKind;
   detected: DetectedArtifact;
+  /**
+   * Whether this session can read the file right now. A source restored from an earlier visit
+   * whose file was too big to keep comes back with false, and has to be attached again first.
+   */
+  attached?: boolean;
 }
 
 export interface WorkspaceSnapshot {
