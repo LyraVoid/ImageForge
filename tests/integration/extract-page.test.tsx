@@ -32,7 +32,8 @@ describe("the extract tool", () => {
     renderExtract();
 
     expect(screen.getByText(/Drop an OTA payload/)).toBeInTheDocument();
-    expect(screen.getByText("Drop an Android image here")).toBeInTheDocument();
+    expect(screen.getByText("OTA .zip / payload.bin / vendor .img")).toBeInTheDocument();
+    expect(screen.queryByText("Drop an Android image here")).toBeNull();
   });
 
   it("lists a payload's partitions and hands an extracted one to the patcher", async () => {

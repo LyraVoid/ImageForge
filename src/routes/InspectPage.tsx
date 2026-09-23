@@ -69,10 +69,16 @@ export function InspectPage() {
       <ErrorPanel error={error} />
 
       {source === null ? (
-        <div className="space-y-3">
-          <p className="text-xs text-muted-foreground">{t("inspect.hint")}</p>
-          <ImagePicker showLimit={false} continueToPatcher={false} />
-        </div>
+        <ImagePicker
+          showLimit={false}
+          continueToPatcher={false}
+          compact
+          title={t("inspect.hint")}
+          formats={t("dropzone.formats.inspect")}
+          accept=""
+          maxBytes={Number.MAX_SAFE_INTEGER}
+          icon={FileSearch}
+        />
       ) : (
         <>
           <SourcePanel source={source} />

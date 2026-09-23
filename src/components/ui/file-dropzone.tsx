@@ -1,4 +1,5 @@
 import { FileUp, LoaderCircle } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import * as React from "react";
 import { useT } from "@/i18n/use-translation";
 import { cn } from "@/lib/utils";
@@ -11,6 +12,9 @@ export interface FileDropzoneProps {
   busy?: boolean;
   title?: string;
   hint?: string;
+  formats?: string;
+  compact?: boolean;
+  icon?: LucideIcon;
   className?: string;
 }
 
@@ -22,6 +26,9 @@ export function FileDropzone({
   busy = false,
   title,
   hint,
+  formats,
+  compact = false,
+  icon,
   className,
 }: FileDropzoneProps) {
   const t = useT();
@@ -32,6 +39,7 @@ export function FileDropzone({
   const accept_ = disabled || busy;
   const shownTitle = title ?? t("dropzone.title");
   const shownHint = hint ?? t("dropzone.hint");
+  const Icon = icon ?? FileUp;
 
   const validate = React.useCallback(
     (file: File): boolean => {
@@ -90,25 +98,35 @@ export function FileDropzone({
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
         className={cn(
-          "flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-6 py-12 text-center transition-colors duration-150",
+          "flex w-full rounded-lg border border-dashed transition-colors duration-150",
+          compact
+            ? "items-center gap-3 px-4 py-4 text-left"
+            : "flex-col items-center justify-center gap-2 px-6 py-12 text-center",
           "border-border-strong bg-surface hover:border-primary-border hover:bg-primary-muted/40",
           dragging && "border-primary bg-primary-muted",
           accept_ && "cursor-not-allowed opacity-60",
           !accept_ && "cursor-pointer",
         )}
       >
-        <div className="flex size-9 items-center justify-center rounded-md border border-border bg-surface-muted">
+        <div
+          className={cn(
+            "flex shrink-0 items-center justify-center rounded-md border border-border bg-surface-muted",
+            compact ? "size-8" : "size-9",
+          )}
+        >
           {busy ? (
             <LoaderCircle className="size-4 animate-spin text-primary" aria-hidden />
           ) : (
-            <FileUp className="size-4 text-muted-foreground" aria-hidden />
+            <Icon className="size-4 text-muted-foreground" aria-hidden />
           )}
         </div>
-        <div className="space-y-1">
+        <div className={cn("min-w-0 space-y-1", compact && "flex-1")}>
           <p className="text-sm font-medium text-foreground">{busy ? t("dropzone.busy") : shownTitle}</p>
           <p className="text-xs text-muted-foreground">{shownHint}</p>
+          {formats ? (
+            <p className="break-words font-mono text-[11px] leading-4 text-muted-foreground">{formats}</p>
+          ) : null}
         </div>
-        <p className="font-mono text-[11px] text-muted-foreground">boot.img / init_boot.img / vendor_boot.img</p>
         <input
           ref={inputRef}
           type="file"

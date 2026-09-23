@@ -32,6 +32,7 @@ describe("the unpack tool", () => {
     renderUnpack();
 
     expect(screen.getByText(/Drop a sparse image/)).toBeInTheDocument();
+    expect(screen.getByText("super.img / sparse .img / erofs / ext4")).toBeInTheDocument();
   });
 
   it("describes a sparse image and unpacks it into an artifact", async () => {

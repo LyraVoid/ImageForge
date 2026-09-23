@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router";
+import type { LucideIcon } from "lucide-react";
 import { FileDropzone } from "@/components/ui/file-dropzone";
 import { SourcePanel } from "@/components/app/source-panel";
 import { MAX_SUPPORTED_IMAGE_BYTES } from "@/core";
@@ -16,9 +17,21 @@ import { useForgeStore } from "@/stores/forge-store";
 export function ImagePicker({
   showLimit = true,
   continueToPatcher = true,
+  compact = false,
+  title,
+  formats,
+  accept,
+  icon,
+  maxBytes = MAX_SUPPORTED_IMAGE_BYTES,
 }: {
   showLimit?: boolean;
   continueToPatcher?: boolean;
+  compact?: boolean;
+  title?: string;
+  formats?: string;
+  accept?: string;
+  icon?: LucideIcon;
+  maxBytes?: number;
 }) {
   const t = useT();
   const navigate = useNavigate();
@@ -33,7 +46,16 @@ export function ImagePicker({
 
   return (
     <div className="space-y-3">
-      <FileDropzone onFileSelected={handleFile} busy={stage === "analyzing"} maxBytes={MAX_SUPPORTED_IMAGE_BYTES} />
+      <FileDropzone
+        onFileSelected={handleFile}
+        busy={stage === "analyzing"}
+        maxBytes={maxBytes}
+        title={title}
+        formats={formats ?? t("dropzone.formats.patch")}
+        accept={accept}
+        compact={compact}
+        icon={icon}
+      />
       {source && stage !== "analyzing" ? <SourcePanel source={source} /> : null}
       {showLimit ? (
         <p className="text-center text-[11px] leading-5 text-muted-foreground">

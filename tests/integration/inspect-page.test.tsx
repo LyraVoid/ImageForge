@@ -32,6 +32,7 @@ describe("the inspect tool", () => {
     renderInspect();
 
     expect(screen.getByText(/Drop any image, package or partition/)).toBeInTheDocument();
+    expect(screen.getByText("boot / package / sparse / super / filesystem / logo")).toBeInTheDocument();
   });
 
   it("reports what a boot image is, without offering to patch it", async () => {

@@ -69,10 +69,15 @@ export function ExtractPage() {
       <ErrorPanel error={error} />
 
       {!isPackage ? (
-        <div className="space-y-3">
-          <p className="text-xs text-muted-foreground">{t("extract.openHint")}</p>
-          <ImagePicker showLimit={false} />
-        </div>
+        <ImagePicker
+          showLimit={false}
+          compact
+          title={t("extract.openHint")}
+          formats={t("dropzone.formats.extract")}
+          accept=".zip,.bin,.img,application/zip,application/octet-stream"
+          maxBytes={Number.MAX_SAFE_INTEGER}
+          icon={PackageOpen}
+        />
       ) : (
         <>
           <SourcePanel source={source} />

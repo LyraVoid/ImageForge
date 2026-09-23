@@ -30,6 +30,7 @@ describe("the boot animation tool", () => {
     renderAnimation();
 
     expect(screen.getByText(/Drop a bootanimation.zip/)).toBeInTheDocument();
+    expect(screen.getByText("bootanimation.zip / rbootanimation.zip")).toBeInTheDocument();
   });
 
   it("lists the parts, edits the desc and packs it again", async () => {

@@ -163,10 +163,14 @@ export function LogoPage() {
       <ErrorPanel error={error} />
 
       {source === null ? (
-        <div className="space-y-3">
-          <p className="text-xs text-muted-foreground">{t("logo.hint")}</p>
-          <ImagePicker showLimit={false} />
-        </div>
+        <ImagePicker
+          showLimit={false}
+          compact
+          title={t("logo.hint")}
+          formats={t("dropzone.formats.logo")}
+          accept=".img,.bin,application/octet-stream"
+          icon={ImageIcon}
+        />
       ) : splash === null ? (
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
           <LoaderCircle className="size-3.5 animate-spin text-primary" aria-hidden />

@@ -85,10 +85,15 @@ export function UnpackPage() {
       <ErrorPanel error={error} />
 
       {source === null ? (
-        <div className="space-y-3">
-          <p className="text-xs text-muted-foreground">{t("unpack.hint")}</p>
-          <ImagePicker showLimit={false} />
-        </div>
+        <ImagePicker
+          showLimit={false}
+          compact
+          title={t("unpack.hint")}
+          formats={t("dropzone.formats.unpack")}
+          accept=".img,application/octet-stream"
+          maxBytes={Number.MAX_SAFE_INTEGER}
+          icon={HardDrive}
+        />
       ) : isPackage ? (
         <section className="rounded-lg border border-border bg-surface p-4 shadow-subtle">
           <div className="flex items-start gap-3">

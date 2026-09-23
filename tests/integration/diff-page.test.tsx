@@ -30,6 +30,7 @@ describe("the compare tool", () => {
     renderDiff();
 
     expect(screen.getByText(/Open the image you want to compare/)).toBeInTheDocument();
+    expect(screen.getByText("boot image / package / partition / any other file")).toBeInTheDocument();
   });
 
   it("compares an artifact with the open image and reports the verdict", async () => {

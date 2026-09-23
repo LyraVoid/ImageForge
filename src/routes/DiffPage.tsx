@@ -43,10 +43,15 @@ export function DiffPage() {
       <ErrorPanel error={error} />
 
       {source === null ? (
-        <div className="space-y-3">
-          <p className="text-xs text-muted-foreground">{t("diff.hint")}</p>
-          <ImagePicker showLimit={false} />
-        </div>
+        <ImagePicker
+          showLimit={false}
+          compact
+          title={t("diff.hint")}
+          formats={t("dropzone.formats.diff")}
+          accept=""
+          maxBytes={Number.MAX_SAFE_INTEGER}
+          icon={Scale}
+        />
       ) : (
         <>
           <section className="overflow-hidden rounded-lg border border-border bg-surface shadow-subtle">

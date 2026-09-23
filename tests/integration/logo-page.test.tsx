@@ -30,6 +30,7 @@ describe("the splash editor page", () => {
     renderLogo();
 
     expect(screen.getByText(/Drop a splash\.img/)).toBeInTheDocument();
+    expect(screen.getByText("splash.img / MTK logo.bin")).toBeInTheDocument();
   });
 
   it("lists the frames and packs the image again unchanged", async () => {

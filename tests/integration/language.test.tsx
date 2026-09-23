@@ -58,7 +58,7 @@ describe("language selection", () => {
 
     expect(await screen.findByRole("heading", { name: "Android 镜像工具" })).toBeInTheDocument();
     expect(screen.getByText("分区解包")).toBeInTheDocument();
-    expect(screen.getByText("把 Android 镜像拖到这里")).toBeInTheDocument();
+    expect(screen.getByText("把 boot 镜像拖到这里")).toBeInTheDocument();
     expect(screen.queryByText("Drop an Android image here")).toBeNull();
   });
 
@@ -71,6 +71,6 @@ describe("language selection", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "イメージをパッチ" })).toBeInTheDocument();
-    expect(screen.getByText("Android イメージをここにドロップ")).toBeInTheDocument();
+    expect(screen.getByText("boot イメージをここにドロップ")).toBeInTheDocument();
   });
 });

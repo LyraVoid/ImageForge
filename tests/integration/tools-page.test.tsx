@@ -24,7 +24,7 @@ describe("the tools page", () => {
       expect(screen.getByText(t(tool.titleKey))).toBeInTheDocument();
     }
     // the patcher is the primary card and starts with the dropzone right on the page
-    expect(screen.getByText("Drop an Android image here")).toBeInTheDocument();
+    expect(screen.getByText("Drop a boot image here")).toBeInTheDocument();
     const planned = TOOLS.filter((tool) => tool.status === "planned").length;
     expect(screen.queryAllByText("Planned")).toHaveLength(planned);
     // every tool except the primary card is a button with its own status badge
