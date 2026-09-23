@@ -37,6 +37,7 @@ export function LogoPage() {
   const clearSplashReplacement = useForgeStore((state) => state.clearSplashReplacement);
   const replaceSplashFramesFromFiles = useForgeStore((state) => state.replaceSplashFramesFromFiles);
   const setLogoScreen = useForgeStore((state) => state.setLogoScreen);
+  const setSplashFrameResolution = useForgeStore((state) => state.setSplashFrameResolution);
   const setSplashMode = useForgeStore((state) => state.setSplashMode);
   const packSplash = useForgeStore((state) => state.packSplash);
   const exportSplashFrames = useForgeStore((state) => state.exportSplashFrames);
@@ -318,6 +319,12 @@ export function LogoPage() {
                         <p className="truncate font-mono text-[11px] text-foreground">
                           {frame.name.trim() || t("logo.frameName", { index: String(frame.index) })}
                         </p>
+                        {frame.width === 0 && splash.format === "mtk-logo" ? (
+                          <FrameSizeInput
+                            label={t("logo.setSize")}
+                            onApply={(width, height) => void setSplashFrameResolution(frame.index, { width, height })}
+                          />
+                        ) : null}
                         <p className="text-[11px] text-muted-foreground">
                           {frame.width === 0
                             ? formatBytes(frame.compressedSize) + " → " + formatBytes(frame.realSize)
@@ -442,6 +449,42 @@ export function LogoPage() {
         </>
       )}
     </div>
+  );
+}
+
+/**
+ * A block whose length the image's resolution does not explain, usually a small icon, has no size
+ * anywhere in the container. This is where one is given: with it, that frame gets a layout, a preview
+ * and the right to be replaced.
+ */
+function FrameSizeInput({ label, onApply }: { label: string; onApply: (width: number, height: number) => void }) {
+  const [width, setWidth] = useState("");
+  const [height, setHeight] = useState("");
+  const ready = Number(width) > 0 && Number(height) > 0;
+  return (
+    <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+      {label}
+      <input
+        aria-label={(label + " width") as never}
+        className="w-14 rounded border border-border bg-surface px-1 py-0.5 font-mono text-[11px]"
+        type="number"
+        min={1}
+        value={width}
+        onChange={(event) => setWidth(event.target.value)}
+      />
+      ×
+      <input
+        aria-label={(label + " height") as never}
+        className="w-14 rounded border border-border bg-surface px-1 py-0.5 font-mono text-[11px]"
+        type="number"
+        min={1}
+        value={height}
+        onChange={(event) => setHeight(event.target.value)}
+      />
+      <Button variant="secondary" size="sm" disabled={!ready} onClick={() => onApply(Number(width), Number(height))}>
+        {label}
+      </Button>
+    </span>
   );
 }
 

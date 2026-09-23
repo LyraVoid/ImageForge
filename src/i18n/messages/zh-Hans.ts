@@ -206,6 +206,7 @@ export const zhHans: Messages = {
   "extract.extractSelected": "提取选中的 {count} 个",
   "extract.selected": "已选 {count} 个",
 
+  "logo.setSize": "设定尺寸",
   "dropzone.title": "把 Android 镜像拖到这里",
   "dropzone.hint": "或点击选择文件",
   "dropzone.busy": "正在分析镜像",

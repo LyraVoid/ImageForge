@@ -110,6 +110,30 @@ describe("the MediaTek logo container", () => {
     expect(await sha256Hex(unchanged.bytes)).toBe(await sha256Hex(image));
   });
 
+  it("finds a block's layout when that frame is given its own size", async () => {
+    // a full screen frame and a small icon: the icon's size is nowhere in the container
+    // a hundred pixel row of four byte pixels is 400 bytes, which no two byte row explains
+    const image = await buildMtkLogo([
+      frame(720, 1600, { bytesPerPixel: 4, stride: 2880, prefixBytes: 0 }, [10, 20, 30, 255]),
+      frame(100, 60, { bytesPerPixel: 4, stride: 400, prefixBytes: 0 }, [200, 100, 0, 255]),
+    ]);
+
+    const blind = await parseMtkLogo(bytesSource(image), { width: 720, height: 1600 });
+    expect(blind.frames[1].layout).toBeNull();
+
+    const seen = await parseMtkLogo(bytesSource(image), { width: 720, height: 1600 }, {
+      "1": { width: 100, height: 60 },
+    });
+    expect(seen.frames[1].layout).toMatchObject({ bytesPerPixel: 4, stride: 400, prefixBytes: 0 });
+    // and with a layout that frame can be decoded, which is what makes it editable
+    const rgba = decodeMtkPixels(
+      await readMtkFrameRaw(bytesSource(image), seen.frames[1]),
+      seen.frames[1].layout as never,
+    );
+    expect(rgba.length).toBe(100 * 60 * 4);
+    expect([rgba[0], rgba[1], rgba[2]]).toEqual([200, 100, 0]);
+  });
+
   it("replaces one block, keeps the others and pads back to the original size", async () => {
     const image = await buildMtkLogo(
       [

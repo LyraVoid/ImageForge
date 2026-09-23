@@ -506,12 +506,13 @@ export class PatchWorkerSession implements PatchWorkerApi {
     sourceId: string,
     inside?: string,
     resolution?: { width: number; height: number },
+    frameResolutions?: Record<string, { width: number; height: number }>,
   ): Promise<SplashSummary> {
     const { source } = await this.viewSource(sourceId, inside);
     const format = await detectLogoFormat(source);
     if (format?.id === "mtk-logo") {
       const screen = resolution ?? { width: 0, height: 0 };
-      const parsed = await parseMtkLogo(source, screen);
+      const parsed = await parseMtkLogo(source, screen, frameResolutions ?? {});
       const frames = parsed.frames.map((frame) => ({
         index: frame.index,
         // the container records no names; the page labels them by index
@@ -600,6 +601,7 @@ export class PatchWorkerSession implements PatchWorkerApi {
     inside: string | undefined,
     index: number,
     resolution?: { width: number; height: number },
+    frameResolutions?: Record<string, { width: number; height: number }>,
   ): Promise<SplashPreview> {
     const { source } = await this.viewSource(sourceId, inside);
     const format = await detectLogoFormat(source);
@@ -610,7 +612,7 @@ export class PatchWorkerSession implements PatchWorkerApi {
           "Give the screen resolution first.",
         );
       }
-      const parsed = await parseMtkLogo(source, resolution);
+      const parsed = await parseMtkLogo(source, resolution, frameResolutions ?? {});
       const frame = parsed.frames[index];
       if (!frame?.layout) {
         throw new WorkerError(
@@ -694,6 +696,7 @@ export class PatchWorkerSession implements PatchWorkerApi {
     inside: string | undefined,
     replacements: SplashReplacementRequest[],
     resolution?: { width: number; height: number },
+    frameResolutions?: Record<string, { width: number; height: number }>,
   ): Promise<WorkspaceArtifact> {
     const { source } = await this.viewSource(sourceId, inside);
     const detected = await detectLogoFormat(source);
@@ -706,7 +709,7 @@ export class PatchWorkerSession implements PatchWorkerApi {
           "Give the screen resolution first.",
         );
       }
-      const mtk = await parseMtkLogo(source, resolution);
+      const mtk = await parseMtkLogo(source, resolution, frameResolutions ?? {});
       const mtkEntries: MtkPackEntry[] = mtk.frames.map((frame) => {
         const replacement = byIndex.get(frame.index);
         if (!replacement || !frame.layout) return { kind: "keep", frame };
@@ -721,7 +724,7 @@ export class PatchWorkerSession implements PatchWorkerApi {
       });
       const packedMtk = await packMtkLogo(source, mtk, mtkEntries);
       const check = bytesSource(packedMtk.bytes);
-      const reparsed = await parseMtkLogo(check, resolution);
+      const reparsed = await parseMtkLogo(check, resolution, frameResolutions ?? {});
       const mtkVerified = await this.verifyRepack({
         source,
         rebuilt: packedMtk.bytes,

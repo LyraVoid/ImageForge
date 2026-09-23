@@ -206,6 +206,7 @@ export const ja: Messages = {
   "extract.extractSelected": "選択した {count} 件を抽出",
   "extract.selected": "{count} 件を選択中",
 
+  "logo.setSize": "サイズ指定",
   "dropzone.title": "Android イメージをここにドロップ",
   "dropzone.hint": "またはクリックしてファイルを選択",
   "dropzone.busy": "イメージを分析しています",

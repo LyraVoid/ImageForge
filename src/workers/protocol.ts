@@ -325,6 +325,7 @@ export interface PatchWorkerApi {
     sourceId: string,
     inside?: string,
     resolution?: { width: number; height: number },
+    frameResolutions?: Record<string, { width: number; height: number }>,
   ): Promise<SplashSummary>;
   /** One frame as the container stores it: a BMP for splash, raw pixels for a MediaTek logo. */
   readSplashFrameBmp(sourceId: string, inside: string | undefined, index: number): Promise<ArrayBuffer>;
@@ -334,6 +335,7 @@ export interface PatchWorkerApi {
     inside: string | undefined,
     index: number,
     resolution?: { width: number; height: number },
+    frameResolutions?: Record<string, { width: number; height: number }>,
   ): Promise<SplashPreview>;
   /** Compares the open source with an artifact, byte by byte. */
   compareWithArtifact(sourceId: string, inside: string | undefined, artifactId: string): Promise<DiffSummary>;
@@ -359,6 +361,7 @@ export interface PatchWorkerApi {
     inside: string | undefined,
     replacements: SplashReplacementRequest[],
     resolution?: { width: number; height: number },
+    frameResolutions?: Record<string, { width: number; height: number }>,
   ): Promise<WorkspaceArtifact>;
   browseFilesystem(sourceId: string, path: string, inside?: string): Promise<FilesystemListing>;
   /** Extracts several entries at once, in the order given, and keeps each as an artifact. */

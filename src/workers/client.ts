@@ -66,6 +66,7 @@ export interface PatchWorkerClient {
     sourceId: string,
     inside?: string,
     resolution?: { width: number; height: number },
+    frameResolutions?: Record<string, { width: number; height: number }>,
   ): Promise<SplashSummary>;
   readSplashFrameBmp(sourceId: string, inside: string | undefined, index: number): Promise<ArrayBuffer>;
   readSplashFramePreview(
@@ -73,6 +74,7 @@ export interface PatchWorkerClient {
     inside: string | undefined,
     index: number,
     resolution?: { width: number; height: number },
+    frameResolutions?: Record<string, { width: number; height: number }>,
   ): Promise<SplashPreview>;
   exportFilesAsZip(
     sourceId: string,
@@ -84,6 +86,7 @@ export interface PatchWorkerClient {
     inside: string | undefined,
     replacements: SplashReplacementRequest[],
     resolution?: { width: number; height: number },
+    frameResolutions?: Record<string, { width: number; height: number }>,
   ): Promise<WorkspaceArtifact>;
   browseFilesystem(sourceId: string, path: string, inside?: string): Promise<FilesystemListing>;
   extractEntries(sourceId: string, entryIds: string[]): Promise<WorkspaceArtifact[]>;
@@ -140,22 +143,24 @@ function createWorkerBackedClient(worker: Worker): PatchWorkerClient {
     inspectPartition: (sourceId, inside) => remote.inspectPartition(sourceId, inside),
     unpackSparseSource: (sourceId) => remote.unpackSparseSource(sourceId),
     extractLogicalPartition: (sourceId, name, options) => remote.extractLogicalPartition(sourceId, name, options),
-    inspectSplash: (sourceId, inside, resolution) => remote.inspectSplash(sourceId, inside, resolution),
+    inspectSplash: (sourceId, inside, resolution, frameResolutions) =>
+      remote.inspectSplash(sourceId, inside, resolution, frameResolutions),
     readSplashFrameBmp: (sourceId, inside, index) => remote.readSplashFrameBmp(sourceId, inside, index),
-    readSplashFramePreview: (sourceId, inside, index, resolution) =>
-      remote.readSplashFramePreview(sourceId, inside, index, resolution),
+    readSplashFramePreview: (sourceId, inside, index, resolution, frameResolutions) =>
+      remote.readSplashFramePreview(sourceId, inside, index, resolution, frameResolutions),
     exportFilesAsZip: (sourceId, name, files) =>
       remote.exportFilesAsZip(
         sourceId,
         name,
         files.map((file) => Comlink.transfer(file, [file.data])),
       ),
-    packSplashImage: (sourceId, inside, replacements, resolution) =>
+    packSplashImage: (sourceId, inside, replacements, resolution, frameResolutions) =>
       remote.packSplashImage(
         sourceId,
         inside,
         replacements.map((entry) => Comlink.transfer(entry, [entry.payload])),
         resolution,
+        frameResolutions,
       ),
     browseFilesystem: (sourceId, path, inside) => remote.browseFilesystem(sourceId, path, inside),
     extractEntries: (sourceId, entryIds) => remote.extractEntries(sourceId, entryIds),
@@ -219,15 +224,15 @@ function createInlineClient(): PatchWorkerClient {
     unpackSparseSource: async (sourceId) => (await load()).unpackSparseSource(sourceId),
     extractLogicalPartition: async (sourceId, name, options) =>
       (await load()).extractLogicalPartition(sourceId, name, options),
-    inspectSplash: async (sourceId, inside, resolution) =>
-      (await load()).inspectSplash(sourceId, inside, resolution),
+    inspectSplash: async (sourceId, inside, resolution, frameResolutions) =>
+      (await load()).inspectSplash(sourceId, inside, resolution, frameResolutions),
     readSplashFrameBmp: async (sourceId, inside, index) =>
       (await load()).readSplashFrameBmp(sourceId, inside, index),
-    readSplashFramePreview: async (sourceId, inside, index, resolution) =>
-      (await load()).readSplashFramePreview(sourceId, inside, index, resolution),
+    readSplashFramePreview: async (sourceId, inside, index, resolution, frameResolutions) =>
+      (await load()).readSplashFramePreview(sourceId, inside, index, resolution, frameResolutions),
     exportFilesAsZip: async (sourceId, name, files) => (await load()).exportFilesAsZip(sourceId, name, files),
-    packSplashImage: async (sourceId, inside, replacements, resolution) =>
-      (await load()).packSplashImage(sourceId, inside, replacements, resolution),
+    packSplashImage: async (sourceId, inside, replacements, resolution, frameResolutions) =>
+      (await load()).packSplashImage(sourceId, inside, replacements, resolution, frameResolutions),
     browseFilesystem: async (sourceId, path, inside) => (await load()).browseFilesystem(sourceId, path, inside),
     extractEntries: async (sourceId, entryIds) => (await load()).extractEntries(sourceId, entryIds),
     extractFilesystemFileAs: async (sourceId, path, inside) =>

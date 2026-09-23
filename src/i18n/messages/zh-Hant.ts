@@ -206,6 +206,7 @@ export const zhHant: Messages = {
   "extract.extractSelected": "提取選取的 {count} 個",
   "extract.selected": "已選 {count} 個",
 
+  "logo.setSize": "設定尺寸",
   "dropzone.title": "把 Android 映像拖到這裡",
   "dropzone.hint": "或點擊選擇檔案",
   "dropzone.busy": "正在分析映像",

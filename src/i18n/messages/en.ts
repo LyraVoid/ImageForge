@@ -209,6 +209,7 @@ export const en = {
   "extract.extractSelected": "Extract {count} selected",
   "extract.selected": "{count} selected",
 
+  "logo.setSize": "Set size",
   "dropzone.title": "Drop an Android image here",
   "dropzone.hint": "or click to browse files",
   "dropzone.busy": "Analyzing image",

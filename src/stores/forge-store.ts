@@ -131,6 +131,11 @@ interface ForgeState {
    * user gives one; the page offers candidates taken from the size of the image's biggest block.
    */
   logoScreen: { width: number; height: number } | null;
+  /**
+   * A resolution the user gave to one frame whose length the image's own resolution does not explain,
+   * by frame index. MediaTek ships small icon blocks whose size is nowhere in the container.
+   */
+  splashFrameResolutions: Record<string, { width: number; height: number }>;
   analysis: AnalyzeResponse | null;
   selectedProviderId: string | null;
   planResponse: PlanResponse | null;
@@ -211,6 +216,8 @@ interface ForgeState {
   setSplashMode: (mode: SplashResolutionMode, custom?: { width?: number; height?: number }) => void;
   /** Says what the screen is, which is what a MediaTek logo needs before it can be read. */
   setLogoScreen: (screen: { width: number; height: number }) => Promise<void>;
+  /** Gives one frame its own size, for a block the screen resolution does not explain. */
+  setSplashFrameResolution: (index: number, size: { width: number; height: number }) => Promise<void>;
   /** Packs the image with every replacement in place, and keeps the result as an artifact. */
   packSplash: () => Promise<WorkspaceArtifact | null>;
   /** Exports every frame as the BMP the device stores, plus a manifest, in one archive. */
@@ -260,6 +267,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
   splashCustomWidth: null,
   splashCustomHeight: null,
   logoScreen: null,
+  splashFrameResolutions: {},
   analysis: null,
   selectedProviderId: null,
   planResponse: null,
@@ -491,6 +499,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
         state.source.id,
         state.insideEntry ?? undefined,
         state.logoScreen ?? undefined,
+        state.splashFrameResolutions,
       );
       set({ splash: summary, splashPreviews: {}, splashReplacements: {}, error: null });
       return summary;
@@ -511,6 +520,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
         state.insideEntry ?? undefined,
         index,
         state.logoScreen ?? undefined,
+        state.splashFrameResolutions,
       );
       const value = {
         width: preview.width,
@@ -621,6 +631,12 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     await get().loadSplash();
   },
 
+  setSplashFrameResolution: async (index, size) => {
+    set({ splashFrameResolutions: { ...get().splashFrameResolutions, [String(index)]: size }, splashPreviews: {} });
+    // re-reading the image with the new size is what gives that frame a layout
+    await get().loadSplash();
+  },
+
   setSplashMode: (mode, custom) => {
     set({
       splashMode: mode,
@@ -645,6 +661,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
         state.insideEntry ?? undefined,
         replacements,
         state.logoScreen ?? undefined,
+        state.splashFrameResolutions,
       );
       set({ artifacts: [...get().artifacts, artifact], error: null });
       return artifact;

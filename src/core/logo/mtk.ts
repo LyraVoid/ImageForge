@@ -118,6 +118,12 @@ export async function readMtkFrameRaw(source: ByteSource, frame: MtkFrame): Prom
 export async function parseMtkLogo(
   source: ByteSource,
   resolution: { width: number; height: number },
+  /**
+   * A resolution for one frame, by index, for the blocks the image's own resolution does not explain:
+   * a small icon has its own size and the container does not record it. Frames left out stay unknown
+   * and are never touched.
+   */
+  frameResolutions: Record<string, { width: number; height: number }> = {},
 ): Promise<ParsedMtkLogo> {
   if (source.size < MTK_HEADER_SIZE + 8) {
     throw new PackageError(
@@ -169,7 +175,8 @@ export async function parseMtkLogo(
     };
     // The raw length is not stored anywhere, so each block is inflated once to measure it.
     frame.rawSize = (await readMtkFrameRaw(source, frame)).length;
-    frame.layout = detectMtkLayout(frame.rawSize, resolution.width, resolution.height);
+    const size = frameResolutions[String(index)] ?? resolution;
+    frame.layout = detectMtkLayout(frame.rawSize, size.width, size.height);
     frames.push(frame);
   }
   return { blockCount, payloadEnd, header, frames, sizeBytes: source.size };
