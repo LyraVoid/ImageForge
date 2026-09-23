@@ -5,8 +5,9 @@ Status: **bundled**.
 Magisk is GPL-3.0 throughout (unlike KernelSU, there is no per-directory split), so its binaries can
 be redistributed with this AGPL-3.0-or-later project as separate, unmodified programs.
 
-This record covers the upstream Magisk flavour. WeaveMask, a fork that patches the ramdisk the same
-way with its own payloads, is registered separately in `THIRD_PARTY_LICENSES/weavemask/`.
+This record covers the upstream Magisk flavour. Two forks that patch the ramdisk the same way with
+their own payloads are registered separately: WeaveMask in `THIRD_PARTY_LICENSES/weavemask/` and
+MagisKube in `THIRD_PARTY_LICENSES/magiskube/`.
 
 | Field | Value |
 | --- | --- |

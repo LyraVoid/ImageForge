@@ -157,6 +157,10 @@ export const zhHant: Record<string, string> = {
   "LyraVoid/KernelPatch 1de1a37304406615a3c3b6f1d28d2cd926b93a0f (release 0.13.8 of the extended branch FolkPatch is built on)":
     "LyraVoid/KernelPatch 1de1a37304406615a3c3b6f1d28d2cd926b93a0f（FolkPatch 所用的擴充分支的 0.13.8 發佈）",
 
+  // Magisk flavours (continued)
+  "MagisKube": "MagisKube",
+  "MagisKube release 1.0.0 (a fork of Magisk on the same v30.7 base)": "MagisKube release 1.0.0（與 Magisk 同一 v30.7 底座的 branch）",
+
   // KernelSU family managers
   "Five managers of this family are registered as flavours — KernelSU (me.weishu.kernelsu), SukiSU (com.sukisu.ultra), ReSukiSU (com.resukisu.resukisu), YukiSU (com.anatdx.yukisu) and KowSU (com.kowx712.supermanager) — because each one's modules are compiled against its own manager certificate and cannot be mixed with another's.":
     "這個家族登錄了五個管理器 flavour——KernelSU（me.weishu.kernelsu）、SukiSU（com.sukisu.ultra）、ReSukiSU（com.resukisu.resukisu）、YukiSU（com.anatdx.yukisu）與 KowSU（com.kowx712.supermanager）——因為每個管理器的模組都針對自己的管理器憑證編譯，不能混用。",

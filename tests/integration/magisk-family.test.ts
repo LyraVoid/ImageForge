@@ -20,21 +20,22 @@ const engine = createPatchEngine({ artifacts });
 const TIMEOUT = 300000;
 
 /**
- * WeaveMask is a flavour, not a provider: its patcher is Magisk v30.7's, so what has to be checked is
- * that the flavour really drives the run — the payloads it writes are WeaveMask's own, and the manager
- * it requires is WeaveMask's app rather than Magisk's.
+ * WeaveMask and MagisKube are flavours, not providers: their patchers are Magisk v30.7's, so what has
+ * to be checked is that a flavour really drives the run — the payloads written are that manager's, and
+ * the app the result needs is its own rather than Magisk's.
  */
-describe.skipIf(!hasInitBootImage)("WeaveMask flavour", () => {
-  it("writes its own payloads and requires its own manager", async () => {
+describe.skipIf(!hasInitBootImage)("Magisk family flavours", () => {
+  for (const id of ["weavemask", "magiskube"]) {
+  it("writes " + id + "'s payloads and requires its manager", async () => {
     const source = readInitBootImage();
     const analyzed = await engine.analyze(source);
     const outcome = await engine.run(analyzed.image, analyzed.sha256, "magisk", {
-      configuration: { magiskFlavor: "weavemask" },
+      configuration: { magiskFlavor: id },
     });
 
-    const flavor = magiskFlavor("weavemask");
+    const flavor = magiskFlavor(id);
     expect(outcome.plan.artifact.id).toBe(flavor.artifacts.magiskinit);
-    expect(outcome.result.metadata.requiredManager).toBe("io.github.seyud.weave");
+    expect(outcome.result.metadata.requiredManager).toBe(flavor.managerPackage);
 
     // The plan pins exactly the four payloads the run carries.
     expect(outcome.plan.configuration.magiskArtifacts.split(",")).toEqual([
@@ -75,10 +76,11 @@ describe.skipIf(!hasInitBootImage)("WeaveMask flavour", () => {
     const config = findEntry(archive, ".backup/.magisk");
     expect(new TextDecoder().decode(config?.data ?? new Uint8Array())).toContain("KEEPVERITY=");
   }, TIMEOUT);
+  }
 
-  it("keeps the two flavours apart", () => {
+  it("keeps the flavours apart", () => {
     const ids = MAGISK_FLAVORS.map((flavor) => flavor.id);
-    expect(ids).toEqual(["magisk", "weavemask"]);
+    expect(ids).toEqual(["magisk", "magiskube", "weavemask"]);
 
     const payloads = MAGISK_FLAVORS.flatMap((flavor) => Object.values(flavor.artifacts));
     expect(new Set(payloads).size).toBe(payloads.length);

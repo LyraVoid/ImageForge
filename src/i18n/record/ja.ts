@@ -159,6 +159,10 @@ export const ja: Record<string, string> = {
   "LyraVoid/KernelPatch 1de1a37304406615a3c3b6f1d28d2cd926b93a0f (release 0.13.8 of the extended branch FolkPatch is built on)":
     "LyraVoid/KernelPatch 1de1a37304406615a3c3b6f1d28d2cd926b93a0f（FolkPatch が使う拡張ブランチの 0.13.8 リリース）",
 
+  // Magisk flavours (continued)
+  "MagisKube": "MagisKube",
+  "MagisKube release 1.0.0 (a fork of Magisk on the same v30.7 base)": "MagisKube リリース 1.0.0（Magisk と同じ v30.7 ベースのフォーク）",
+
   // KernelSU family managers
   "Five managers of this family are registered as flavours — KernelSU (me.weishu.kernelsu), SukiSU (com.sukisu.ultra), ReSukiSU (com.resukisu.resukisu), YukiSU (com.anatdx.yukisu) and KowSU (com.kowx712.supermanager) — because each one's modules are compiled against its own manager certificate and cannot be mixed with another's.":
     "この系統のマネージャーを 5 つ flavour として登録しています。KernelSU（me.weishu.kernelsu）、SukiSU（com.sukisu.ultra）、ReSukiSU（com.resukisu.resukisu）、YukiSU（com.anatdx.yukisu）、KowSU（com.kowx712.supermanager）です。各マネージャーのモジュールは自分の証明書に対してビルドされるため、混在させられません。",

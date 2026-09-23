@@ -237,6 +237,9 @@ export const MAGISK_RELEASE = "v30.7";
 /** WeaveMask release the ramdisk payloads of that flavour are taken from. */
 export const WEAVEMASK_RELEASE = "v30.7.5";
 
+/** MagisKube release the ramdisk payloads of that flavour are taken from. */
+export const MAGISKUBE_RELEASE = "1.0.0";
+
 export const MAGISK_MAGISKINIT_ID = "magisk-magiskinit";
 export const MAGISK_MAGISK_PAYLOAD_ID = "magisk-magisk";
 export const MAGISK_STUB_PAYLOAD_ID = "magisk-stub";
@@ -246,6 +249,11 @@ export const WEAVEMASK_MAGISKINIT_ID = "weavemask-magiskinit";
 export const WEAVEMASK_MAGISK_PAYLOAD_ID = "weavemask-magisk";
 export const WEAVEMASK_STUB_PAYLOAD_ID = "weavemask-stub";
 export const WEAVEMASK_INIT_LD_PAYLOAD_ID = "weavemask-init-ld";
+
+export const MAGISKUBE_MAGISKINIT_ID = "magiskube-magiskinit";
+export const MAGISKUBE_MAGISK_PAYLOAD_ID = "magiskube-magisk";
+export const MAGISKUBE_STUB_PAYLOAD_ID = "magiskube-stub";
+export const MAGISKUBE_INIT_LD_PAYLOAD_ID = "magiskube-init-ld";
 
 export const ARTIFACT_CATALOG: ArtifactCatalog = {
   schemaVersion: 1,
@@ -355,6 +363,51 @@ export const ARTIFACT_CATALOG: ArtifactCatalog = {
           architecture: "arm64",
           sha256: "54ec98f3f93473e51252267a8997cd12878dd463263f3dc2a32c14ab7951f9f0",
           source: "bundled:/artifacts/weavemask/init-ld",
+          sizeBytes: 5208,
+        },
+      ],
+    },
+    {
+      providerId: "magisk",
+      release: MAGISKUBE_RELEASE,
+      releasedAt: "2026-08-01T00:00:00.000Z",
+      notes:
+        "Official MagisKube release (SunRayEx/Magisk-Metro, a fork of Magisk built on the same v30.7 base: its versionCode is 30700 and the four ramdisk patcher files are byte for byte Magisk v30.7's). Its binaries are built with the manager package org.magiskube.magisk compiled in, so the payloads have to come from this release and the produced image needs that app. Distributed as a separate unmodified program; the fork is GPL-3.0 throughout, like Magisk.",
+      artifacts: [
+        {
+          id: MAGISKUBE_MAGISKINIT_ID,
+          version: MAGISKUBE_RELEASE,
+          type: "init",
+          architecture: "arm64",
+          sha256: "2f47ef9ff012bf7da2f38170fe1bc4eeea335bc273ec86a4daf31f06ded39ffe",
+          source: "bundled:/artifacts/magiskube/magiskinit",
+          sizeBytes: 199856,
+        },
+        {
+          id: MAGISKUBE_MAGISK_PAYLOAD_ID,
+          version: MAGISKUBE_RELEASE,
+          type: "payload",
+          architecture: "arm64",
+          sha256: "6dd9eea6bcaa734edd1dd101cc88ce89adf6ebc73dc28231709a4354b1a3f680",
+          source: "bundled:/artifacts/magiskube/magisk",
+          sizeBytes: 393912,
+        },
+        {
+          id: MAGISKUBE_STUB_PAYLOAD_ID,
+          version: MAGISKUBE_RELEASE,
+          type: "payload",
+          architecture: "arm64",
+          sha256: "77e727ebe42879fe9e98e9098b3af93caf6e8e35feaf59760db77ff0ecf57717",
+          source: "bundled:/artifacts/magiskube/stub",
+          sizeBytes: 90557,
+        },
+        {
+          id: MAGISKUBE_INIT_LD_PAYLOAD_ID,
+          version: MAGISKUBE_RELEASE,
+          type: "payload",
+          architecture: "arm64",
+          sha256: "54ec98f3f93473e51252267a8997cd12878dd463263f3dc2a32c14ab7951f9f0",
+          source: "bundled:/artifacts/magiskube/init-ld",
           sizeBytes: 5208,
         },
       ],

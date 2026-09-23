@@ -47,6 +47,11 @@ export const MANAGER_APPS: ManagerApp[] = [
     releaseUrl: "https://github.com/Seyud/WeaveMask/releases",
   },
   {
+    packageName: "org.magiskube.magisk",
+    name: "MagisKube",
+    releaseUrl: "https://github.com/SunRayEx/Magisk-Metro/releases",
+  },
+  {
     packageName: "com.sukisu.ultra",
     name: "SukiSU",
     releaseUrl: "https://github.com/SukiSU-Ultra/SukiSU-Ultra/releases",

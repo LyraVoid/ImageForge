@@ -12,6 +12,10 @@ import {
   WEAVEMASK_MAGISKINIT_ID,
   WEAVEMASK_MAGISK_PAYLOAD_ID,
   WEAVEMASK_STUB_PAYLOAD_ID,
+  MAGISKUBE_INIT_LD_PAYLOAD_ID,
+  MAGISKUBE_MAGISKINIT_ID,
+  MAGISKUBE_MAGISK_PAYLOAD_ID,
+  MAGISKUBE_STUB_PAYLOAD_ID,
 } from "../../artifacts/catalog";
 
 /** Options the patch page can set for Magisk. */
@@ -72,6 +76,18 @@ export const MAGISK_FLAVORS: MagiskFlavor[] = [
     },
     managerPackage: "com.topjohnwu.magisk",
     source: "official Magisk release v30.7",
+  },
+  {
+    id: "magiskube",
+    label: "MagisKube",
+    artifacts: {
+      magiskinit: MAGISKUBE_MAGISKINIT_ID,
+      magisk: MAGISKUBE_MAGISK_PAYLOAD_ID,
+      stub: MAGISKUBE_STUB_PAYLOAD_ID,
+      initLd: MAGISKUBE_INIT_LD_PAYLOAD_ID,
+    },
+    managerPackage: "org.magiskube.magisk",
+    source: "MagisKube release 1.0.0 (a fork of Magisk on the same v30.7 base)",
   },
   {
     id: "weavemask",

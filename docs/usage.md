@@ -45,7 +45,7 @@ are not. Only files that are actually implemented appear as `available`.
 | --- | --- | --- | --- |
 | **APatch** | `boot.img` only | `CONFIG_KALLSYMS=y` in the kernel; uncompressed, gzip, LZ4 or xz kernel | `me.bmax.apatch`, or `me.yuki.aster` for the Aster flavour, or `me.yuki.folk` for the FolkPatch flavour, or whatever a hand-supplied core image was built for |
 | **KernelSU** | `init_boot.img`, or a `boot.img`/`vendor_boot.img` with a ramdisk | the KMI of the device (read from the kernel when the image has one, otherwise selected) | `me.weishu.kernelsu`, or the package of the selected manager: SukiSU `com.sukisu.ultra`, ReSukiSU `com.resukisu.resukisu`, YukiSU `com.anatdx.yukisu`, KowSU `com.kowx712.supermanager` |
-| **Magisk** | `init_boot.img`, or a `boot.img`/`vendor_boot.img` with a ramdisk | nothing beyond the image | `com.topjohnwu.magisk`, or `io.github.seyud.weave` for the WeaveMask flavour |
+| **Magisk** | `init_boot.img`, or a `boot.img`/`vendor_boot.img` with a ramdisk | nothing beyond the image | `com.topjohnwu.magisk`, `io.github.seyud.weave` for WeaveMask, or `org.magiskube.magisk` for MagisKube |
 | **Mock** | `boot.img`, `init_boot.img` | nothing | none: it is a pipeline demonstration, not a root solution |
 
 Find the KMI from the kernel banner if the image carries a kernel:

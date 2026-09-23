@@ -78,6 +78,7 @@ describe("patch page re-planning", () => {
     const manager = screen.getByLabelText("Manager");
     expect([...manager.querySelectorAll("option")].map((option) => option.textContent)).toEqual([
       "Magisk · official Magisk release v30.7",
+      "MagisKube · MagisKube release 1.0.0 (a fork of Magisk on the same v30.7 base)",
       "WeaveMask · WeaveMask release v30.7.5, a fork of Magisk",
     ]);
 

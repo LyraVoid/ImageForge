@@ -108,6 +108,23 @@ describe("bundled artifacts", () => {
     }
   });
 
+  it("ships the MagisKube ramdisk payloads, digest verified", async () => {
+    const release = registry.resolve({ providerId: "magisk", artifactId: "magiskube-magiskinit" }).release;
+    expect(release.release).toBe("1.0.0");
+    expect(release.artifacts.map((artifact) => artifact.id).sort()).toEqual(
+      ["magiskube-init-ld", "magiskube-magisk", "magiskube-magiskinit", "magiskube-stub"].sort(),
+    );
+
+    for (const artifact of release.artifacts) {
+      const bytes = await registry.loadVerifiedPayload(artifact);
+      expect(bytes.length, artifact.id).toBe(artifact.sizeBytes);
+      expect(await sha256Hex(bytes), artifact.id).toBe(artifact.sha256);
+    }
+    expect(release.artifacts.every((artifact) => (artifact.source ?? "").startsWith("bundled:/artifacts/magiskube/"))).toBe(
+      true,
+    );
+  });
+
   it("matches the shipped kptools WebAssembly digest", async () => {
     const artifact = registry.resolve({ providerId: "apatch", artifactId: APATCH_KPTOOLS_ID }).artifact;
     const bytes = await registry.loadVerifiedPayload(artifact);

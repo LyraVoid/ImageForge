@@ -8,6 +8,7 @@ third-party component that ImageForge links, embeds, bundles or downloads at run
     THIRD_PARTY_LICENSES/
     ├── magisk/
     ├── weavemask/
+    ├── magiskube/
     ├── kernelsu/
     ├── apatch/
     ├── kernelpatch/
@@ -41,6 +42,7 @@ Bundled third-party components, each with its own directory, pinned revision and
 | KernelSU `ksuinit` and the loadable modules | separate, unmodified programs | GPL-3.0-or-later / GPL-2.0-only |
 | Magisk payloads (`public/artifacts/magisk/*`) | bundled artifact | GPL-3.0 |
 | WeaveMask payloads (`public/artifacts/weavemask/*`) | bundled artifact | GPL-3.0 |
+| MagisKube payloads (`public/artifacts/magiskube/*`) | bundled artifact | GPL-3.0 |
 | lz4 (`public/wasm/lz4.wasm`) | bundled codec | BSD-2-Clause |
 | bzip2 (`public/wasm/bzip2.wasm`) | bundled codec | BSD-like |
 | Rust crates linked into `public/wasm/imageforge.wasm` | linked into our own module | Apache-2.0 / MIT |

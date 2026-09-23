@@ -145,10 +145,10 @@ Deliberately honest limits:
   pinned release (GPL-3.0 throughout) and compressed at patch time with magiskboot's codec, settings
   and declared dictionary; together with magiskboot's archive layout that makes the produced ramdisk
   **byte for byte the one the official app writes**, which the real-material test asserts.
-  **WeaveMask is registered as a second flavour** of this provider: its patcher *is* Magisk v30.7's
-  (the same files, modes and configuration keys, checked byte for byte), while the payloads and the
-  manager app (`io.github.seyud.weave`) are its own — so the flavour, not a second implementation,
-  is what a run selects.
+  **Two more forks are registered as flavours** of this provider: WeaveMask (`io.github.seyud.weave`)
+  and MagisKube (`org.magiskube.magisk`). Both patch the ramdisk with Magisk v30.7's own patcher — the
+  same files, modes and configuration keys, checked byte for byte — while the payloads and the manager
+  app are their own, so the flavour, not a second implementation, is what a run selects.
 
 The suite needs real material for its strongest checks — an OTA package, device dumps, a MediaTek logo
 image — and every test that needs it skips itself and names the environment variable that supplies it.
