@@ -314,7 +314,7 @@ export function LogoPage() {
                   const replacement = replacements[frame.index];
                   return (
                     <li key={frame.index} className="flex flex-wrap items-center gap-3 py-2 first:pt-0 last:pb-0">
-                      <FrameThumb preview={replacement ? replacement.preview : preview} />
+                      <FrameThumb preview={replacement ? replacement.preview : preview} pending={frame.width !== 0} />
                       <div className="min-w-0 flex-1 space-y-0.5">
                         <p className="truncate font-mono text-[11px] text-foreground">
                           {frame.name.trim() || t("logo.frameName", { index: String(frame.index) })}
@@ -489,7 +489,13 @@ function FrameSizeInput({ label, onApply }: { label: string; onApply: (width: nu
 }
 
 /** Draws a preview's pixels straight onto a canvas; no browser image decoding is involved. */
-function FrameThumb({ preview }: { preview?: { width: number; height: number; rgba: Uint8Array } }) {
+function FrameThumb({
+  preview,
+  pending,
+}: {
+  preview?: { width: number; height: number; rgba: Uint8Array };
+  pending: boolean;
+}) {
   const canvas = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -511,8 +517,10 @@ function FrameThumb({ preview }: { preview?: { width: number; height: number; rg
     <span className="flex h-10 w-16 shrink-0 items-center justify-center overflow-hidden rounded border border-border bg-surface-muted">
       {preview ? (
         <canvas ref={canvas} className="max-h-10 max-w-16" />
-      ) : (
+      ) : pending ? (
         <LoaderCircle className="size-3 animate-spin text-muted-foreground" aria-hidden />
+      ) : (
+        <span className="text-[10px] text-muted-foreground">?</span>
       )}
     </span>
   );

@@ -60,19 +60,6 @@ export function Header() {
           {t("shell.tools")}
         </Link>
 
-        {/* Everything is kept in this browser between visits, so there has to be a way to wipe it */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="ml-auto"
-          title={t("shell.clearWorkspace")}
-          onClick={() => {
-            if (!hasWorkspace || window.confirm(t("shell.clearWorkspaceConfirm"))) void clearWorkspace();
-          }}
-        >
-          <Trash2 className="size-3.5" />
-          <span className="hidden sm:inline">{t("shell.clearWorkspace")}</span>
-        </Button>
 
         {inPatchFlow ? (
           <div className="hidden flex-1 justify-center md:flex">
@@ -83,6 +70,17 @@ export function Header() {
         )}
 
         <div className="ml-auto flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={t("shell.clearWorkspace")}
+            title={t("shell.clearWorkspace")}
+            onClick={() => {
+              if (!hasWorkspace || window.confirm(t("shell.clearWorkspaceConfirm"))) void clearWorkspace();
+            }}
+          >
+            <Trash2 />
+          </Button>
           <LanguageMenu />
           <Button asChild variant="ghost" size="icon" aria-label={t("shell.aria.settings")}>
             <Link to="/settings">

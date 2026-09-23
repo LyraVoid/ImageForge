@@ -82,6 +82,18 @@ export function detectMtkLayout(rawSize: number, width: number, height: number):
  * noise, so the tool offers them and the preview decides — more than the reference tool does with its
  * bare resolution argument.
  */
+/** Screen sizes MTK devices actually ship, most common first. */
+const COMMON_MTK_SCREENS: Array<[number, number]> = [
+  [720, 1600],
+  [720, 1640],
+  [1080, 2400],
+  [1080, 2340],
+  [1220, 2712],
+  [1080, 1920],
+  [1440, 3200],
+  [1200, 2000],
+];
+
 export function suggestMtkResolutions(
   rawSize: number,
   limit = 8,
@@ -96,7 +108,10 @@ export function suggestMtkResolutions(
       if (height < 800 || height > 3400) continue;
       const ratio = height / width;
       if (ratio < 1.5 || ratio > 2.6) continue;
-      out.push({ width, height, bytesPerPixel, distance: Math.abs(ratio - 2.0) });
+      const known = COMMON_MTK_SCREENS.findIndex(([w, h]) => w === width && h === height);
+      // a size the device is known to use comes first; the rest by how phone shaped they are
+      const distance = known >= 0 ? known / 100 : 1 + Math.abs(ratio - 2.0);
+      out.push({ width, height, bytesPerPixel, distance });
     }
   }
   out.sort((left, right) => left.distance - right.distance);

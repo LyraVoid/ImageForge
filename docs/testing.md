@@ -114,6 +114,19 @@ What each reader refuses, by name, is part of that promise:
 | MediaTek logo | blocks whose length no resolution explains (those are left alone rather than guessed at) |
 | boot animation | an archive with no desc.txt, and a desc.txt that declares no animation |
 
+## Looking at the interface
+
+No unit test can say whether a page is usable, and two real bugs were reported by a person using the app a
+minute after the whole suite had gone green. scripts/screenshots.mjs drives the running app in a real
+browser, takes a picture of every page (including a dark one and a phone sized one), and prints anything the
+console complained about:
+
+    npx playwright install chromium      # once
+    node scripts/screenshots.mjs [base-url]
+
+Pictures land in /tmp/imageforge-shots. It uses the real material in .research/ where there is any, so point
+it at a machine that has it.
+
 ## Adding a test that needs material
 
 Skip it when the material is absent and name the variable here, in the same paragraph as the others,

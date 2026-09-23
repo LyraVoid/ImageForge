@@ -47,6 +47,9 @@ by operation into a `Blob` (which browsers keep on disk) rather than a single bu
 `my_stock` can be extracted and downloaded — it used to be impossible, since one `Uint8Array` of that
 size cannot exist in a browser. The page marks such an artifact as blob-backed.
 
+**It never flashes anything.** A run ends with an image to download; the device is not touched, and no
+ADB, fastboot or USB is involved. Which manager app an image needs is stated on the patch page.
+
 **It installs and it works offline.** Everything runs in the browser, so the app is offered as an
 installable one: the manifest, the icons and a service worker that precaches the shell and the codecs.
 After the first visit the tools open without a network, and what you built is still in the workspace
@@ -228,6 +231,22 @@ neither toolchain is required for app development.
   allocated `.kpm.info` section) and its declared name, version and licence are reported in
   the result. Third-party modules are never bundled: they are the user's files and their
   licences are the user's responsibility.
+
+## Running it yourself
+
+It is a static site: build it and serve the contents of dist over HTTP.
+
+    pnpm install && pnpm build
+    pnpm preview            # or any static server pointed at dist/
+
+The paths inside the app are absolute — the service worker, the manifest and the WebAssembly modules are
+fetched from /, /wasm and /artifacts — so serve it from the root of a domain rather than a sub directory
+without rewriting those paths.
+
+Browsers: anything with WebAssembly, Web Workers and the Compression Streams API (Chrome, Edge, Firefox and
+Safari 16.4 or newer). Nothing lists a device, so no permissions are asked for.
+
+AGPL-3.0-or-later: if you run a modified copy for others over a network, they are entitled to its source.
 
 ## Architecture
 

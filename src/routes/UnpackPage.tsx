@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EXTRACT_TOOL, PATCH_ROUTES } from "@/app/tools";
-import { useT } from "@/i18n/use-translation";
+import { useRecordText, useT } from "@/i18n/use-translation";
 import { formatBytes } from "@/lib/format";
 import { downloadBlob } from "@/lib/download";
 import { useForgeStore } from "@/stores/forge-store";
@@ -43,6 +43,7 @@ export function UnpackPage() {
   const [metadataOnly, setMetadataOnly] = useState(false);
   const imageArtifacts = artifacts.filter((artifact) => /\.img$/i.test(artifact.name));
   const sendToPatcher = useForgeStore((state) => state.sendToPatcher);
+  const record = useRecordText();
   const openArtifactAsSource = useForgeStore((state) => state.openArtifactAsSource);
   const openFilesystemFile = useForgeStore((state) => state.openFilesystemFile);
   const [busy, setBusy] = useState<string | null>(null);
@@ -276,7 +277,7 @@ export function UnpackPage() {
               <CardHeader>
                 <CardTitle>{t("unpack.incompatible")}</CardTitle>
                 <CardDescription>
-                  {view.kind === "unsupported" ? view.detected.label : ""}
+                  {view.kind === "unsupported" ? record(view.detected.label) : ""}
                 </CardDescription>
               </CardHeader>
             </Card>
