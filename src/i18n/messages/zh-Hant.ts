@@ -251,6 +251,7 @@ export const zhHant: Messages = {
 
   "patch.building": "正在產生修補計畫",
   "patch.plan": "修補計畫",
+  "patch.plan.details": "完整計畫記錄",
   "patch.plan.description": "提供者、版本與產物都被固定下來，同一份計畫日後可以重現。",
   "patch.configuration": "設定",
   "patch.configuration.description": "傳給提供者的計畫設定。",

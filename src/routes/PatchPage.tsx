@@ -1,12 +1,11 @@
-import { ArrowLeft, Info, Layers, LoaderCircle, Play } from "lucide-react";
+import { ArrowLeft, ChevronDown, Info, Layers, LoaderCircle, Play, Settings2, ShieldCheck, Workflow } from "lucide-react";
 import { useRef, useState } from "react";
-import type { ChangeEvent } from "react";
+import type { ChangeEvent, ReactNode } from "react";
 import { Navigate, useNavigate } from "react-router";
 import { ErrorPanel } from "@/components/app/error-panel";
 import { KeyValueList } from "@/components/app/key-value-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { formatBytes, truncateHash } from "@/lib/format";
 import {
@@ -34,6 +33,31 @@ const BANNER_BODY: Record<string, MessageKey> = {
   kernelsu: "patch.banner.kernelsu.body",
   magisk: "patch.banner.magisk.body",
 };
+
+function SettingsSection({
+  icon: Icon,
+  title,
+  description,
+  children,
+}: {
+  icon?: typeof Info;
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="overflow-hidden rounded-lg border border-border bg-surface shadow-subtle">
+      <header className="flex items-start gap-3 border-b border-border px-4 py-3">
+        {Icon ? <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden /> : null}
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
+          {description ? <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{description}</p> : null}
+        </div>
+      </header>
+      <div className="p-4">{children}</div>
+    </section>
+  );
+}
 
 export function PatchPage() {
   const t = useT();
@@ -94,12 +118,10 @@ export function PatchPage() {
   if (!planResponse) {
     if (!isBusy) return <Navigate to={PATCH_ROUTES.analyze} replace />;
     return (
-      <Card>
-        <CardContent className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
-          <LoaderCircle className="size-4 animate-spin text-primary" aria-hidden />
-          {t("patch.building")}
-        </CardContent>
-      </Card>
+      <div className="flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-6 text-sm text-muted-foreground shadow-subtle">
+        <LoaderCircle className="size-4 animate-spin text-primary" aria-hidden />
+        {t("patch.building")}
+      </div>
     );
   }
 
@@ -111,7 +133,7 @@ export function PatchPage() {
   const planEntries = [
     { key: t("patch.field.provider"), value: plan.providerName + " (" + plan.providerId + ")" },
     { key: t("patch.field.release"), value: plan.release },
-    { key: t("patch.field.artifact"), value: plan.artifact.id + "@" + plan.artifact.version },
+    { key: t("patch.field.artifact"), value: plan.artifact.type + " · " + plan.artifact.version },
     { key: t("patch.field.artifactType"), value: plan.artifact.type },
     {
       key: t("patch.field.artifactSha256"),
@@ -124,6 +146,13 @@ export function PatchPage() {
     { key: t("patch.field.sourceSha256"), value: truncateHash(plan.sourceImageSha256, 24, 12) },
     { key: t("patch.field.planId"), value: plan.id },
     { key: t("patch.field.reproducible"), value: plan.reproducible ? t("patch.value.yes") : t("patch.value.no") },
+  ];
+  const summaryEntries = [
+    { key: t("patch.field.provider"), value: plan.providerName },
+    { key: t("patch.field.release"), value: plan.release },
+    { key: t("patch.field.artifact"), value: plan.artifact.id + "@" + plan.artifact.version },
+    { key: t("patch.field.target"), value: plan.target + " · v" + plan.headerVersion },
+    { key: t("patch.field.architecture"), value: plan.architecture },
   ];
 
   const configurationEntries = Object.entries(plan.configuration).map(([key, value]) => ({
@@ -152,73 +181,26 @@ export function PatchPage() {
 
       <ErrorPanel error={error} />
 
-      <div className="rounded-lg border border-info/30 bg-info-muted px-4 py-3">
-        <div className="flex items-start gap-2">
-          <Info className="mt-0.5 size-3.5 shrink-0 text-info" aria-hidden />
-          <div className="space-y-1">
-            <p className="text-xs font-medium text-foreground">
-              {plan.providerId === "mock"
-                ? t("patch.banner.mock.title")
-                : t("patch.banner.upstream", { provider: plan.providerName })}
-            </p>
-            {bannerBody ? (
-              <p className="text-[11px] leading-4 text-muted-foreground">{t(bannerBody)}</p>
-            ) : null}
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="space-y-5">
+          <div className="rounded-lg border border-info/30 bg-info-muted px-4 py-3">
+            <div className="flex items-start gap-2">
+              <Info className="mt-0.5 size-3.5 shrink-0 text-info" aria-hidden />
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-foreground">
+                  {plan.providerId === "mock"
+                    ? t("patch.banner.mock.title")
+                    : t("patch.banner.upstream", { provider: plan.providerName })}
+                </p>
+                {bannerBody ? (
+                  <p className="text-[11px] leading-4 text-muted-foreground">{t(bannerBody)}</p>
+                ) : null}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("patch.plan")}</CardTitle>
-            <CardDescription>{t("patch.plan.description")}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <KeyValueList entries={planEntries} />
-          </CardContent>
-        </Card>
-
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("patch.configuration")}</CardTitle>
-              <CardDescription>{t("patch.configuration.description")}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <KeyValueList entries={configurationEntries} />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("patch.pipeline")}</CardTitle>
-              <CardDescription>{t("patch.pipeline.description")}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ol className="space-y-1.5">
-                {plan.steps.map((step) => (
-                  <li key={step.id} className="flex items-center justify-between gap-3 text-xs">
-                    <span className="text-foreground">{record(step.label)}</span>
-                    <span className="font-mono text-[11px] text-muted-foreground">{step.progress}%</span>
-                  </li>
-                ))}
-                <li className="flex items-center justify-between gap-3 border-t border-border pt-1.5 text-xs">
-                  <span className="font-medium text-foreground">{t("patch.pipeline.complete")}</span>
-                  <span className="font-mono text-[11px] text-muted-foreground">100%</span>
-                </li>
-              </ol>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {planResponse.providerNotes.length > 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("patch.notes")}</CardTitle>
-          </CardHeader>
-          <CardContent>
+          {planResponse.providerNotes.length > 0 ? (
+            <SettingsSection icon={Info} title={t("patch.notes")}>
             <ul className="space-y-1.5">
               {planResponse.providerNotes.map((note) => (
                 <li key={note} className="text-[11px] leading-4 text-muted-foreground">
@@ -226,17 +208,16 @@ export function PatchPage() {
                 </li>
               ))}
             </ul>
-          </CardContent>
-        </Card>
-      ) : null}
+            </SettingsSection>
+          ) : null}
 
       {plan.providerId === "apatch" ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("patch.kpimg.title")}</CardTitle>
-            <CardDescription>{t("patch.kpimg.description")}</CardDescription>
-          </CardHeader>
-          <CardContent className="flex items-start justify-between gap-4">
+        <SettingsSection
+          icon={Layers}
+          title={t("patch.kpimg.title")}
+          description={t("patch.kpimg.description")}
+        >
+          <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 space-y-1">
               <Select
                 aria-label={t("patch.kpimg.title")}
@@ -288,17 +269,17 @@ export function PatchPage() {
                 {isCustomFlavour() ? t("patch.kpimg.unknownManager") : (flavour?.managerPackage ?? t("patch.kpimg.unknownManager"))}
               </span>
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </SettingsSection>
       ) : null}
 
       {plan.providerId === "apatch" ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("patch.kpm.title")}</CardTitle>
-            <CardDescription>{t("patch.kpm.description")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
+        <SettingsSection
+          icon={Layers}
+          title={t("patch.kpm.title")}
+          description={t("patch.kpm.description")}
+        >
+          <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <input
                 ref={kpmInputRef}
@@ -342,17 +323,17 @@ export function PatchPage() {
               </ul>
             ) : null}
             <p className="text-[11px] leading-4 text-muted-foreground">{t("patch.kpm.hint")}</p>
-          </CardContent>
-        </Card>
+          </div>
+        </SettingsSection>
       ) : null}
 
       {plan.providerId === "kernelsu" ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("patch.kernelsu.title")}</CardTitle>
-            <CardDescription>{t("patch.kernelsu.description")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
+        <SettingsSection
+          icon={Layers}
+          title={t("patch.kernelsu.title")}
+          description={t("patch.kernelsu.description")}
+        >
+          <div className="space-y-2">
             <Select
               aria-label={t("patch.kernelsu.title")}
               className="max-w-xs"
@@ -400,17 +381,18 @@ export function PatchPage() {
               <code className="mx-1">uname -r</code>
               {t("patch.kernelsu.hint.tail")}
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </SettingsSection>
       ) : null}
 
       {plan.providerId === "magisk" ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("patch.magisk.title")}</CardTitle>
-            <CardDescription>{t("patch.magisk.description")}</CardDescription>
-          </CardHeader>
-          <CardContent className="flex items-start justify-between gap-4">
+        <SettingsSection
+          icon={Settings2}
+          title={t("patch.magisk.title")}
+          description={t("patch.magisk.description")}
+        >
+          <div className="divide-y divide-border">
+          <div className="flex items-start justify-between gap-4 py-3 first:pt-0">
             <div className="space-y-1">
               <p className="text-xs font-medium text-foreground">{t("patch.magisk.keepVerity")}</p>
               <p className="text-[11px] leading-4 text-muted-foreground">{t("patch.magisk.keepVerity.body")}</p>
@@ -422,8 +404,8 @@ export function PatchPage() {
                 applyOption({ [MAGISK_KEEP_VERITY_SETTING]: String(checked) })
               }
             />
-          </CardContent>
-          <CardContent className="flex items-start justify-between gap-4 border-t border-border/60 pt-4">
+          </div>
+          <div className="flex items-start justify-between gap-4 py-3">
             <div className="space-y-1">
               <p className="text-xs font-medium text-foreground">{t("patch.magisk.keepForceEncrypt")}</p>
               <p className="text-[11px] leading-4 text-muted-foreground">
@@ -437,8 +419,8 @@ export function PatchPage() {
                 applyOption({ [MAGISK_KEEP_FORCE_ENCRYPT_SETTING]: String(checked) })
               }
             />
-          </CardContent>
-          <CardContent className="space-y-2 border-t border-border/60 pt-4">
+          </div>
+          <div className="space-y-2 py-3 last:pb-0">
             <p className="text-xs font-medium text-foreground">{t("patch.magisk.preinit")}</p>
             <div className="flex flex-wrap items-center gap-2">
               <Input
@@ -466,17 +448,18 @@ export function PatchPage() {
               <code className="mx-1">magisk --preinit-device</code>
               {t("patch.magisk.preinit.hint.after")}
             </p>
-          </CardContent>
-        </Card>
+          </div>
+          </div>
+        </SettingsSection>
       ) : null}
 
       {plan.providerId === "apatch" ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("patch.superkey.title")}</CardTitle>
-            <CardDescription>{t("patch.superkey.description")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
+        <SettingsSection
+          icon={ShieldCheck}
+          title={t("patch.superkey.title")}
+          description={t("patch.superkey.description")}
+        >
+          <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <Input
                 type="password"
@@ -502,16 +485,17 @@ export function PatchPage() {
               </Badge>
             </div>
             <p className="text-[11px] leading-4 text-muted-foreground">{t("patch.superkey.hint")}</p>
-          </CardContent>
-        </Card>
+          </div>
+        </SettingsSection>
       ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("patch.output.title")}</CardTitle>
-          <CardDescription>{t("patch.output.description")}</CardDescription>
-        </CardHeader>
-        <CardContent className="flex items-start justify-between gap-4">
+      <SettingsSection
+        icon={Settings2}
+        title={t("patch.output.title")}
+        description={t("patch.output.description")}
+      >
+        <div className="divide-y divide-border">
+        <div className="flex items-start justify-between gap-4 py-3 first:pt-0">
           <div className="space-y-1">
             <p className="text-xs font-medium text-foreground">{t("patch.output.preserve")}</p>
             <p className="text-[11px] leading-4 text-muted-foreground">
@@ -523,8 +507,8 @@ export function PatchPage() {
             checked={readOption("preserveImageSize", "false") === "true"}
             onCheckedChange={(checked) => applyOption({ preserveImageSize: String(checked) })}
           />
-        </CardContent>
-        <CardContent className="flex items-start justify-between gap-4 border-t border-border/60 pt-4">
+        </div>
+        <div className="flex items-start justify-between gap-4 py-3 last:pb-0">
           <div className="space-y-1">
             <p className="text-xs font-medium text-foreground">{t("patch.output.keepSignature")}</p>
             <p className="text-[11px] leading-4 text-muted-foreground">{t("patch.output.keepSignature.body")}</p>
@@ -534,18 +518,100 @@ export function PatchPage() {
             checked={readOption("keepSignature", "true") === "true"}
             onCheckedChange={(checked) => applyOption({ keepSignature: String(checked) })}
           />
-        </CardContent>
-      </Card>
+        </div>
+        </div>
+      </SettingsSection>
 
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <Button variant="ghost" onClick={() => navigate(PATCH_ROUTES.analyze)}>
-          <ArrowLeft />
-          {t("patch.back")}
-        </Button>
-        <Button variant="primary" disabled={isBusy} onClick={() => navigate(PATCH_ROUTES.run)}>
-          {isBusy ? <LoaderCircle className="animate-spin" /> : <Play />}
-          {t("patch.start")}
-        </Button>
+        </div>
+
+        <aside className="space-y-4 lg:sticky lg:top-20">
+          <section className="overflow-hidden rounded-lg border border-border bg-surface shadow-subtle">
+            <header className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
+              <div>
+                <h2 className="text-sm font-semibold tracking-tight">{t("patch.plan")}</h2>
+                <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{t("patch.plan.description")}</p>
+              </div>
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-success-muted text-success">
+                <ShieldCheck className="size-4" aria-hidden />
+              </span>
+            </header>
+            <div className="p-4">
+              <KeyValueList entries={summaryEntries} stacked />
+
+              <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
+                <Button
+                  variant="primary"
+                  size="lg"
+                  className="w-full"
+                  disabled={isBusy}
+                  onClick={() => navigate(PATCH_ROUTES.run)}
+                >
+                  {isBusy ? <LoaderCircle className="animate-spin" /> : <Play />}
+                  {t("patch.start")}
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => navigate(PATCH_ROUTES.analyze)}
+                >
+                  <ArrowLeft />
+                  {t("patch.back")}
+                </Button>
+              </div>
+            </div>
+          </section>
+
+          <details className="group overflow-hidden rounded-lg border border-border bg-surface shadow-subtle">
+            <summary className="flex cursor-pointer list-none items-start gap-3 px-4 py-3 transition-colors hover:bg-surface-muted">
+              <Settings2 className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold tracking-tight">{t("patch.configuration")}</span>
+                <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">
+                  {t("patch.configuration.description")}
+                </span>
+              </span>
+              <ChevronDown
+                className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
+                aria-hidden
+              />
+            </summary>
+            <div className="space-y-5 border-t border-border p-4">
+              <div>
+                <h3 className="text-xs font-semibold tracking-tight">{t("patch.plan.details")}</h3>
+                <div className="mt-2">
+                  <KeyValueList entries={planEntries} />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-xs font-semibold tracking-tight">{t("patch.configuration")}</h3>
+                <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
+                  {t("patch.configuration.description")}
+                </p>
+                <div className="mt-2">
+                  <KeyValueList entries={configurationEntries} />
+                </div>
+              </div>
+              <div>
+                <h3 className="flex items-center gap-1.5 text-xs font-semibold tracking-tight">
+                  <Workflow className="size-3.5 text-muted-foreground" aria-hidden />
+                  {t("patch.pipeline")}
+                </h3>
+                <ol className="mt-2 space-y-1.5">
+                  {plan.steps.map((step) => (
+                    <li key={step.id} className="flex items-center justify-between gap-3 text-xs">
+                      <span className="text-foreground">{record(step.label)}</span>
+                      <span className="font-mono text-[11px] text-muted-foreground">{step.progress}%</span>
+                    </li>
+                  ))}
+                  <li className="flex items-center justify-between gap-3 border-t border-border pt-1.5 text-xs">
+                    <span className="font-medium text-foreground">{t("patch.pipeline.complete")}</span>
+                    <span className="font-mono text-[11px] text-muted-foreground">100%</span>
+                  </li>
+                </ol>
+              </div>
+            </div>
+          </details>
+        </aside>
       </div>
     </div>
   );

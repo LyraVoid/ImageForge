@@ -254,6 +254,7 @@ export const en = {
 
   "patch.building": "Building the patch plan",
   "patch.plan": "Patch plan",
+  "patch.plan.details": "Full plan record",
   "patch.plan.description":
     "Provider, release and artifact are pinned so the same plan can be reproduced later.",
   "patch.configuration": "Configuration",

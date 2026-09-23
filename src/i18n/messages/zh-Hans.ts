@@ -251,6 +251,7 @@ export const zhHans: Messages = {
 
   "patch.building": "正在生成修补计划",
   "patch.plan": "修补计划",
+  "patch.plan.details": "完整计划记录",
   "patch.plan.description": "提供方、版本与制品都被固定下来，同一份计划日后可以复现。",
   "patch.configuration": "配置",
   "patch.configuration.description": "传给提供方的计划配置。",

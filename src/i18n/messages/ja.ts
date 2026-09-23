@@ -251,6 +251,7 @@ export const ja: Messages = {
 
   "patch.building": "パッチ計画を作成しています",
   "patch.plan": "パッチ計画",
+  "patch.plan.details": "完全な計画記録",
   "patch.plan.description":
     "プロバイダー・リリース・アーティファクトを固定するので、同じ計画を後から再現できます。",
   "patch.configuration": "構成",
